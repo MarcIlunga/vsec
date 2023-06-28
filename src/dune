@@ -1,0 +1,7 @@
+(alias
+   (name default)
+    (deps ec-language-server.install))
+(env
+ (dev     (flags :standard -w -9 -w -27 -w -32 -w -37))
+ (release     (flags :standard -w -9 -w -27 -w -32 -w -37)))
+(vendored_dirs easycrypt)

@@ -1,0 +1,5 @@
+(library
+ (name dm)
+ (flags -rectypes)
+ (public_name ec-language-server.dm)
+ (libraries base sel lsp easycrypt.ecLib))

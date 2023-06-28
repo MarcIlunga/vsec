@@ -1,0 +1,7 @@
+(executable
+ (name ecLsp)
+ (public_name ecLsp)
+ (modules ecLsp lspManager)
+ (flags -linkall -rectypes)
+ (package ec-language-server)
+ (libraries sel yojson dm lsp))
