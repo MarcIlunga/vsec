@@ -24,9 +24,9 @@ module LM = Map.Make (Int)
 module SM = Map.Make (Stateid)
 
 type parsed_ast = {
-  ast: unit;
+  ast: EcParsetree.global;
   classification: vernac_classification;
-  tokens: unit list
+  tokens: EcParser.token list
 }
 
 type pre_sentence = {

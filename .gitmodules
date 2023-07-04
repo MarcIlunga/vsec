@@ -1,4 +1,3 @@
 [submodule "src/easycrypt"]
 	path = src/easycrypt
-	url = git@github.com:rtetley/easycrypt.git
-	branch = origin/rename-lib
+	url = git@github.com:EasyCrypt/easycrypt.git
