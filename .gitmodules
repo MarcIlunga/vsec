@@ -1,3 +1,4 @@
 [submodule "src/easycrypt"]
 	path = src/easycrypt
 	url = git@github.com:EasyCrypt/easycrypt.git
+	branch = main
