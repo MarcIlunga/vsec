@@ -174,15 +174,9 @@ let textDocumentDidOpen params =
   let vst = get_init_state () in
   let st, events = Dm.DocumentManager.init vst uri ~text in
   let st = Dm.DocumentManager.validate_document st in
-  let (st, events') = 
-    if !check_mode = Settings.Mode.Continuous then 
-      Dm.DocumentManager.interpret_to_end st 
-    else 
-      (st, [])
-  in
   Hashtbl.add states (Uri.path uri) st;
   update_view uri st;
-  inject_dm_events (uri, events@events')
+  inject_dm_events (uri, events)
 
 let textDocumentDidChange params =
   let Notification.Client.DidChangeTextDocumentParams.{ textDocument; contentChanges } = params in
@@ -194,15 +188,9 @@ let textDocumentDidChange params =
   let text_edits = List.map mk_text_edit contentChanges in
   let st = Dm.DocumentManager.apply_text_edits st text_edits in
   let st = Dm.DocumentManager.validate_document st in
-  let (st, events) = 
-    (* if !check_mode = Settings.Mode.Continuous then 
-      Dm.DocumentManager.interpret_to_end st 
-    else  *)
-      (st, [])
-  in
   Hashtbl.replace states (Uri.path uri) st;
   update_view uri st;
-  inject_dm_events (uri, events)
+  inject_dm_events (uri, [])
 
 let textDocumentDidSave params =
   let Notification.Client.DidChangeTextDocumentParams.{ textDocument } = params in
@@ -213,7 +201,10 @@ let textDocumentDidSave params =
   update_view uri st
 
 let textDocumentDidClose params =
-  [] (* TODO handle properly *)
+  let Notification.Client.DidCloseTextDocumentParams.{ textDocument } = params in
+  let uri = textDocument.uri in
+  Hashtbl.remove states (Uri.path uri);
+  []
 
 let textDocumentHover ~id params = 
   let Request.Client.HoverParams.{ textDocument; position } = params in
@@ -231,8 +222,7 @@ let coqtopInterpretToPoint params =
   let Notification.Client.InterpretToPointParams.{ textDocument; position } = params in
   let uri = textDocument.uri in
   let st = Hashtbl.find states (Uri.path uri) in
-  let st = Dm.DocumentManager.validate_document st in
-  let (st, events) = Dm.DocumentManager.interpret_to_position ~stateful:(!check_mode = Settings.Mode.Manual) st position in
+  let (st, events) = Dm.DocumentManager.interpret_to_position st position in
   Hashtbl.replace states (Uri.path uri) st;
   update_view uri st;
   inject_dm_events (uri, events)

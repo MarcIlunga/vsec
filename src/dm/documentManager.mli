@@ -41,7 +41,7 @@ val validate_document : state -> state
     text of [doc] has not changed since the last call to [validate_document], it
     has no effect. *)
 
-val interpret_to_position : stateful:bool -> state -> Position.t -> (state * events)
+val interpret_to_position : state -> Position.t -> (state * events)
 (** [interpret_to_position stateful doc pos] navigates to the last sentence ending
     before or at [pos] and returns the resulting state. The [stateful] flag 
     determines if we record the resulting position in the state. *)

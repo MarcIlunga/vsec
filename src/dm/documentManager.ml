@@ -97,14 +97,14 @@ let executed_ranges st =
   in
   executed_ranges st.document st.execution_state loc
 
-let interpret_to ~stateful ~background state id : (state * event Sel.event list) =
+let interpret_to state id : (state * event Sel.event list) =
   state, []
 
-let interpret_to_position ~stateful st pos =
+let interpret_to_position st pos =
   let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
   match Document.find_sentence_before st.document loc with
   | None -> (st, []) (* document is empty *)
-  | Some { id } -> interpret_to ~stateful ~background:false st id
+  | Some { id } -> interpret_to st id
 
 let interpret_to_previous st = st, []
 
@@ -113,7 +113,7 @@ let interpret_to_next st = st, []
 let interpret_to_end st =
   match Document.get_last_sentence st.document with 
   | None -> (st, [])
-  | Some {id} -> log ("interpret_to_end id = " ^ Stateid.to_string id); interpret_to ~stateful:true ~background:false st id
+  | Some {id} -> log ("interpret_to_end id = " ^ Stateid.to_string id); interpret_to st id
 
 let hover st pos = 
   let pattern = RawDocument.word_at_position (Document.raw_document st.document) pos in
@@ -198,7 +198,7 @@ let init init_scope uri ~text =
   let execution_state, feedback = ExecutionManager.init init_scope in
   let st = {uri; document; init_scope; observe_id; execution_state } in
   validate_document st, [inject_em_event feedback]
-  
+
 module Internal = struct
 
   let document st =
