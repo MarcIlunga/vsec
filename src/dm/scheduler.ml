@@ -24,14 +24,14 @@ type vernac_qed_type = VtKeep of vernac_keep_as | VtDrop
 
 type vernac_classification =
   (* Start of a proof *)
-  | VtStartProof 
+  | VtStartProof
   (* Command altering the global state, bad for parallel
      processing. *)
-  | VtSideff 
+  | VtSideff
   (* End of a proof *)
   | VtQed of vernac_qed_type
   (* A proof step *)
-  | VtProofStep 
+  | VtProofStep
   (* Queries are commands assumed to be "pure", that is to say, they
      don't modify the interpretation state. *)
   | VtQuery
@@ -42,8 +42,8 @@ type error_recovery_strategy =
 
 type executable_sentence = {
   id : sentence_id;
-  ast : unit (* Synterp.vernac_control_entry *);
-  synterp : unit(* Vernacstate.Synterp.t *);
+  ast : EcLib.EcParsetree.global;
+  synterp : EcLib.EcScope.scope;
   error_recovery : error_recovery_strategy;
 }
 
@@ -152,7 +152,7 @@ let flatten_proof_block st =
 
 let is_opaque_flat_proof terminator section_depth block = false
 
-let push_state id ast synterp classif st = 
+let push_state id (ast: EcLib.EcParsetree.global) synterp classif st = 
   (* let open Vernacextend in *)
   let ex_sentence = { id; ast; synterp; error_recovery = RSkip } in
   match classif with

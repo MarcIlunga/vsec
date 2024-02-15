@@ -32,14 +32,14 @@ type parsed_ast = {
 type pre_sentence = {
   start : int;
   stop : int;
-  synterp_state : unit; (* synterp state after this sentence's synterp phase *)
+  synterp_state : EcLib.EcScope.scope;
   ast : parsed_ast;
 }
 
 type sentence = {
   start : int;
   stop : int;
-  synterp_state : unit; (* synterp state after this sentence's synterp phase *)
+  synterp_state : EcLib.EcScope.scope; (* synterp state after this sentence's synterp phase *)
   scheduler_state_before : Scheduler.state;
   scheduler_state_after : Scheduler.state;
   ast : parsed_ast;
@@ -154,7 +154,7 @@ let get_last_sentence parsed =
 let state_after_sentence = function
 | Some (stop, { synterp_state; scheduler_state_after }) ->
   (stop, synterp_state, scheduler_state_after)
-| None -> (-1, (), Scheduler.initial_state)
+| None -> (-1, EcLib.EcScope.empty @@ EcLib.EcGState.create (), Scheduler.initial_state)
 
 (** Returns the state at position [pos] if it does not require execution *)
 let state_at_pos parsed pos =
@@ -343,8 +343,8 @@ let invalidate top_edit parsed_doc new_sentences =
 let validate_document ({ parsed_loc; raw_doc; } as document) = 
   let (stop, parsing_state, _scheduler_state) = state_at_pos document parsed_loc in
   let text = RawDocument.text raw_doc in
-  (* let stream = Stream.of_string text in
-  while Stream.count stream < stop do Stream.junk () stream done; *)
+  let stream = Stream.of_string text in
+  while Stream.count stream < stop do Stream.junk stream done;
   log @@ Format.sprintf "Parsing more from pos %i" stop;
   let new_sentences, errors = [], [] (* parse_more parsing_state stream raw_doc *) (* TODO invalidate first *) in
   log @@ Format.sprintf "%i new sentences" (List.length new_sentences);

@@ -46,8 +46,8 @@ type error_recovery_strategy =
 
 type executable_sentence = {
   id : sentence_id;
-  ast : unit (* synterp.vernac_control_entry *);
-  synterp : unit (* vernacstate.synterp.t *);
+  ast : EcLib.EcParsetree.global;
+  synterp : EcLib.EcScope.scope;
   error_recovery : error_recovery_strategy;
 }
 
@@ -66,7 +66,7 @@ type schedule
 
 val initial_schedule : schedule
 
-val schedule_sentence : sentence_id * (unit * vernac_classification * unit) -> state -> schedule -> state * schedule
+val schedule_sentence : sentence_id * (EcLib.EcParsetree.global * vernac_classification * EcLib.EcScope.scope) -> state -> schedule -> state * schedule
 (** Identifies the structure of the document and dependencies between sentences
     in order to easily compute the tasks to interpret the a sentence.
     Input sentence is None on parsing error. *)

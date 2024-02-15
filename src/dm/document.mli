@@ -35,9 +35,9 @@ val validate_document : document -> sentence_id_set * document
     and returns the set of invalidated sentences *)
 
 type parsed_ast = {
-  ast: unit;
+  ast: EcParsetree.global;
   classification: vernac_classification;
-  tokens: unit list
+  tokens: EcParser.token list
 }
 
 type parsing_error = {
@@ -58,7 +58,7 @@ val apply_text_edits : document -> text_edit list -> document * int
 type sentence = {
   start : int;
   stop : int;
-  synterp_state : unit; (* synterp state after this sentence's synterp phase *)
+  synterp_state : EcLib.EcScope.scope; (* synterp state after this sentence's synterp phase *)
   scheduler_state_before : Scheduler.state;
   scheduler_state_after : Scheduler.state;
   ast : parsed_ast;
