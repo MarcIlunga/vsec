@@ -59,6 +59,7 @@ type document = {
   schedule : Scheduler.schedule;
   parsed_loc : int;
   raw_doc : RawDocument.t;
+  init_scope : EcLib.EcScope.scope;
 }
 
 let schedule doc = doc.schedule
@@ -151,14 +152,14 @@ let get_first_sentence parsed =
 let get_last_sentence parsed = 
   Option.map snd @@ LM.find_last_opt (fun _ -> true) parsed.sentences_by_end
 
-let state_after_sentence = function
+let state_after_sentence parsed = function
 | Some (stop, { synterp_state; scheduler_state_after }) ->
   (stop, synterp_state, scheduler_state_after)
-| None -> (-1, EcLib.EcScope.empty @@ EcLib.EcGState.create (), Scheduler.initial_state)
+| None -> (-1, parsed.init_scope, Scheduler.initial_state)
 
 (** Returns the state at position [pos] if it does not require execution *)
 let state_at_pos parsed pos =
-  state_after_sentence @@
+  state_after_sentence parsed @@
     LM.find_last_opt (fun stop -> stop <= pos) parsed.sentences_by_end
 
 let pos_at_end parsed =
@@ -353,7 +354,7 @@ let validate_document ({ parsed_loc; raw_doc; } as document) =
   let parsed_loc = pos_at_end document in
   invalid_ids, { document with parsed_loc }
 
-let create_document text =
+let create_document init_scope text =
   let raw_doc = RawDocument.create text in
     { parsed_loc = -1;
       raw_doc;
@@ -361,6 +362,7 @@ let create_document text =
       sentences_by_end = LM.empty;
       parsing_errors_by_end = LM.empty;
       schedule = initial_schedule;
+      init_scope
     }
 
 let apply_text_edit document edit =

@@ -49,6 +49,6 @@ type 'a log = Log : 'a -> 'a log
 (*TODO: Replace this proper easycrypt data structures *)
 module Vernacstate = struct
 
-  type t = unit
+  type t = EcScope.scope
 
 end

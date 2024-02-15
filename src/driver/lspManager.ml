@@ -19,11 +19,11 @@ open Lsp
 open LspData
 open ExtProtocol
 
-let init_state = ref None
+let init_state : EcLib.EcScope.scope option ref = ref None
 let get_init_state () =
   match !init_state with
   | Some st -> st
-  | None -> [](* CErrors.anomaly Pp.(str "Initial state not available") *)
+  | None -> assert false (* TODO fixme *)
 
 let states : (string, Dm.DocumentManager.state) Hashtbl.t = Hashtbl.create 39
 
@@ -34,8 +34,8 @@ let Dm.Types.Log log = Dm.Log.mk_log "lspManager"
 let conf_request_id = 3456736879
 
 let server_info = ServerInfo.{
-  name = "vscoq-language-server";
-  version = "2.0.0";
+  name = "easyscrypt-language-server";
+  version = "1.0.0";
 } 
 
 type lsp_event = 
@@ -171,9 +171,8 @@ let update_view uri st =
 
 let textDocumentDidOpen params =
   let Notification.Client.DidOpenTextDocumentParams.{ textDocument = { uri; text } } = params in
-  []
-  (* let vst, opts = get_init_state () in
-  let st, events = Dm.DocumentManager.init vst ~opts uri ~text in
+  let vst = get_init_state () in
+  let st, events = Dm.DocumentManager.init vst uri ~text in
   let st = Dm.DocumentManager.validate_document st in
   let (st, events') = 
     if !check_mode = Settings.Mode.Continuous then 
@@ -183,7 +182,7 @@ let textDocumentDidOpen params =
   in
   Hashtbl.add states (Uri.path uri) st;
   update_view uri st;
-  inject_dm_events (uri, events@events') *)
+  inject_dm_events (uri, events@events')
 
 let textDocumentDidChange params =
   let Notification.Client.DidChangeTextDocumentParams.{ textDocument; contentChanges } = params in
@@ -399,5 +398,5 @@ let pr_event = function
   | LogEvent _ -> "debug"
 
 let init injections =
-  init_state := Some [];(* Some (Vernacstate.freeze_full_state (), injections); *)
+  init_state := Some (EcLib.EcScope.empty @@ EcLib.EcGState.create ());
   [lsp]

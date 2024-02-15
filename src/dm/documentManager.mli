@@ -27,7 +27,7 @@ val pp_event : Format.formatter -> event -> unit
 
 type events = event Sel.event list
 
-(* val init : Vernacstate.t -> opts:Coqargs.injection_command list -> Uri.t -> text:string -> state * events *)
+val init : EcLib.EcScope.scope -> Uri.t -> text:string -> state * events
 (** [init st opts uri text] initializes the document manager with initial vernac state
     [st] on which command line opts will be set. *)
 

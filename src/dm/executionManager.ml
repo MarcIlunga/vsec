@@ -32,9 +32,6 @@ type feedback_message = Severity.t * EcLocation.t option * string
 
 type sentence_state = Done of execution_status
 
-let doc_id = ref (-1)
-let fresh_doc_id () = incr doc_id; !doc_id
-
 type document_id = int
 
 type coq_feedback_listener = int
@@ -42,10 +39,6 @@ type coq_feedback_listener = int
 type state = {
   initial : Vernacstate.t;
   of_sentence : (sentence_state * feedback_message list) SM.t;
-
-  (* ugly stuff to correctly dispatch Coq feedback *)
-  doc_id : document_id; (* unique number used to interface with Coq's Feedback *)
-  coq_feeder : coq_feedback_listener;
   sel_feedback_queue : (sentence_id * (Severity.t * EcLocation.t option * string)) Queue.t;
   sel_cancellation_handle : Sel.cancellation_handle;
 }
@@ -101,22 +94,12 @@ let local_feedback feedback_queue : event Sel.event * Sel.cancellation_handle =
     |> Sel.set_priority PriorityManager.feedback,
   c
 
-let install_feedback_listener doc_id send = 0
-  (* let open Feedback in
-  add_feeder (fun fb ->
-    match fb.contents with
-    | _ -> () (* STM feedbacks are handled differently *)) *)
-
 let init vernac_state =
-  let doc_id = fresh_doc_id () in
   let sel_feedback_queue = Queue.create () in
-  let coq_feeder = install_feedback_listener doc_id (fun x -> Queue.push x sel_feedback_queue) in
   let event, sel_cancellation_handle = local_feedback sel_feedback_queue in
   {
     initial = vernac_state;
     of_sentence = SM.empty;
-    doc_id;
-    coq_feeder;
     sel_feedback_queue;
     sel_cancellation_handle;
   },

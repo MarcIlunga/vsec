@@ -26,7 +26,7 @@ type document
 
 val raw_document : document -> RawDocument.t
 
-val create_document : string -> document
+val create_document : EcScope.scope -> string -> document
 (** [create_document text] creates a fresh document with content defined by
     [text]. *)
 

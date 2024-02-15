@@ -24,7 +24,7 @@ type event
 type events = event Sel.event list
 (* val pr_event : event -> Pp.t *)
 
-(* val init : Vernacstate.t -> state * event Sel.event *)
+val init : EcScope.scope -> state * event Sel.event
 
 val invalidate : Scheduler.schedule -> sentence_id -> state -> state
 val errors : state -> (sentence_id * (EcLocation.t option * string)) list

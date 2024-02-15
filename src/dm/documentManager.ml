@@ -19,7 +19,7 @@ let Log log = Log.mk_log "documentManager"
 
 type state = {
   uri : Uri.t;
-  init_vs : unit;
+  init_scope : EcLib.EcScope.scope;
   (* opts : Coqargs.injection_command list; *)
   document : Document.document;
   execution_state : ExecutionManager.state;
@@ -192,6 +192,13 @@ let handle_event ev st =
     let execution_state_update, events = ExecutionManager.handle_event ev st.execution_state in
     (Option.map (fun execution_state -> {st with execution_state}) execution_state_update, inject_em_events events)
 
+let init init_scope uri ~text =
+  let document = Document.create_document init_scope text in
+  let observe_id = None in
+  let execution_state, feedback = ExecutionManager.init init_scope in
+  let st = {uri; document; init_scope; observe_id; execution_state } in
+  validate_document st, [inject_em_event feedback]
+  
 module Internal = struct
 
   let document st =
