@@ -205,7 +205,19 @@ git diff --name-only | xargs dune build --force
    dune clean && dune build && dune runtest
    ```
 
-2. **Commit with Descriptive Messages**:
+2. **Stage Only Your Changes**:
+   ```bash
+   # NEVER use git add -A or git add .
+   # Instead, explicitly add only files you modified:
+   git add path/to/specific/file1.ml
+   git add path/to/specific/file2.ml
+   
+   # Review what will be committed:
+   git status
+   git diff --cached
+   ```
+
+3. **Commit with Descriptive Messages**:
    ```bash
    git commit -m "Implement <feature>: <description>
    
