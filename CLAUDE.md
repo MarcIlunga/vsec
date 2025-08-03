@@ -112,6 +112,45 @@ All OCaml dependencies managed via OPAM and dune. Key libraries:
 - `ppx_*`: Various syntax extensions
 - `sexplib`: S-expression support
 
+## Repository Management
+
+**IMPORTANT**: Always work with the correct repository:
+- **Fork Repository**: `MarcIlunga/vsec` (origin) - This is where you create PRs
+- **Upstream Repository**: `EasyCrypt/vsec` (upstream) - This is the main project
+
+### Verifying Repository Setup
+```bash
+# Check your remotes
+git remote -v
+
+# Should show:
+# origin    https://github.com/MarcIlunga/vsec.git (fetch)
+# origin    https://github.com/MarcIlunga/vsec.git (push)
+# upstream  https://github.com/EasyCrypt/vsec.git (fetch)
+# upstream  https://github.com/EasyCrypt/vsec.git (push)
+```
+
+### Creating Pull Requests
+```bash
+# ALWAYS specify the repository explicitly
+gh pr create --repo MarcIlunga/vsec --title "..." --body "..."
+
+# NEVER create PRs to EasyCrypt/vsec directly
+```
+
+### Syncing with Upstream
+```bash
+# Fetch latest changes from upstream
+git fetch upstream
+
+# Merge upstream main into your main
+git checkout main
+git merge upstream/main
+
+# Push to your fork
+git push origin main
+```
+
 ## Development Workflow
 
 ### Before Starting Any Feature
