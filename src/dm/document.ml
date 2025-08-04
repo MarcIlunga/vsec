@@ -186,7 +186,78 @@ let rec diff old_sentences new_sentences =
       Equal [(old_sentence.id,new_sentence)] :: diff old_sentences new_sentences
     else Deleted [old_sentence.id] :: Added [new_sentence] :: diff old_sentences new_sentences
 
-let extract_string flag token = ""
+let extract_string print_tok tok =
+  let open EcParser in
+  match tok with 
+  | STRING s -> "\"" ^ s ^ "\""
+  | IDENT s -> s
+  | TIDENT s -> s 
+  | INT s -> if print_tok then "INT " ^ EcBigInt.to_string s else EcBigInt.to_string s
+  | NOP x | NUMID x -> x
+  | UIDENT x | LIDENT x -> x
+  | PRIM_REWRITE x -> x
+  | _ -> ""
+
+(** Classify a global declaration for scheduling *)
+let classify_global (global : EcParsetree.global) =
+  let open EcParsetree in
+  match global.gl_action.pl_desc with
+  (* Theory/module definitions *)
+  | Gtheory _ | Gmodule _ -> VtSideff
+  
+  (* Proof-related *)
+  | Glemma _ -> VtStartProof
+  | Gaxiom _ -> VtSideff
+  
+  (* Queries *)
+  | Gprint _ | Gsearch _ -> VtQuery
+  
+  (* Type/operator definitions *)
+  | Gtype _ | Goperator _ -> VtSideff
+  
+  (* Import/export *)
+  | Ginclude _ | Gexport _ -> VtSideff
+  
+  (* Proof tactics would be VtProofStep but they appear inside proofs *)
+  (* QED would be VtQed but it's handled differently *)
+  
+  (* Default to query for unknown cases *)
+  | _ -> VtQuery
+
+(** Map EasyCrypt tokens to syntax highlighting categories *)
+let classify_token tok =
+  let open EcParser in
+  match tok with
+  (* Keywords *)
+  | ADMIT | AXIOM | CLONE | CONST | DECLARE | ELSE | ELSIF | END 
+  | EXISTS | EXPORT | FORALL | FUN | GLOB | IF | IMPORT | INCLUDE 
+  | LEMMA | LET | LOCAL | MODULE | OP | PRED | PRINT | PROC | PROOF 
+  | PROVER | QED | REALIZE | RECORD | REQUIRE | SAVE | SECTION 
+  | THEN | THEORY | TYPE | VAR | WHILE -> `Keyword
+  
+  (* Types *)
+  | TIDENT _ -> `Type
+  
+  (* Identifiers *)
+  | LIDENT _ | UIDENT _ | IDENT _ -> `Identifier
+  
+  (* Literals *)
+  | INT _ | STRING _ -> `Literal
+  
+  (* Operators *)
+  | PLUS | MINUS | STAR | SLASH | AT | BACKSLASH | DOT 
+  | EQ | LT | GT | LE | GE | NE | AND | ANDA | OR | ORA 
+  | NOT | IMPL | IFF | LRARROW -> `Operator
+  
+  (* Comments - if we had them in tokens *)
+  (* | COMMENT _ -> `Comment *)
+  
+  (* Delimiters *)
+  | LPAREN | RPAREN | LBRACKET | RBRACKET | LBRACE | RBRACE 
+  | COMMA | SEMICOLON | COLON | COLONCOLON -> `Delimiter
+  
+  (* Everything else *)
+  | _ -> `Other
 
 let string_of_parsed_ast { tokens } = 
   (* TODO implement printer for vernac_entry *)
@@ -230,57 +301,103 @@ let parse_one_sentence stream ~st =
   | _ ->  Stream.junk () stream; junk_sentence_end stream *)
 
 
-(** TODO move inside ParsedDoc, remove set_parsing_errors *)
-(* let rec parse_more synterp_state stream raw parsed errors =
+(** Parse more sentences from the stream using EasyCrypt parser *)
+let rec parse_more synterp_state stream raw_doc parsed errors =
   let handle_parse_error start msg =
     log @@ "handling parse error at " ^ string_of_int start;
     let stop = Stream.count stream in
     let parsing_error = { msg; start; stop; } in
     let errors = parsing_error :: errors in
-    parse_more synterp_state stream raw parsed errors
+    parse_more synterp_state stream raw_doc parsed errors
   in
   let start = Stream.count stream in
-  begin
-    (* FIXME should we save lexer state? *)
-    match parse_one_sentence stream ~st:synterp_state with
-    | None (* EOI *) -> List.rev parsed, errors
-    | Some ast ->
-      let stop = Stream.count stream in
-      log @@ "Parsed: " ^ (Pp.string_of_ppcmds @@ Ppvernac.pr_vernac ast);
-      let begin_line, begin_char, end_char =
-              match ast.loc with
-              | Some lc -> lc.line_nb, lc.bp, lc.ep
-              | None -> assert false
-      in
-      let str = String.sub (RawDocument.text raw) begin_char (end_char - begin_char) in
-      let sstr = Stream.of_string str in
-      let lex = CLexer.Lexer.tok_func sstr in
-      let tokens = stream_tok 0 [] lex begin_line begin_char in
-      begin
-        try
-          let entry = Synterp.synterp_control ast in
-          let classification = Vernac_classifier.classify_vernac ast in
-          let synterp_state = Vernacstate.Synterp.freeze () in
-          let sentence = { ast = { ast = entry; classification; tokens }; start = begin_char; stop; synterp_state } in
-          let parsed = sentence :: parsed in
-          parse_more synterp_state stream raw parsed errors
-        with exn ->
-          let e, info = Exninfo.capture exn in
-          let loc = Loc.get_loc @@ info in
-          handle_parse_error start (loc, Pp.string_of_ppcmds @@ CErrors.iprint_no_report (e,info))
-        end
-    | exception (Stream.Error msg as exn) ->
-      let loc = Loc.get_loc @@ Exninfo.info exn in
-      junk_sentence_end stream;
-      handle_parse_error start (loc,msg)
-    | exception (CLexer.Error.E e as exn) -> (* May be more problematic to handle for the diff *)
-      let loc = Loc.get_loc @@ Exninfo.info exn in
-      junk_sentence_end stream;
-      handle_parse_error start (loc,CLexer.Error.to_string e)
-  end *)
+  let text = RawDocument.text raw_doc in
+  let remaining_text = String.sub text start (String.length text - start) in
+  
+  (* Create lexing buffer from remaining text *)
+  let lexbuf = Lexing.from_string remaining_text in
+  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_cnum = start };
+  
+  try
+    (* Tokenize first to detect sentence boundaries *)
+    let tokens = EcLexer.main lexbuf in
+    match tokens with
+    | [] -> List.rev parsed, errors (* End of input *)
+    | _ ->
+      (* Try to parse a single sentence/global declaration *)
+      let lexbuf_parse = Lexing.from_string remaining_text in
+      lexbuf_parse.lex_curr_p <- { lexbuf_parse.lex_curr_p with pos_cnum = start };
+      
+      begin try
+        let prog = EcParser.prog EcLexer.main lexbuf_parse in
+        let stop = start + lexbuf_parse.lex_curr_p.pos_cnum in
+        
+        match EcLocation.unloc prog with
+        | EcParsetree.P_Prog (globals, terminate) ->
+          (* Process each global declaration as a separate sentence *)
+          let process_global (parsed, pos) global =
+            let ast = global in
+            let start_pos = pos in
+            (* TODO: Get actual position from global.gl_action location *)
+            let stop_pos = stop in (* For now, use the end position *)
+            
+            (* Classify based on the global action *)
+            let classification = 
+              classify_global global
+            in
+            
+            (* Extract tokens for this specific global *)
+            (* TODO: Extract tokens for just this global, not all *)
+            let global_tokens = tokens in
+            
+            let sentence = { 
+              ast = { ast; classification; tokens = global_tokens }; 
+              start = start_pos; 
+              stop = stop_pos; 
+              synterp_state 
+            } in
+            (sentence :: parsed, stop_pos)
+          in
+          
+          let parsed, _ = List.fold_left process_global (parsed, start) globals in
+          
+          if terminate then
+            (* End of file/input *)
+            List.rev parsed, errors
+          else
+            (* Continue parsing from the new position *)
+            let new_stream = Stream.of_string (String.sub text stop (String.length text - stop)) in
+            while Stream.count new_stream < (stop - start) do Stream.junk new_stream done;
+            parse_more synterp_state new_stream raw_doc parsed errors
+            
+        | EcParsetree.P_Exit ->
+          (* Exit command - stop parsing *)
+          List.rev parsed, errors
+          
+        | EcParsetree.P_Undo _ ->
+          (* Undo command - handle specially *)
+          (* TODO: Implement undo handling *)
+          List.rev parsed, errors
+        
+      with
+      | EcParser.Error ->
+        (* Parse error - try to recover by skipping to next sentence *)
+        handle_parse_error start (None, "Parse error")
+      | EcLexer.LexicalError(loc, msg) ->
+        (* Lexical error *)
+        handle_parse_error start (Some loc, msg)
+      end
+      
+  with
+  | EcLexer.LexicalError(loc, msg) ->
+    handle_parse_error start (Some loc, msg)
+  | exn ->
+    let msg = Printexc.to_string exn in
+    handle_parse_error start (None, msg)
 
-(* let parse_more synterp_state stream raw =
-  parse_more synterp_state stream raw [] [] *)
+let parse_more synterp_state stream raw_doc =
+  parse_more synterp_state stream raw_doc [] []
+
 
 let patch_sentence parsed scheduler_state_before id ({ ast; start; stop; synterp_state } : pre_sentence) =
   log @@ "Patching sentence " ^ Stateid.to_string id;
@@ -347,7 +464,7 @@ let validate_document ({ parsed_loc; raw_doc; } as document) =
   let stream = Stream.of_string text in
   while Stream.count stream < stop do Stream.junk stream done;
   log @@ Format.sprintf "Parsing more from pos %i" stop;
-  let new_sentences, errors = [], [] (* parse_more parsing_state stream raw_doc *) (* TODO invalidate first *) in
+  let new_sentences, errors = parse_more parsing_state stream raw_doc in
   log @@ Format.sprintf "%i new sentences" (List.length new_sentences);
   let invalid_ids, document = invalidate (stop+1) document new_sentences in
   let document = set_parse_errors document errors in
@@ -382,5 +499,9 @@ module Internal = struct
     (* (string_of_parsed_ast sentence.ast) *)
     sentence.start
     sentence.stop
+  
+  let parse_more = parse_more
+  let classify_token = classify_token
+  let classify_global = classify_global
 
 end
