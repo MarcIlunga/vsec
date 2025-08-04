@@ -188,6 +188,40 @@ let rec diff old_sentences new_sentences =
 
 let extract_string flag token = ""
 
+(** Classify a global declaration for scheduling *)
+let classify_global (global : EcParsetree.global) =
+  let open EcParsetree in
+  match global.gl_action.pl_desc with
+  (* Theory/module definitions *)
+  | Gtheory _ | Gmodule _ -> VtSideff
+  
+  (* Proof-related *)
+  | Glemma _ -> VtStartProof
+  | Gaxiom _ -> VtSideff
+  
+  (* Queries *)
+  | Gprint _ | Gsearch _ -> VtQuery
+  
+  (* Type/operator definitions *)
+  | Gtype _ | Goperator _ -> VtSideff
+  
+  (* Import/export *)
+  | Ginclude _ | Gexport _ -> VtSideff
+  
+  (* Proof tactics *)
+  | Gtactics _ -> VtProofStep
+  
+  (* Save/Qed *)
+  | Gsave save ->
+    begin match save.pl_desc with
+    | `Qed -> VtQed VtKeepOpaque
+    | `Admit -> VtQed VtDrop
+    | `Abort -> VtQuery (* Abort doesn't produce a theorem *)
+    end
+  
+  (* Default to query for unknown cases *)
+  | _ -> VtQuery
+
 let string_of_parsed_ast { tokens } = 
   (* TODO implement printer for vernac_entry *)
   "[" ^ String.concat "--" (List.map (extract_string false) tokens) ^ "]"

@@ -158,7 +158,58 @@ let purge_state = function
   | Error(e,_) -> Error (e,None)
 
 let execute (st : state) ((vs, events, interrupted) : Vernacstate.t * events * bool) (task : prepared_task)  =
-  (st, vs, events, true)
+  if interrupted then 
+    (st, vs, events, true)
+  else
+    match task with
+    | PSkip id ->
+      (* Skip execution - just mark as done *)
+      let st = update st id (Success vs) in
+      (st, vs, events, false)
+      
+    | PExec sentence ->
+      (* Execute an EasyCrypt sentence *)
+      begin try
+        (* Create a loader for requires/imports *)
+        let loader = EcCommands.Loader.create () in
+        (* Create located action from the AST *)
+        let action = EcLocation.mk_loc EcLocation.dummy sentence.ast in
+        (* Process the global declaration with EasyCrypt *)
+        let new_scope = EcCommands.process_internal loader vs action in
+        let st = update st sentence.id (Success new_scope) in
+        (st, new_scope, events, false)
+      with
+      | EcScope.HiError (loc, msg) ->
+        (* EasyCrypt error with location *)
+        let st = update st sentence.id (error (Some loc) msg vs) in
+        (st, vs, events, false)
+      | e ->
+        (* Other errors *)
+        let msg = Printexc.to_string e in
+        let st = update st sentence.id (error None msg vs) in
+        (st, vs, events, false)
+      end
+      
+    | PQuery sentence ->
+      (* Execute a query - doesn't change state *)
+      begin try
+        (* Create a loader for requires/imports *)
+        let loader = EcCommands.Loader.create () in
+        (* Create located action from the AST *)
+        let action = EcLocation.mk_loc EcLocation.dummy sentence.ast in
+        (* Process the query but don't update state *)
+        let _ = EcCommands.process_internal loader vs action in
+        let st = update st sentence.id (Success vs) in
+        (st, vs, events, false)
+      with
+      | EcScope.HiError (loc, msg) ->
+        let st = update st sentence.id (error (Some loc) msg vs) in
+        (st, vs, events, false)
+      | e ->
+        let msg = Printexc.to_string e in
+        let st = update st sentence.id (error None msg vs) in
+        (st, vs, events, false)
+      end
 
 let build_tasks_for sch st id =
   let rec build_tasks id tasks =
