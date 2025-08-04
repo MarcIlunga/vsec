@@ -93,5 +93,14 @@ val range_of_id : document -> Stateid.t -> Range.t
 module Internal : sig
 
   val string_of_sentence : sentence -> string
+  
+  (** For testing: parse more sentences from stream *)
+  val parse_more : EcScope.scope -> char Stream.t -> RawDocument.t -> pre_sentence list * parsing_error list
+  
+  (** For testing: classify tokens for syntax highlighting *)
+  val classify_token : EcParser.token -> [`Keyword | `Type | `Identifier | `Literal | `Operator | `Delimiter | `Other]
+  
+  (** For testing: classify global declarations *)
+  val classify_global : EcParsetree.global -> vernac_classification
 
 end
