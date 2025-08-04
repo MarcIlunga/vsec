@@ -198,32 +198,6 @@ let extract_string print_tok tok =
   | PRIM_REWRITE x -> x
   | _ -> ""
 
-(** Classify a global declaration for scheduling *)
-let classify_global (global : EcParsetree.global) =
-  let open EcParsetree in
-  match global.gl_action.pl_desc with
-  (* Theory/module definitions *)
-  | Gtheory _ | Gmodule _ -> VtSideff
-  
-  (* Proof-related *)
-  | Glemma _ -> VtStartProof
-  | Gaxiom _ -> VtSideff
-  
-  (* Queries *)
-  | Gprint _ | Gsearch _ -> VtQuery
-  
-  (* Type/operator definitions *)
-  | Gtype _ | Goperator _ -> VtSideff
-  
-  (* Import/export *)
-  | Ginclude _ | Gexport _ -> VtSideff
-  
-  (* Proof tactics would be VtProofStep but they appear inside proofs *)
-  (* QED would be VtQed but it's handled differently *)
-  
-  (* Default to query for unknown cases *)
-  | _ -> VtQuery
-
 (** Map EasyCrypt tokens to syntax highlighting categories *)
 let classify_token tok =
   let open EcParser in
@@ -258,6 +232,40 @@ let classify_token tok =
   
   (* Everything else *)
   | _ -> `Other
+
+(** Classify a global declaration for scheduling *)
+let classify_global (global : EcParsetree.global) =
+  let open EcParsetree in
+  match global.gl_action.pl_desc with
+  (* Theory/module definitions *)
+  | Gtheory _ | Gmodule _ -> VtSideff
+  
+  (* Proof-related *)
+  | Glemma _ -> VtStartProof
+  | Gaxiom _ -> VtSideff
+  
+  (* Queries *)
+  | Gprint _ | Gsearch _ -> VtQuery
+  
+  (* Type/operator definitions *)
+  | Gtype _ | Goperator _ -> VtSideff
+  
+  (* Import/export *)
+  | Ginclude _ | Gexport _ -> VtSideff
+  
+  (* Proof tactics *)
+  | Gtactics _ -> VtProofStep
+  
+  (* Save/Qed *)
+  | Gsave save ->
+    begin match save.pl_desc with
+    | `Qed -> VtQed VtKeepOpaque
+    | `Admit -> VtQed VtDrop
+    | `Abort -> VtQuery (* Abort doesn't produce a theorem *)
+    end
+  
+  (* Default to query for unknown cases *)
+  | _ -> VtQuery
 
 let string_of_parsed_ast { tokens } = 
   (* TODO implement printer for vernac_entry *)

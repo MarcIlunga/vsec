@@ -49,6 +49,10 @@ type prepared_task =
   | PExec of executable_sentence
   | PQuery of executable_sentence
 
+(* TODO: ProofJob module is a remnant from VSCoq's parallel proof processing.
+   EasyCrypt doesn't currently support delegating proofs to worker processes.
+   This module is kept for future compatibility when parallel proof checking
+   might be implemented for EasyCrypt. *)
 module ProofJob = struct
   type update_request =
     | UpdateExecStatus of sentence_id * execution_status
@@ -121,6 +125,7 @@ let handle_event event state =
   | LocalFeedback (id,fb) ->
       Some (handle_feedback id fb state), []
   | ProofEvent event -> 
+    (* TODO: Handle proof worker events when parallel proof processing is implemented *)
     Some state, []
 
 let find_fulfilled_opt x m =
@@ -158,7 +163,69 @@ let purge_state = function
   | Error(e,_) -> Error (e,None)
 
 let execute (st : state) ((vs, events, interrupted) : Vernacstate.t * events * bool) (task : prepared_task)  =
-  (st, vs, events, true)
+  if interrupted then 
+    (st, vs, events, true)
+  else
+    match task with
+    | PSkip id ->
+      (* Skip execution - just mark as done *)
+      let st = update st id (Success vs) in
+      (st, vs, events, false)
+      
+    | PExec sentence ->
+      (* Execute an EasyCrypt sentence *)
+      begin try
+        (* Create a fresh loader for each sentence execution.
+           This ensures clean state for requires/imports and prevents
+           cross-contamination between independent executions.
+           TODO: Consider caching loaders per document for efficiency. *)
+        let loader = EcCommands.Loader.create () in
+        (* Use the location from the AST if available, otherwise use dummy *)
+        let loc = sentence.ast.gl_action.pl_loc in
+        let action = EcLocation.mk_loc loc sentence.ast in
+        (* Process the global declaration with EasyCrypt *)
+        let new_scope = EcCommands.process_internal loader vs action in
+        let st = update st sentence.id (Success new_scope) in
+        (st, new_scope, events, false)
+      with
+      | EcScope.HiError (loc, msg) ->
+        (* EasyCrypt error with location *)
+        let st = update st sentence.id (error (Some loc) msg vs) in
+        (* TODO: Implement error recovery based on sentence.error_recovery strategy
+           - RSkip: Current behavior (mark as error, continue with old state)
+           - RAdmitted: Could try to admit the current proof and continue *)
+        (st, vs, events, false)
+      | e ->
+        (* Other errors *)
+        let msg = Printexc.to_string e in
+        let st = update st sentence.id (error None msg vs) in
+        (st, vs, events, false)
+      end
+      
+    | PQuery sentence ->
+      (* Execute a query - doesn't change state *)
+      begin try
+        (* Create a fresh loader for each sentence execution.
+           This ensures clean state for requires/imports and prevents
+           cross-contamination between independent executions.
+           TODO: Consider caching loaders per document for efficiency. *)
+        let loader = EcCommands.Loader.create () in
+        (* Use the location from the AST if available, otherwise use dummy *)
+        let loc = sentence.ast.gl_action.pl_loc in
+        let action = EcLocation.mk_loc loc sentence.ast in
+        (* Process the query but don't update state *)
+        let _ = EcCommands.process_internal loader vs action in
+        let st = update st sentence.id (Success vs) in
+        (st, vs, events, false)
+      with
+      | EcScope.HiError (loc, msg) ->
+        let st = update st sentence.id (error (Some loc) msg vs) in
+        (st, vs, events, false)
+      | e ->
+        let msg = Printexc.to_string e in
+        let st = update st sentence.id (error None msg vs) in
+        (st, vs, events, false)
+      end
 
 let build_tasks_for sch st id =
   let rec build_tasks id tasks =
