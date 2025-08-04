@@ -416,5 +416,7 @@ module Internal = struct
     (* (string_of_parsed_ast sentence.ast) *)
     sentence.start
     sentence.stop
+  
+  let classify_global = classify_global
 
 end

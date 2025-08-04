@@ -49,6 +49,8 @@ let%test_unit "execute_with_error" =
   let ast = 
     let open EcLib.EcParsetree in
     (* Create an invalid global that will cause an error *)
+    (* TODO: Verify this creates a valid error in EasyCrypt.
+       An empty lemma list might not be the best test case. *)
     { gl_action = EcLib.EcLocation.mk_loc EcLib.EcLocation.dummy 
         (Glemma []); (* Empty lemma list should cause error *)
       gl_debug = None } in
