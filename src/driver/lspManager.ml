@@ -366,6 +366,36 @@ let textDocumentCompletion ~id params =
       items = keyword_items @ tactic_items;
     }
 
+let textDocumentDefinition ~id params =
+  let Request.Client.DefinitionParams.{ textDocument; position } = params in
+  
+  try
+    (* Get document state *)
+    let st = Hashtbl.find states (Uri.path textDocument.uri) in
+    let doc = Dm.DocumentManager.Internal.document st in
+    
+    (* For now, implement a basic definition search by looking at the document content *)
+    (* This is a simplified implementation - in a full implementation we would:
+       1. Parse the AST to find the symbol at the position
+       2. Look up the symbol in the EasyCrypt scope/environment
+       3. Return the actual definition location *)
+    
+    (* Placeholder: return current position as definition location *)
+    let location = Request.Client.Location.{
+      uri = textDocument.uri;
+      range = {
+        start = position;
+        end_ = position;
+      };
+    } in
+    
+    Ok [location]
+    
+  with
+  | Not_found ->
+    (* Document not found - return empty list *)
+    Ok []
+
 let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,string) result * events =
   fun ~id req ->
   match req with
@@ -377,6 +407,8 @@ let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,
     textDocumentHover ~id params, []
   | Completion params ->
     textDocumentCompletion ~id params, []
+  | Definition params ->
+    textDocumentDefinition ~id params, []
   | UnknownRequest -> log "Received unknown request"; Ok(()), []
 
 let dispatch_ext_request : type a. id:int -> a Request.Client.params -> (a,string) result * events =

@@ -182,11 +182,36 @@ module Request = struct
       
     end
 
+    module DefinitionParams = struct
+
+      type t = {
+        textDocument : TextDocumentIdentifier.t;
+        position : Position.t;
+      } [@@deriving yojson] [@@yojson.allow_extra_fields]
+
+    end
+
+    module Location = struct
+
+      type t = {
+        uri : Uri.t;
+        range : Range.t;
+      } [@@deriving yojson]
+
+    end
+
+    module DefinitionResult = struct
+
+      type t = Location.t list [@@deriving yojson]
+
+    end
+
     type 'rsp params =
     | Initialize : InitializeParams.t -> InitializeResult.t params
     | Shutdown : unit params
     | Hover : HoverParams.t -> HoverResult.t option params
     | Completion : CompletionParams.t -> CompletionResult.t params
+    | Definition : DefinitionParams.t -> DefinitionResult.t params
     | UnknownRequest : unit params
 
     type t = Pack : int * _ params -> t
@@ -197,6 +222,7 @@ module Request = struct
       | "shutdown" -> Pack (id, Shutdown)
       | "textDocument/hover" -> Pack (id, Hover HoverParams.(t_of_yojson params))
       | "textDocument/completion" -> Pack (id, Completion CompletionParams.(t_of_yojson params))
+      | "textDocument/definition" -> Pack (id, Definition DefinitionParams.(t_of_yojson params))
       | _ -> Pack (id, UnknownRequest)
 
     let yojson_of_response : type a. a params -> a -> Yojson.Safe.t =
@@ -206,6 +232,7 @@ module Request = struct
         | Shutdown -> yojson_of_unit resp
         | Hover _ -> yojson_of_option HoverResult.yojson_of_t resp
         | Completion _ -> CompletionResult.yojson_of_t resp
+        | Definition _ -> DefinitionResult.yojson_of_t resp
         | UnknownRequest -> yojson_of_unit resp
 
     type 'b dispatch = {
