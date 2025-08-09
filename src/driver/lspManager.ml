@@ -281,8 +281,53 @@ let make_CompletionItem (label, typ, path) : CompletionItem.t =
     documentation = Some ("Path: " ^ path);
   } 
 
+let get_easycrypt_keywords () = [
+  "lemma"; "theorem"; "axiom"; "proof"; "qed"; "by"; "auto"; "smt";
+  "require"; "import"; "open"; "module"; "type"; "op"; "pred"; "theory";
+  "end"; "section"; "declare"; "as"; "export"; "local"; "clone";
+  "with"; "remove"; "rename"; "equiv"; "hoare"; "phoare"; "lossless";
+  "islossless"; "eager"; "while"; "if"; "then"; "else"; "return";
+  "var"; "proc"; "fun"; "let"; "in"; "match"; "case"; "def"
+]
+
+let get_easycrypt_tactics () = [
+  "trivial"; "reflexivity"; "symmetry"; "transitivity"; "assumption";
+  "exact"; "apply"; "rewrite"; "split"; "left"; "right"; "exists";
+  "generalize"; "clear"; "intro"; "intros"; "move"; "case"; "elim";
+  "induction"; "destruct"; "unfold"; "fold"; "simpl"; "compute";
+  "change"; "replace"; "assert"; "cut"; "have"; "suffices"; "wlog";
+  "progress"; "first"; "last"; "seq"; "wp"; "sp"; "skip"; "rnd";
+  "swap"; "cfold"; "rcondt"; "rcondf"; "inline"; "outline"; "sim"
+]
+
+let create_completion_item ~label ~detail =
+  LspData.CompletionItem.{
+    label;
+    detail = Some detail;
+    documentation = None;
+  }
+
 let textDocumentCompletion ~id params =
-  Ok Request.Client.CompletionResult.{isIncomplete = false; items = [];}, []
+  let Request.Client.CompletionParams.{ textDocument; position } = params in
+  
+  (* Get keywords and tactics *)
+  let keywords = get_easycrypt_keywords () in
+  let tactics = get_easycrypt_tactics () in
+  
+  let keyword_items = List.map (fun kw -> 
+    create_completion_item ~label:kw ~detail:"EasyCrypt keyword"
+  ) keywords in
+  
+  let tactic_items = List.map (fun tactic -> 
+    create_completion_item ~label:tactic ~detail:"EasyCrypt tactic"
+  ) tactics in
+  
+  let all_items = keyword_items @ tactic_items in
+  
+  Ok Request.Client.CompletionResult.{
+    isIncomplete = false; 
+    items = all_items;
+  }
 
 let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,string) result * events =
   fun ~id req ->
@@ -293,12 +338,20 @@ let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,
     do_shutdown ~id ()
   | Hover params ->
     textDocumentHover ~id params, []
+  | Completion params ->
+    textDocumentCompletion ~id params, []
   | UnknownRequest -> log "Received unknown request"; Ok(()), []
 
 let dispatch_ext_request : type a. id:int -> a Request.Client.params -> (a,string) result * events =
   fun ~id req ->
   match req with
   | DocumentState params -> sendDocumentState ~id params
+  | Reset _ -> Ok (), []
+  | About _ -> Ok "VsEc - EasyCrypt Language Server", []
+  | Check _ -> Ok "Not implemented", []
+  | Locate _ -> Ok "Not implemented", []
+  | Print _ -> Ok "Not implemented", []
+  | Search _ -> Ok (), []
 
 let dispatch_notification = 
   let open Protocol.Notification.Client in function 
