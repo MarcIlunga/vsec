@@ -1,0 +1,99 @@
+lib: [
+  "_build/install/default/lib/ec-language-server/META"
+  "_build/install/default/lib/ec-language-server/dm/dm.a" {"dm/dm.a"}
+  "_build/install/default/lib/ec-language-server/dm/dm.cma" {"dm/dm.cma"}
+  "_build/install/default/lib/ec-language-server/dm/dm.cmi" {"dm/dm.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm.cmt" {"dm/dm.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm.cmx" {"dm/dm.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/dm.cmxa" {"dm/dm.cmxa"}
+  "_build/install/default/lib/ec-language-server/dm/dm.ml" {"dm/dm.ml"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Document.cmi" {"dm/dm__Document.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Document.cmt" {"dm/dm__Document.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Document.cmti" {"dm/dm__Document.cmti"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Document.cmx" {"dm/dm__Document.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/dm__DocumentManager.cmi" {"dm/dm__DocumentManager.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm__DocumentManager.cmt" {"dm/dm__DocumentManager.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm__DocumentManager.cmti" {"dm/dm__DocumentManager.cmti"}
+  "_build/install/default/lib/ec-language-server/dm/dm__DocumentManager.cmx" {"dm/dm__DocumentManager.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/dm__ExecutionManager.cmi" {"dm/dm__ExecutionManager.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm__ExecutionManager.cmt" {"dm/dm__ExecutionManager.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm__ExecutionManager.cmti" {"dm/dm__ExecutionManager.cmti"}
+  "_build/install/default/lib/ec-language-server/dm/dm__ExecutionManager.cmx" {"dm/dm__ExecutionManager.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Log.cmi" {"dm/dm__Log.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Log.cmt" {"dm/dm__Log.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Log.cmti" {"dm/dm__Log.cmti"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Log.cmx" {"dm/dm__Log.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/dm__PriorityManager.cmi" {"dm/dm__PriorityManager.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm__PriorityManager.cmt" {"dm/dm__PriorityManager.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm__PriorityManager.cmx" {"dm/dm__PriorityManager.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/dm__RawDocument.cmi" {"dm/dm__RawDocument.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm__RawDocument.cmt" {"dm/dm__RawDocument.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm__RawDocument.cmti" {"dm/dm__RawDocument.cmti"}
+  "_build/install/default/lib/ec-language-server/dm/dm__RawDocument.cmx" {"dm/dm__RawDocument.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Scheduler.cmi" {"dm/dm__Scheduler.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Scheduler.cmt" {"dm/dm__Scheduler.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Scheduler.cmti" {"dm/dm__Scheduler.cmti"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Scheduler.cmx" {"dm/dm__Scheduler.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Types.cmi" {"dm/dm__Types.cmi"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Types.cmt" {"dm/dm__Types.cmt"}
+  "_build/install/default/lib/ec-language-server/dm/dm__Types.cmx" {"dm/dm__Types.cmx"}
+  "_build/install/default/lib/ec-language-server/dm/document.ml" {"dm/document.ml"}
+  "_build/install/default/lib/ec-language-server/dm/document.mli" {"dm/document.mli"}
+  "_build/install/default/lib/ec-language-server/dm/documentManager.ml" {"dm/documentManager.ml"}
+  "_build/install/default/lib/ec-language-server/dm/documentManager.mli" {"dm/documentManager.mli"}
+  "_build/install/default/lib/ec-language-server/dm/executionManager.ml" {"dm/executionManager.ml"}
+  "_build/install/default/lib/ec-language-server/dm/executionManager.mli" {"dm/executionManager.mli"}
+  "_build/install/default/lib/ec-language-server/dm/log.ml" {"dm/log.ml"}
+  "_build/install/default/lib/ec-language-server/dm/log.mli" {"dm/log.mli"}
+  "_build/install/default/lib/ec-language-server/dm/priorityManager.ml" {"dm/priorityManager.ml"}
+  "_build/install/default/lib/ec-language-server/dm/rawDocument.ml" {"dm/rawDocument.ml"}
+  "_build/install/default/lib/ec-language-server/dm/rawDocument.mli" {"dm/rawDocument.mli"}
+  "_build/install/default/lib/ec-language-server/dm/scheduler.ml" {"dm/scheduler.ml"}
+  "_build/install/default/lib/ec-language-server/dm/scheduler.mli" {"dm/scheduler.mli"}
+  "_build/install/default/lib/ec-language-server/dm/types.ml" {"dm/types.ml"}
+  "_build/install/default/lib/ec-language-server/dune-package"
+  "_build/install/default/lib/ec-language-server/lsp/extProtocol.ml" {"lsp/extProtocol.ml"}
+  "_build/install/default/lib/ec-language-server/lsp/jsonRpc.ml" {"lsp/jsonRpc.ml"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp.a" {"lsp/lsp.a"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp.cma" {"lsp/lsp.cma"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp.cmi" {"lsp/lsp.cmi"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp.cmt" {"lsp/lsp.cmt"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp.cmx" {"lsp/lsp.cmx"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp.cmxa" {"lsp/lsp.cmxa"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp.ml" {"lsp/lsp.ml"}
+  "_build/install/default/lib/ec-language-server/lsp/lspData.ml" {"lsp/lspData.ml"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__ExtProtocol.cmi" {"lsp/lsp__ExtProtocol.cmi"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__ExtProtocol.cmt" {"lsp/lsp__ExtProtocol.cmt"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__ExtProtocol.cmx" {"lsp/lsp__ExtProtocol.cmx"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__JsonRpc.cmi" {"lsp/lsp__JsonRpc.cmi"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__JsonRpc.cmt" {"lsp/lsp__JsonRpc.cmt"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__JsonRpc.cmx" {"lsp/lsp__JsonRpc.cmx"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__LspData.cmi" {"lsp/lsp__LspData.cmi"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__LspData.cmt" {"lsp/lsp__LspData.cmt"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__LspData.cmx" {"lsp/lsp__LspData.cmx"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__Protocol.cmi" {"lsp/lsp__Protocol.cmi"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__Protocol.cmt" {"lsp/lsp__Protocol.cmt"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp__Protocol.cmx" {"lsp/lsp__Protocol.cmx"}
+  "_build/install/default/lib/ec-language-server/lsp/protocol.ml" {"lsp/protocol.ml"}
+  "_build/install/default/lib/ec-language-server/opam"
+  "_build/install/default/lib/ec-language-server/sel/sel.a" {"sel/sel.a"}
+  "_build/install/default/lib/ec-language-server/sel/sel.cma" {"sel/sel.cma"}
+  "_build/install/default/lib/ec-language-server/sel/sel.cmi" {"sel/sel.cmi"}
+  "_build/install/default/lib/ec-language-server/sel/sel.cmt" {"sel/sel.cmt"}
+  "_build/install/default/lib/ec-language-server/sel/sel.cmti" {"sel/sel.cmti"}
+  "_build/install/default/lib/ec-language-server/sel/sel.cmx" {"sel/sel.cmx"}
+  "_build/install/default/lib/ec-language-server/sel/sel.cmxa" {"sel/sel.cmxa"}
+  "_build/install/default/lib/ec-language-server/sel/sel.ml" {"sel/sel.ml"}
+  "_build/install/default/lib/ec-language-server/sel/sel.mli" {"sel/sel.mli"}
+]
+libexec: [
+  "_build/install/default/lib/ec-language-server/dm/dm.cmxs" {"dm/dm.cmxs"}
+  "_build/install/default/lib/ec-language-server/lsp/lsp.cmxs" {"lsp/lsp.cmxs"}
+  "_build/install/default/lib/ec-language-server/sel/sel.cmxs" {"sel/sel.cmxs"}
+]
+bin: [
+  "_build/install/default/bin/ecLsp"
+]
+doc: [
+  "_build/install/default/doc/ec-language-server/README.md"
+]

@@ -1,0 +1,106 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Open in Emacs (Terminal Tab)",
+            "type": "shell",
+            "command": "/home/marcilunga/.local/bin/easycrypt-emacs",
+            "args": ["${file}"],
+            "presentation": {
+                "echo": false,
+                "reveal": "always",
+                "focus": true,
+                "panel": "new",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "instanceLimit": 10
+            }
+        },
+        {
+            "label": "Open in Emacs (Split Terminal)",
+            "type": "shell",
+            "command": "/home/marcilunga/.local/bin/easycrypt-emacs",
+            "args": ["${file}"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": false,
+                "clear": false,
+                "group": "easycrypt"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Open in Emacs (Right Side)",
+            "dependsOrder": "sequence", 
+            "dependsOn": ["Move Terminal Right"],
+            "type": "shell",
+            "command": "/home/marcilunga/.local/bin/easycrypt-emacs",
+            "args": ["${file}"],
+            "presentation": {
+                "echo": false,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": false,
+                "clear": true,
+                "group": "easycrypt-right"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Move Terminal Right",
+            "command": "${command:workbench.action.positionPanelRight}",
+            "problemMatcher": []
+        },
+        {
+            "label": "Open in Emacs at Current Line",
+            "type": "shell",
+            "command": "/home/marcilunga/.local/bin/easycrypt-emacs-sync",
+            "args": ["${file}", "${lineNumber}"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": false,
+                "clear": false,
+                "group": "easycrypt"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Emacs Server",
+            "type": "shell",
+            "command": "bash",
+            "args": ["-c", "eval $(opam env) && export PATH=$HOME/.local/bin:$PATH && emacs --daemon"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Open in Emacs Client",
+            "type": "shell",
+            "command": "bash",
+            "args": ["-c", "eval $(opam env) && export PATH=$HOME/.local/bin:$PATH && emacsclient -nw ${file}"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": false,
+                "group": "easycrypt"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,0 +1,221 @@
+(lang dune 3.19)
+(name ec-language-server)
+(sections
+ (lib .)
+ (libexec .)
+ (bin ../../bin)
+ (doc ../../doc/ec-language-server))
+(files
+ (lib
+  (META
+   dm/dm.a
+   dm/dm.cma
+   dm/dm.cmi
+   dm/dm.cmt
+   dm/dm.cmx
+   dm/dm.cmxa
+   dm/dm.ml
+   dm/dm__Document.cmi
+   dm/dm__Document.cmt
+   dm/dm__Document.cmti
+   dm/dm__Document.cmx
+   dm/dm__DocumentManager.cmi
+   dm/dm__DocumentManager.cmt
+   dm/dm__DocumentManager.cmti
+   dm/dm__DocumentManager.cmx
+   dm/dm__ExecutionManager.cmi
+   dm/dm__ExecutionManager.cmt
+   dm/dm__ExecutionManager.cmti
+   dm/dm__ExecutionManager.cmx
+   dm/dm__Log.cmi
+   dm/dm__Log.cmt
+   dm/dm__Log.cmti
+   dm/dm__Log.cmx
+   dm/dm__PriorityManager.cmi
+   dm/dm__PriorityManager.cmt
+   dm/dm__PriorityManager.cmx
+   dm/dm__RawDocument.cmi
+   dm/dm__RawDocument.cmt
+   dm/dm__RawDocument.cmti
+   dm/dm__RawDocument.cmx
+   dm/dm__Scheduler.cmi
+   dm/dm__Scheduler.cmt
+   dm/dm__Scheduler.cmti
+   dm/dm__Scheduler.cmx
+   dm/dm__Types.cmi
+   dm/dm__Types.cmt
+   dm/dm__Types.cmx
+   dm/document.ml
+   dm/document.mli
+   dm/documentManager.ml
+   dm/documentManager.mli
+   dm/executionManager.ml
+   dm/executionManager.mli
+   dm/log.ml
+   dm/log.mli
+   dm/priorityManager.ml
+   dm/rawDocument.ml
+   dm/rawDocument.mli
+   dm/scheduler.ml
+   dm/scheduler.mli
+   dm/types.ml
+   dune-package
+   lsp/extProtocol.ml
+   lsp/jsonRpc.ml
+   lsp/lsp.a
+   lsp/lsp.cma
+   lsp/lsp.cmi
+   lsp/lsp.cmt
+   lsp/lsp.cmx
+   lsp/lsp.cmxa
+   lsp/lsp.ml
+   lsp/lspData.ml
+   lsp/lsp__ExtProtocol.cmi
+   lsp/lsp__ExtProtocol.cmt
+   lsp/lsp__ExtProtocol.cmx
+   lsp/lsp__JsonRpc.cmi
+   lsp/lsp__JsonRpc.cmt
+   lsp/lsp__JsonRpc.cmx
+   lsp/lsp__LspData.cmi
+   lsp/lsp__LspData.cmt
+   lsp/lsp__LspData.cmx
+   lsp/lsp__Protocol.cmi
+   lsp/lsp__Protocol.cmt
+   lsp/lsp__Protocol.cmx
+   lsp/protocol.ml
+   opam
+   sel/sel.a
+   sel/sel.cma
+   sel/sel.cmi
+   sel/sel.cmt
+   sel/sel.cmti
+   sel/sel.cmx
+   sel/sel.cmxa
+   sel/sel.ml
+   sel/sel.mli))
+ (libexec (dm/dm.cmxs lsp/lsp.cmxs sel/sel.cmxs))
+ (bin (ecLsp))
+ (doc (README.md)))
+(library
+ (name ec-language-server.dm)
+ (kind normal)
+ (archives (byte dm/dm.cma) (native dm/dm.cmxa))
+ (plugins (byte dm/dm.cma) (native dm/dm.cmxs))
+ (native_archives dm/dm.a)
+ (requires base ec-language-server.sel ec-language-server.lsp easycrypt.ecLib)
+ (main_module_name Dm)
+ (modes byte native)
+ (modules
+  (wrapped
+   (group
+    (alias
+     (obj_name dm)
+     (visibility public)
+     (kind alias)
+     (source (path Dm) (impl (path dm/dm.ml-gen))))
+    (name Dm)
+    (modules
+     (module
+      (obj_name dm__Document)
+      (visibility public)
+      (source
+       (path Document)
+       (intf (path dm/document.mli))
+       (impl (path dm/document.ml))))
+     (module
+      (obj_name dm__DocumentManager)
+      (visibility public)
+      (source
+       (path DocumentManager)
+       (intf (path dm/documentManager.mli))
+       (impl (path dm/documentManager.ml))))
+     (module
+      (obj_name dm__ExecutionManager)
+      (visibility public)
+      (source
+       (path ExecutionManager)
+       (intf (path dm/executionManager.mli))
+       (impl (path dm/executionManager.ml))))
+     (module
+      (obj_name dm__Log)
+      (visibility public)
+      (source (path Log) (intf (path dm/log.mli)) (impl (path dm/log.ml))))
+     (module
+      (obj_name dm__PriorityManager)
+      (visibility public)
+      (source (path PriorityManager) (impl (path dm/priorityManager.ml))))
+     (module
+      (obj_name dm__RawDocument)
+      (visibility public)
+      (source
+       (path RawDocument)
+       (intf (path dm/rawDocument.mli))
+       (impl (path dm/rawDocument.ml))))
+     (module
+      (obj_name dm__Scheduler)
+      (visibility public)
+      (source
+       (path Scheduler)
+       (intf (path dm/scheduler.mli))
+       (impl (path dm/scheduler.ml))))
+     (module
+      (obj_name dm__Types)
+      (visibility public)
+      (source (path Types) (impl (path dm/types.ml))))))
+   (wrapped true))))
+(library
+ (name ec-language-server.lsp)
+ (kind normal)
+ (archives (byte lsp/lsp.cma) (native lsp/lsp.cmxa))
+ (plugins (byte lsp/lsp.cma) (native lsp/lsp.cmxs))
+ (native_archives lsp/lsp.a)
+ (requires
+  sexplib
+  yojson
+  uri
+  ppx_yojson_conv_lib
+  ppx_sexp_conv.runtime-lib
+  sexplib0)
+ (main_module_name Lsp)
+ (modes byte native)
+ (modules
+  (wrapped
+   (group
+    (alias
+     (obj_name lsp)
+     (visibility public)
+     (kind alias)
+     (source (path Lsp) (impl (path lsp/lsp.ml-gen))))
+    (name Lsp)
+    (modules
+     (module
+      (obj_name lsp__ExtProtocol)
+      (visibility public)
+      (source (path ExtProtocol) (impl (path lsp/extProtocol.ml))))
+     (module
+      (obj_name lsp__JsonRpc)
+      (visibility public)
+      (source (path JsonRpc) (impl (path lsp/jsonRpc.ml))))
+     (module
+      (obj_name lsp__LspData)
+      (visibility public)
+      (source (path LspData) (impl (path lsp/lspData.ml))))
+     (module
+      (obj_name lsp__Protocol)
+      (visibility public)
+      (source (path Protocol) (impl (path lsp/protocol.ml))))))
+   (wrapped true))))
+(library
+ (name ec-language-server.sel)
+ (kind normal)
+ (archives (byte sel/sel.cma) (native sel/sel.cmxa))
+ (plugins (byte sel/sel.cma) (native sel/sel.cmxs))
+ (native_archives sel/sel.a)
+ (requires unix ppx_deriving.runtime)
+ (main_module_name Sel)
+ (modes byte native)
+ (modules
+  (singleton
+   (obj_name sel)
+   (visibility public)
+   (source (path Sel) (intf (path sel/sel.mli)) (impl (path sel/sel.ml))))))

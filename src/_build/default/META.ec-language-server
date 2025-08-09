@@ -1,0 +1,29 @@
+package "dm" (
+  directory = "dm"
+  description = ""
+  requires =
+  "base easycrypt.ecLib ec-language-server.lsp ec-language-server.sel"
+  archive(byte) = "dm.cma"
+  archive(native) = "dm.cmxa"
+  plugin(byte) = "dm.cma"
+  plugin(native) = "dm.cmxs"
+)
+package "lsp" (
+  directory = "lsp"
+  description = ""
+  requires =
+  "ppx_sexp_conv.runtime-lib ppx_yojson_conv_lib sexplib sexplib0 uri yojson"
+  archive(byte) = "lsp.cma"
+  archive(native) = "lsp.cmxa"
+  plugin(byte) = "lsp.cma"
+  plugin(native) = "lsp.cmxs"
+)
+package "sel" (
+  directory = "sel"
+  description = ""
+  requires = "ppx_deriving.runtime unix"
+  archive(byte) = "sel.cma"
+  archive(native) = "sel.cmxa"
+  plugin(byte) = "sel.cma"
+  plugin(native) = "sel.cmxs"
+)

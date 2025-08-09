@@ -169,7 +169,7 @@ let execute (st : state) ((vs, events, interrupted) : Vernacstate.t * events * b
     match task with
     | PSkip id ->
       (* Skip execution - just mark as done *)
-      let st = update st id (Success vs) in
+      let st = update st id (Success (Some vs)) in
       (st, vs, events, false)
       
     | PExec sentence ->
@@ -179,18 +179,18 @@ let execute (st : state) ((vs, events, interrupted) : Vernacstate.t * events * b
            This ensures clean state for requires/imports and prevents
            cross-contamination between independent executions.
            TODO: Consider caching loaders per document for efficiency. *)
-        let loader = EcCommands.Loader.create () in
+        let loader = EcCommands.loader in
         (* Use the location from the AST if available, otherwise use dummy *)
-        let loc = sentence.ast.gl_action.pl_loc in
-        let action = EcLocation.mk_loc loc sentence.ast in
         (* Process the global declaration with EasyCrypt *)
-        let new_scope = EcCommands.process_internal loader vs action in
-        let st = update st sentence.id (Success new_scope) in
+        let new_scope = EcCommands.process_internal loader vs sentence.ast.gl_action in
+        let st = update st sentence.id (Success (Some new_scope)) in
         (st, new_scope, events, false)
       with
-      | EcScope.HiError (loc, msg) ->
+      | EcScope.HiScopeError (loc, msg) ->
         (* EasyCrypt error with location *)
-        let st = update st sentence.id (error (Some loc) msg vs) in
+        let st = match loc with
+          | Some l -> update st sentence.id (error l msg vs)
+          | None -> update st sentence.id (error (EcLocation._dummy) msg vs) in
         (* TODO: Implement error recovery based on sentence.error_recovery strategy
            - RSkip: Current behavior (mark as error, continue with old state)
            - RAdmitted: Could try to admit the current proof and continue *)
@@ -198,7 +198,7 @@ let execute (st : state) ((vs, events, interrupted) : Vernacstate.t * events * b
       | e ->
         (* Other errors *)
         let msg = Printexc.to_string e in
-        let st = update st sentence.id (error None msg vs) in
+        let st = update st sentence.id (error (EcLocation._dummy) msg vs) in
         (st, vs, events, false)
       end
       
@@ -209,21 +209,21 @@ let execute (st : state) ((vs, events, interrupted) : Vernacstate.t * events * b
            This ensures clean state for requires/imports and prevents
            cross-contamination between independent executions.
            TODO: Consider caching loaders per document for efficiency. *)
-        let loader = EcCommands.Loader.create () in
+        let loader = EcCommands.loader in
         (* Use the location from the AST if available, otherwise use dummy *)
-        let loc = sentence.ast.gl_action.pl_loc in
-        let action = EcLocation.mk_loc loc sentence.ast in
         (* Process the query but don't update state *)
-        let _ = EcCommands.process_internal loader vs action in
-        let st = update st sentence.id (Success vs) in
+        let _ = EcCommands.process_internal loader vs sentence.ast.gl_action in
+        let st = update st sentence.id (Success (Some vs)) in
         (st, vs, events, false)
       with
-      | EcScope.HiError (loc, msg) ->
-        let st = update st sentence.id (error (Some loc) msg vs) in
+      | EcScope.HiScopeError (loc, msg) ->
+        let st = match loc with
+          | Some l -> update st sentence.id (error l msg vs)
+          | None -> update st sentence.id (error (EcLocation._dummy) msg vs) in
         (st, vs, events, false)
       | e ->
         let msg = Printexc.to_string e in
-        let st = update st sentence.id (error None msg vs) in
+        let st = update st sentence.id (error (EcLocation._dummy) msg vs) in
         (st, vs, events, false)
       end
 

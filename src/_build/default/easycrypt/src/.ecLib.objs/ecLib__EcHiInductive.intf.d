@@ -1,0 +1,1 @@
+easycrypt/src/ecHiInductive.mli: EcDecl EcEnv EcIdent EcInductive EcLocation EcParsetree EcSymbols EcTypes EcTyping EcUnify

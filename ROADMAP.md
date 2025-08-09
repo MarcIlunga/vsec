@@ -19,7 +19,6 @@ This roadmap outlines the implementation plan for VsEc (EasyCrypt Language Serve
 - **State Management**: Uses EcScope but lacks full integration
 
 ### ❌ Not Implemented
-- **EasyCrypt Parser**: Stubbed at `src/dm/document.ml:350`
 - **Code Completion**: Empty implementation at `src/driver/lspManager.ml:285`
 - **Go to Definition**: No implementation
 - **Find References**: No implementation
@@ -30,50 +29,58 @@ This roadmap outlines the implementation plan for VsEc (EasyCrypt Language Serve
 
 ### Phase 1: Foundation (Critical Prerequisites)
 
-#### 1.1 Initialize EasyCrypt Submodule 🔴
+#### 1.1 Initialize EasyCrypt Submodule ✅
 **Priority**: P0 - Blocker
 **Dependencies**: None
 **Location**: `src/easycrypt/`
-**Tasks**:
-- Initialize git submodule: `git submodule update --init --recursive`
-- Verify EasyCrypt library builds correctly
-- Update dune files to properly link EasyCrypt libraries
-- Document available EasyCrypt modules and APIs
+**Status**: COMPLETED
+- ✅ Initialize git submodule: `git submodule update --init --recursive`
+- ✅ Verify EasyCrypt library builds correctly
+- ✅ Update dune files to properly link EasyCrypt libraries
+- ✅ Document available EasyCrypt modules and APIs
 
-#### 1.2 EasyCrypt Parser Integration 🔴
+#### 1.2 EasyCrypt Parser Integration ✅
 **Priority**: P0 - Blocker
 **Dependencies**: 1.1
 **Location**: `src/dm/document.ml:350`
-**Tasks**:
-- Implement `parse_more` function using `EcParser`
-- Create `parsed_ast` structures from EasyCrypt AST
-- Handle parse errors with proper locations
-- Map EasyCrypt tokens to syntax highlighting categories
-- Implement sentence boundary detection
+**Status**: COMPLETED
+- ✅ Implement `parse_more` function using `EcParser`
+- ✅ Create `parsed_ast` structures from EasyCrypt AST
+- ✅ Handle parse errors with proper locations
+- ✅ Map EasyCrypt tokens to syntax highlighting categories
+- ✅ Implement sentence boundary detection
 
 ### Phase 2: Core Functionality
 
-#### 2.1 Execution Engine Integration 🔴
+#### 2.1 Execution Engine Integration ✅
 **Priority**: P1 - Critical
 **Dependencies**: 1.1, 1.2
 **Location**: `src/dm/executionManager.ml`
-**Tasks**:
-- Replace Coq execution with EasyCrypt execution
-- Implement `execute_sentence` for EasyCrypt
-- Handle proof state management
-- Integrate error feedback
-- Support tactic execution
+**Status**: COMPLETED (merged from origin)
+- ✅ Replace Coq execution with EasyCrypt execution
+- ✅ Implement `execute_sentence` for EasyCrypt
+- ✅ Handle proof state management
+- ✅ Integrate error feedback
+- ✅ Support tactic execution
 
-#### 2.2 Error Diagnostics 🔴
+#### 2.2 Error Diagnostics 🚧
 **Priority**: P1 - Critical
 **Dependencies**: 1.2, 2.1
 **Location**: `src/dm/documentManager.ml`
-**Tasks**:
-- Convert EasyCrypt errors to LSP diagnostics
-- Map error locations correctly
-- Implement severity levels
-- Handle parse, type, and execution errors
-- Support warning messages
+**Status**: IN PROGRESS - Test Suite Fixes
+**Subtasks**:
+- ✅ Convert EasyCrypt errors to LSP diagnostics (basic implementation exists)
+- ✅ Map error locations correctly
+- ✅ Implement severity levels
+- 🚧 Fix test compilation errors:
+  - ✅ Fix token constructor mismatches (IDENT→LIDENT, etc.)
+  - ✅ Fix type mismatches (execution_status Option types)
+  - ✅ Fix module access issues (EcCommands.loader)
+  - ✅ Fix test-specific imports and types
+  - ⬜ Fix remaining test failures
+  - ⬜ Ensure all tests pass
+- ⬜ Add comprehensive error diagnostic tests
+- ⬜ Verify error handling in real EasyCrypt files
 
 ### Phase 3: Productivity Features
 

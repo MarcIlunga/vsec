@@ -90,6 +90,13 @@ val schedule : document -> Scheduler.schedule
 
 val range_of_id : document -> Stateid.t -> Range.t
 
+type pre_sentence = {
+  start : int;
+  stop : int;
+  synterp_state : EcLib.EcScope.scope;
+  ast : parsed_ast;
+}
+
 module Internal : sig
 
   val string_of_sentence : sentence -> string

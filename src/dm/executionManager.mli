@@ -20,12 +20,13 @@ open Lsp.LspData
 
 (** Execution state, includes the cache *)
 type state
+module ProofJob : sig
+  type t
+end
+
 type event =
   | LocalFeedback of sentence_id * (Severity.t * EcLocation.t option * string)
   | ProofEvent of ProofJob.t
-and ProofJob : sig
-  type t
-end
 type events = event Sel.event list
 (* val pr_event : event -> Pp.t *)
 
@@ -56,8 +57,9 @@ type prepared_task =
 val build_tasks_for : Scheduler.schedule -> state -> sentence_id -> Vernacstate.t * prepared_task list
 val execute : state -> Vernacstate.t * events * bool -> prepared_task -> (state * Vernacstate.t * events * bool)
 
-(** For testing *)
-val update : state -> sentence_id -> execution_status -> state
-and execution_status =
+type execution_status =
   | Success of Vernacstate.t option
   | Error of string EcLocation.located * Vernacstate.t option
+
+(** For testing *)
+val update : state -> sentence_id -> execution_status -> state

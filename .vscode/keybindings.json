@@ -1,0 +1,20 @@
+[
+    {
+        "key": "ctrl+e ctrl+e",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Open in Emacs (Terminal)",
+        "when": "resourceExtname == .ec"
+    },
+    {
+        "key": "ctrl+e ctrl+s",
+        "command": "workbench.action.tasks.runTask", 
+        "args": "Open in Emacs (Split Terminal)",
+        "when": "resourceExtname == .ec"
+    },
+    {
+        "key": "ctrl+e ctrl+l",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Open in Emacs at Current Line",
+        "when": "resourceExtname == .ec && editorTextFocus"
+    }
+]

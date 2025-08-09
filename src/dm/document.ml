@@ -190,12 +190,10 @@ let extract_string print_tok tok =
   let open EcParser in
   match tok with 
   | STRING s -> "\"" ^ s ^ "\""
-  | IDENT s -> s
   | TIDENT s -> s 
-  | INT s -> if print_tok then "INT " ^ EcBigInt.to_string s else EcBigInt.to_string s
-  | NOP x | NUMID x -> x
+  | UINT s -> if print_tok then "UINT " ^ EcBigInt.to_string s else EcBigInt.to_string s
+  | NOP x -> x
   | UIDENT x | LIDENT x -> x
-  | PRIM_REWRITE x -> x
   | _ -> ""
 
 (** Map EasyCrypt tokens to syntax highlighting categories *)
@@ -203,32 +201,32 @@ let classify_token tok =
   let open EcParser in
   match tok with
   (* Keywords *)
-  | ADMIT | AXIOM | CLONE | CONST | DECLARE | ELSE | ELSIF | END 
-  | EXISTS | EXPORT | FORALL | FUN | GLOB | IF | IMPORT | INCLUDE 
+  | ADMIT | AXIOM | CLONE | CONST | DECLARE | ELSE | ELIF | END 
+  | EXIST | EXPORT | FORALL | FUN | GLOB | IF | IMPORT | INCLUDE 
   | LEMMA | LET | LOCAL | MODULE | OP | PRED | PRINT | PROC | PROOF 
-  | PROVER | QED | REALIZE | RECORD | REQUIRE | SAVE | SECTION 
+  | PROVER | QED | REALIZE | REQUIRE | SECTION 
   | THEN | THEORY | TYPE | VAR | WHILE -> `Keyword
   
   (* Types *)
   | TIDENT _ -> `Type
   
   (* Identifiers *)
-  | LIDENT _ | UIDENT _ | IDENT _ -> `Identifier
+  | LIDENT _ | UIDENT _ | MIDENT _ -> `Identifier
   
   (* Literals *)
-  | INT _ | STRING _ -> `Literal
+  | UINT _ | STRING _ -> `Literal
   
   (* Operators *)
   | PLUS | MINUS | STAR | SLASH | AT | BACKSLASH | DOT 
   | EQ | LT | GT | LE | GE | NE | AND | ANDA | OR | ORA 
-  | NOT | IMPL | IFF | LRARROW -> `Operator
+  | NOT | IMPL | IFF | LARROW | RARROW -> `Operator
   
   (* Comments - if we had them in tokens *)
   (* | COMMENT _ -> `Comment *)
   
   (* Delimiters *)
   | LPAREN | RPAREN | LBRACKET | RBRACKET | LBRACE | RBRACE 
-  | COMMA | SEMICOLON | COLON | COLONCOLON -> `Delimiter
+  | COMMA | SEMICOLON | COLON -> `Delimiter
   
   (* Everything else *)
   | _ -> `Other
@@ -237,21 +235,20 @@ let classify_token tok =
 let classify_global (global : EcParsetree.global) =
   let open EcParsetree in
   match global.gl_action.pl_desc with
-  (* Theory/module definitions *)
-  | Gtheory _ | Gmodule _ -> VtSideff
+  (* Module definitions *)
+  | Gmodule _ | Ginterface _ -> VtSideff
   
-  (* Proof-related *)
-  | Glemma _ -> VtStartProof
-  | Gaxiom _ -> VtSideff
+  (* Axioms and type declarations *)
+  | Gaxiom _ | Gtype _ | Goperator _ -> VtSideff
   
   (* Queries *)
   | Gprint _ | Gsearch _ -> VtQuery
   
-  (* Type/operator definitions *)
-  | Gtype _ | Goperator _ -> VtSideff
+  (* Operator and procedure definitions *)
+  | Goperator _ | Gprocop _ | Gpredicate _ -> VtSideff
   
-  (* Import/export *)
-  | Ginclude _ | Gexport _ -> VtSideff
+  (* Theory management *)
+  | GthOpen _ | GthClose _ -> VtSideff
   
   (* Proof tactics *)
   | Gtactics _ -> VtProofStep
@@ -259,7 +256,7 @@ let classify_global (global : EcParsetree.global) =
   (* Save/Qed *)
   | Gsave save ->
     begin match save.pl_desc with
-    | `Qed -> VtQed VtKeepOpaque
+    | `Qed -> VtQed (VtKeep VtKeepOpaque)
     | `Admit -> VtQed VtDrop
     | `Abort -> VtQuery (* Abort doesn't produce a theorem *)
     end
@@ -337,7 +334,14 @@ let rec parse_more synterp_state stream raw_doc parsed errors =
       lexbuf_parse.lex_curr_p <- { lexbuf_parse.lex_curr_p with pos_cnum = start };
       
       begin try
-        let prog = EcParser.prog EcLexer.main lexbuf_parse in
+        (* Create a token function from the lexer *)
+        let token_list = ref (EcLexer.main lexbuf_parse) in
+        let token_fun lexbuf =
+          match !token_list with
+          | [] -> EcParser.EOF
+          | tok :: rest -> token_list := rest; tok
+        in
+        let prog = EcParser.prog token_fun lexbuf_parse in
         let stop = start + lexbuf_parse.lex_curr_p.pos_cnum in
         
         match EcLocation.unloc prog with
@@ -390,18 +394,20 @@ let rec parse_more synterp_state stream raw_doc parsed errors =
       with
       | EcParser.Error ->
         (* Parse error - try to recover by skipping to next sentence *)
-        handle_parse_error start (None, "Parse error")
+        handle_parse_error start (EcLocation.mk_loc EcLocation._dummy "Parse error")
       | EcLexer.LexicalError(loc, msg) ->
         (* Lexical error *)
-        handle_parse_error start (Some loc, msg)
+        let location = Option.value ~default:EcLocation._dummy loc in
+        handle_parse_error start (EcLocation.mk_loc location msg)
       end
       
   with
   | EcLexer.LexicalError(loc, msg) ->
-    handle_parse_error start (Some loc, msg)
+    let location = Option.value ~default:EcLocation._dummy loc in
+    handle_parse_error start (EcLocation.mk_loc location msg)
   | exn ->
     let msg = Printexc.to_string exn in
-    handle_parse_error start (None, msg)
+    handle_parse_error start (EcLocation.mk_loc EcLocation._dummy msg)
 
 let parse_more synterp_state stream raw_doc =
   parse_more synterp_state stream raw_doc [] []

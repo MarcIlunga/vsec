@@ -1,0 +1,1538 @@
+type token =
+    ZETA
+  | WP
+  | WLOG
+  | WITH
+  | WHY3
+  | WHILE
+  | WEAKMEM
+  | VAR
+  | UNROLL
+  | UNDO
+  | UNDERSCORE
+  | UINT of EcBigInt.zint
+  | UIDENT of string
+  | TYPE
+  | TRY
+  | TRIVIAL
+  | TRANSITIVITY
+  | TOP
+  | TIMEOUT
+  | TIME
+  | TILD
+  | TIDENT of string
+  | TICKPIPE
+  | TICKBRACE
+  | THEORY
+  | THEN
+  | SYMMETRY
+  | SWAP
+  | SUFF
+  | SUBTYPE
+  | SUBST
+  | STRING of string
+  | STAR
+  | SPLITWHILE
+  | SPLIT
+  | SP
+  | SOLVE
+  | SMT
+  | SLASHTILDEQ
+  | SLASHSLASHTILDEQ
+  | SLASHSLASHSHARP
+  | SLASHSLASHGT
+  | SLASHSLASHEQ
+  | SLASHSLASH
+  | SLASHSHARP
+  | SLASHGT
+  | SLASHEQ
+  | SLASH
+  | SKIP
+  | SIMPLIFY
+  | SIM
+  | SHARPPIPE
+  | SHARP
+  | SEQ
+  | SEMICOLON
+  | SELF
+  | SECTION
+  | SEARCH
+  | RWNORMAL
+  | RRARROW
+  | RPBRACE
+  | RPAREN
+  | ROP4 of string
+  | ROP3 of string
+  | ROP2 of string
+  | ROP1 of string
+  | RNDSEM
+  | RND
+  | RING of [ `Eq | `Raw ]
+  | RIGHT
+  | REWRITE
+  | RETURN
+  | RES
+  | REQUIRE
+  | REPLACE
+  | RENAME
+  | REMOVE
+  | REFLEX
+  | REALIZE
+  | RCONDT
+  | RCONDF
+  | RBRACKET
+  | RBRACE
+  | RBOOL
+  | RARROW
+  | QUESTION
+  | QED
+  | PUNIOP of string
+  | PROVER
+  | PROOF
+  | PROGRESS
+  | PROC
+  | PRINT
+  | PRED
+  | PRBOUNDED
+  | PRAGMA
+  | PR
+  | PPSTOP of string
+  | POSE
+  | PNUMOP of string
+  | PLUS
+  | PIPEPIPEGT
+  | PIPEGT
+  | PIPE
+  | PHOARE
+  | PCENT
+  | PBINOP of string
+  | OUTLINE
+  | ORA
+  | OR
+  | OP
+  | OF
+  | NUMOP of string
+  | NOTATION
+  | NOT
+  | NOP of string
+  | NE
+  | MOVE
+  | MODULE
+  | MODPATH
+  | MINUS
+  | MIDENT of string
+  | MATCH
+  | LTSTARGTGT
+  | LTSTARGT
+  | LTLTSTARGT
+  | LTCOLON
+  | LT
+  | LPBRACE
+  | LPAREN
+  | LOSSLESS
+  | LOP4 of string
+  | LOP3 of string
+  | LOP2 of string
+  | LOP1 of string
+  | LONGARROW
+  | LOGIC
+  | LOCATE
+  | LOCAL
+  | LLARROW
+  | LIDENT of string
+  | LET
+  | LESAMPLE
+  | LEMMA
+  | LEFT
+  | LEAT
+  | LE
+  | LBRACKET
+  | LBRACE
+  | LAST
+  | LARROW
+  | KILL
+  | IS
+  | IOTA
+  | INTERLEAVE
+  | INSTANCE
+  | INLINE
+  | INDUCTIVE
+  | INCLUDE
+  | IN
+  | IMPOSSIBLE
+  | IMPORT
+  | IMPL
+  | IFF
+  | IF
+  | IDTAC
+  | HOARE
+  | HINT
+  | HAVE
+  | HAT
+  | GT
+  | GOAL
+  | GLOBAL
+  | GLOB
+  | GEN
+  | GE
+  | FWDS
+  | FUSION
+  | FUN
+  | FROM
+  | FORALL
+  | FOR
+  | FIX
+  | FISSION
+  | FIRST
+  | FINAL of Lexing.position
+  | FIELD of [ `Eq | `Raw ]
+  | FEL
+  | FAIL
+  | EXPORT
+  | EXPECT
+  | EXLIM
+  | EXIT
+  | EXIST
+  | EXFALSO
+  | EXACT
+  | ETA
+  | EQUIV
+  | EQ
+  | EOF
+  | END
+  | ELSE
+  | ELIM
+  | ELIF
+  | EHOARE
+  | EDIT
+  | ECALL
+  | EAGER
+  | DUMP
+  | DROP
+  | DOTTICK
+  | DOTDOT
+  | DOT
+  | DONE
+  | DO
+  | DLBRACKET
+  | DELTA
+  | DECLARE
+  | DECIMAL of (EcBigInt.zint * (int * EcBigInt.zint))
+  | DEBUG
+  | DASHLT
+  | COQ
+  | CONST
+  | CONSEQ
+  | CONGR
+  | COMMA
+  | COLONTILD
+  | COLON
+  | CLONE
+  | CLEAR
+  | CLASS
+  | CHECK
+  | CHANGE
+  | CFOLD
+  | CEQ
+  | CBV
+  | CASE
+  | CALL
+  | BYUPTO
+  | BYPR
+  | BYPHOARE
+  | BYEQUIV
+  | BYEHOARE
+  | BY
+  | BETA
+  | BACKSLASH
+  | BACKS
+  | AXIOMATIZED
+  | AXIOM
+  | AUTO
+  | AT
+  | ASYNC
+  | ASSUMPTION
+  | ASSERT
+  | AS
+  | APPLY
+  | ANDA
+  | AND
+  | AMP
+  | ALIAS
+  | ALGNORM
+  | ADMITTED
+  | ADMIT
+  | ABSTRACT
+  | ABORT
+  | ABBREV
+module L = Lexing
+module BI = EcLib.EcBigInt
+val parse_error : EcLocation.t -> string option -> 'a
+val pqsymb_of_psymb : EcParsetree.psymbol -> EcParsetree.pqsymbol
+val pqsymb_of_symb : EcLocation.t -> string -> EcParsetree.pqsymbol
+val mk_tydecl :
+  locality:EcTypes.locality ->
+  EcParsetree.ptyparams * EcParsetree.psymbol ->
+  EcParsetree.ptydbody -> EcParsetree.ptydecl
+val opdef_of_opbody :
+  EcParsetree.pty ->
+  [< `Case of EcParsetree.pop_branch list
+   | `Form of EcParsetree.pformula
+   | `Reft of EcParsetree.psymbol * EcParsetree.pformula ]
+  option -> EcParsetree.pop_def
+val lqident_of_fident :
+  ('a EcLocation.located * 'b option) list * 'c EcLocation.located ->
+  ('a list * 'c) option
+val mk_pfid_symb :
+  EcLocation.t ->
+  string ->
+  EcParsetree.ptyannot option -> EcParsetree.pformula_r EcLocation.located
+val pfapp_symb :
+  EcLocation.t ->
+  string ->
+  EcParsetree.ptyannot option ->
+  EcParsetree.pformula list -> EcParsetree.pformula_r
+val pfget :
+  EcLocation.t ->
+  EcParsetree.ptyannot option ->
+  EcParsetree.pty option ->
+  EcParsetree.pformula -> EcParsetree.pformula -> EcParsetree.pformula_r
+val pfset :
+  EcLocation.t ->
+  EcParsetree.ptyannot option ->
+  EcParsetree.pty option ->
+  EcParsetree.pformula ->
+  EcParsetree.pformula -> EcParsetree.pformula -> EcParsetree.pformula_r
+val pf_nil :
+  EcLocation.t ->
+  EcParsetree.ptyannot option -> EcParsetree.pformula_r EcLocation.located
+val pf_cons :
+  EcLocation.t ->
+  EcParsetree.ptyannot option ->
+  EcParsetree.pformula ->
+  EcParsetree.pformula -> EcParsetree.pformula_r EcLocation.located
+val pflist :
+  EcLocation.t ->
+  EcParsetree.ptyannot option ->
+  EcParsetree.pformula list -> EcParsetree.pformula
+val mk_axiom :
+  locality:EcTypes.locality ->
+  EcParsetree.psymbol *
+  (EcParsetree.psymbol * EcParsetree.pqsymbol list) list option *
+  EcParsetree.mempred_binding option * EcParsetree.pgtybindings option *
+  EcParsetree.pformula -> EcParsetree.paxiom_kind -> EcParsetree.paxiom
+val mk_simplify :
+  [< `Beta
+   | `Delta of EcParsetree.pqsymbol list
+   | `Eta
+   | `Iota
+   | `Logic
+   | `ModPath
+   | `User
+   | `Zeta ]
+  list -> EcParsetree.preduction
+val simplify_red :
+  [> `Beta | `Eta | `Iota | `Logic | `ModPath | `User | `Zeta ] list
+val mk_pterm :
+  bool ->
+  'a EcParsetree.ppt_head ->
+  EcParsetree.ppt_arg EcLocation.located list -> 'a EcParsetree.gppterm
+val mk_core_tactic : EcParsetree.ptactic_core -> EcParsetree.ptactic
+val mk_tactic_of_tactics :
+  EcParsetree.ptactics EcLocation.located -> EcParsetree.ptactic
+val mk_rel_pterm :
+  ('a option * 'b option) EcParsetree.gppterm option ->
+  ('a option * 'b option) EcParsetree.gppterm
+val locality_as_local :
+  EcTypes.locality EcLocation.located -> [> `Global | `Local ]
+type prover = [ `Exclude | `Include | `Only ] * EcParsetree.psymbol
+type pi =
+    [ `DBHINT of EcParsetree.pdbhint | `INT of int | `PROVER of prover list ]
+type smt =
+    [ `ALL
+    | `DEBUG
+    | `DUMPIN of string EcLocation.located
+    | `ITERATE
+    | `MAXLEMMAS of int option
+    | `MAXPROVERS of int
+    | `PROVER of prover list
+    | `QUORUM of int
+    | `SELECTED
+    | `TIMEOUT of int
+    | `UNWANTEDLEMMAS of EcParsetree.pdbhint
+    | `VERBOSE of int option
+    | `VERSION of [ `Full | `Lazy ]
+    | `WANTEDLEMMAS of EcParsetree.pdbhint ]
+module SMT :
+  sig
+    val mk_pi_option : EcParsetree.psymbol -> pi option -> smt
+    val mk_smt_option : smt list -> EcParsetree.pprover_infos
+    val simple_smt_option : EcParsetree.pprover_infos
+  end
+val menhir_begin_marker : int
+val xv_word : int
+val xv_while_tac_info : EcParsetree.while_info
+val xv_var_or_anon : EcParsetree.osymbol_r EcLocation.located
+val xv_var_decl : EcParsetree.pupdate_var
+val xv_user_red_option : EcParsetree.puseroption
+val xv_user_red_info : EcParsetree.pqsymbol list * int option
+val xv_uqident : EcParsetree.pqsymbol
+val xv_update_stmt : EcParsetree.pupdate_stmt list
+val xv_update_cond : EcParsetree.pupdate_cond
+val xv_uoption_loc_fident__ : EcParsetree.pgamepath option
+val xv_uoption_UINT_ : BI.zint option
+val xv_uniop : string
+val xv_uint : BI.zint
+val xv_uident : EcParsetree.psymbol
+val xv_tyvars_decl : EcParsetree.ptyvardecls
+val xv_tyvar_byname1 : EcParsetree.psymbol * EcParsetree.pty
+val xv_tyvar_annot : EcParsetree.ptyannot_r
+val xv_typedecl : EcParsetree.ptydecl list
+val xv_typed_vars_or_anons : (EcParsetree.osymbol * EcParsetree.pty) list
+val xv_typeclass : EcParsetree.ptypeclass
+val xv_type_exp : EcParsetree.pty_r
+val xv_type_args : EcParsetree.pty list
+val xv_typarams : EcParsetree.ptyparams
+val xv_typaram : EcParsetree.psymbol * EcParsetree.pqsymbol list
+val xv_tyd_name : EcParsetree.ptyparams * EcParsetree.psymbol
+val xv_tycinstance : EcParsetree.ptycinstance
+val xv_tyci_op :
+  EcParsetree.psymbol * (EcParsetree.pty list * EcParsetree.pqsymbol)
+val xv_tyci_ax : EcParsetree.psymbol * EcParsetree.ptactic_core
+val xv_tvars_app : EcParsetree.ptyannot
+val xv_trans_kind : EcParsetree.trans_kind
+val xv_trans_hyp : EcParsetree.pformula * EcParsetree.pformula
+val xv_toptactic : EcParsetree.ptactics
+val xv_tident : EcParsetree.psymbol
+val xv_theory_require_1 : EcParsetree.psymbol * EcParsetree.psymbol option
+val xv_theory_require : EcParsetree.threquire
+val xv_theory_open : EcTypes.is_local * bool * EcParsetree.psymbol
+val xv_theory_import : EcParsetree.pqsymbol list
+val xv_theory_export : EcParsetree.pqsymbol list
+val xv_theory_close : EcParsetree.theory_clear * EcParsetree.psymbol
+val xv_theory_clone : EcParsetree.theory_cloning
+val xv_theory_clear_items : EcParsetree.theory_clear
+val xv_theory_clear_item1 : EcParsetree.pqsymbol option
+val xv_theory_clear : EcParsetree.theory_clear
+val xv_theory_alias : EcParsetree.psymbol * EcParsetree.pqsymbol
+val xv_tcfc_set : EcParsetree.tfocus1 list
+val xv_tcfc_rg : EcParsetree.tfocus1
+val xv_tcfc_1 : int
+val xv_tcfc : EcParsetree.tfocus
+val xv_tcd_toptactic : (string * (int * int)) * EcParsetree.ptactics
+val xv_tc_op : EcParsetree.psymbol * EcParsetree.pty
+val xv_tc_inth : EcParsetree.pqsymbol
+val xv_tc_body :
+  (EcParsetree.psymbol * EcParsetree.pty) list *
+  (EcParsetree.psymbol * EcParsetree.pformula) list
+val xv_tc_ax : EcParsetree.psymbol * EcParsetree.pformula
+val xv_tactics_or_prf : [ `Actual of EcParsetree.ptactics | `Proof ]
+val xv_tactics0 : EcParsetree.ptactic_core_r
+val xv_tactics : EcParsetree.ptactics
+val xv_tactic_ip : EcParsetree.ptactic
+val xv_tactic_genip : EcParsetree.introgenpattern
+val xv_tactic_dump : EcParsetree.tcdump * EcParsetree.ptactics
+val xv_tactic_core_r : EcParsetree.ptactic_core_r
+val xv_tactic_core : EcParsetree.ptactic_core
+val xv_tactic_chain_r : EcParsetree.ptactic_chain
+val xv_tactic_chain : EcParsetree.ptactic
+val xv_tactic : EcParsetree.ptactic
+val xv_tac_dir : EcParsetree.tac_dir
+val xv_sword : int
+val xv_swap_position : EcParsetree.pswap_kind
+val xv_swap_info : EcParsetree.oside * EcParsetree.pswap_kind
+val xv_subtype_rename : string * string
+val xv_subtype : EcParsetree.psubtype
+val xv_subtactics : EcParsetree.ptactic list
+val xv_subtactic : EcParsetree.ptactic
+val xv_stop : unit
+val xv_stmt : EcParsetree.pstmt
+val xv_smt_option : pi
+val xv_smt_info1 : smt
+val xv_smt_info : EcParsetree.pprover_infos
+val xv_simplify_arg :
+  [ `Beta
+  | `Delta of EcParsetree.pqsymbol list
+  | `Eta
+  | `Iota
+  | `Logic
+  | `ModPath
+  | `User
+  | `Zeta ]
+val xv_simplify :
+  [ `Beta
+  | `Delta of EcParsetree.pqsymbol list
+  | `Eta
+  | `Iota
+  | `Logic
+  | `ModPath
+  | `User
+  | `Zeta ] list
+val xv_simpl_type_exp : EcParsetree.pty_r
+val xv_signature_item : EcParsetree.pmodule_sig_item
+val xv_sig_struct_body : EcParsetree.pmodule_sig_struct_body
+val xv_sig_params : EcParsetree.pmodule_params
+val xv_sig_param : EcParsetree.psymbol * EcParsetree.pqsymbol
+val xv_sig_def : EcParsetree.pinterface
+val xv_sig_body : EcParsetree.pmodule_sig_struct_body
+val xv_side : EcParsetree.side
+val xv_sharp : bool
+val xv_sform_u_none_ : EcParsetree.pformula_r
+val xv_sform_u_hole_ : EcParsetree.pformula_r
+val xv_sform_r_none_ : EcParsetree.pformula
+val xv_sform_r_hole_ : EcParsetree.pformula
+val xv_sform_h : EcParsetree.pformula
+val xv_sform : EcParsetree.pformula
+val xv_sexpr : EcParsetree.pexpr
+val xv_seq_prefix_EQ_loc_opbody___option_opax__ :
+  [< `Case of EcParsetree.pop_branch list
+   | `Form of EcParsetree.pformula
+   | `Reft of EcParsetree.psymbol * EcParsetree.pformula
+   > `Case `Form ]
+  EcLocation.located * EcParsetree.psymbol option
+val xv_separated_nonempty_list_empty_tactic_genip_ :
+  EcParsetree.introgenpattern list
+val xv_separated_nonempty_list_empty_inlinepat_ :
+  ([ `DIFF | `UNION ] * EcParsetree.inline_pat1) list
+val xv_separated_nonempty_list_STAR_loc_simpl_type_exp__ :
+  EcParsetree.pty list
+val xv_separated_nonempty_list_SEMICOLON_form_r_none__ :
+  EcParsetree.pformula list
+val xv_separated_nonempty_list_SEMICOLON_form_r_hole__ :
+  EcParsetree.pformula list
+val xv_separated_nonempty_list_SEMICOLON_fel_pred_spec_ :
+  EcParsetree.pfel_spec_preds
+val xv_separated_nonempty_list_PIPE_sep_tcfc_COLON_loc_tactics___ :
+  (EcParsetree.tfocus * EcParsetree.ptactics EcLocation.located) list
+val xv_separated_nonempty_list_PIPE_match_branch_ :
+  (EcParsetree.ppattern * EcParsetree.pstmt) list
+val xv_separated_nonempty_list_PIPE_loc_tactics0__ :
+  EcParsetree.ptactic_core list
+val xv_separated_nonempty_list_PIPE_list_loc_intro_pattern___ :
+  EcParsetree.intropattern list
+val xv_separated_nonempty_list_PIPE_ip_ctor_def_ :
+  EcParsetree.ppind_ctor list
+val xv_separated_nonempty_list_PIPE_im_stmt_base_r_empty__ :
+  EcParsetree.pim_regexp list
+val xv_separated_nonempty_list_PIPE_dt_ctor_def_ : EcParsetree.pdatatype
+val xv_separated_nonempty_list_PIPE___anonymous_3_none__ :
+  (EcParsetree.ppattern * EcParsetree.pformula) list
+val xv_separated_nonempty_list_PIPE___anonymous_3_hole__ :
+  (EcParsetree.ppattern * EcParsetree.pformula) list
+val xv_separated_nonempty_list_COMMA_user_red_info_ :
+  (EcParsetree.pqsymbol list * int option) list
+val xv_separated_nonempty_list_COMMA_uqident_ : EcParsetree.pqsymbol list
+val xv_separated_nonempty_list_COMMA_tyvar_byname1_ :
+  (EcParsetree.psymbol * EcParsetree.pty) list
+val xv_separated_nonempty_list_COMMA_typed_vars_or_anons_ :
+  (EcParsetree.osymbol * EcParsetree.pty) list list
+val xv_separated_nonempty_list_COMMA_typaram_ : EcParsetree.ptyparams
+val xv_separated_nonempty_list_COMMA_tident_ : EcParsetree.psymbol list
+val xv_separated_nonempty_list_COMMA_tcfc_rg_ : EcParsetree.tfocus1 list
+val xv_separated_nonempty_list_COMMA_sig_param_ : EcParsetree.pmodule_params
+val xv_separated_nonempty_list_COMMA_qident_or_res_or_glob_ :
+  EcParsetree.glob_or_var list
+val xv_separated_nonempty_list_COMMA_qident_ : EcParsetree.pqsymbol list
+val xv_separated_nonempty_list_COMMA_pty_varty_ : EcParsetree.ptybinding list
+val xv_separated_nonempty_list_COMMA_opcase_ : EcParsetree.pop_pattern list
+val xv_separated_nonempty_list_COMMA_oident_ : EcParsetree.psymbol list
+val xv_separated_nonempty_list_COMMA_nt_binding1_ :
+  (EcParsetree.psymbol * EcParsetree.pty) list
+val xv_separated_nonempty_list_COMMA_loc_type_exp__ : EcParsetree.pty list
+val xv_separated_nonempty_list_COMMA_loc_mod_qident__ :
+  EcParsetree.pmsymbol EcLocation.located list
+val xv_separated_nonempty_list_COMMA_lident_ : EcParsetree.psymbol list
+val xv_separated_nonempty_list_COMMA_ident_ : EcParsetree.psymbol list
+val xv_separated_nonempty_list_COMMA_form_r_none__ :
+  EcParsetree.pformula list
+val xv_separated_nonempty_list_COMMA_form_r_hole__ :
+  EcParsetree.pformula list
+val xv_separated_nonempty_list_COMMA_expr_ : EcParsetree.pexpr list
+val xv_separated_nonempty_list_COMMA_clone_rename_kind_ :
+  EcParsetree.theory_renaming_kind list
+val xv_separated_nonempty_list_COMMA_clone_override_ :
+  (EcParsetree.pqsymbol * EcParsetree.theory_override) list
+val xv_separated_nonempty_list_COMMA_clone_lemma_1_ :
+  EcParsetree.theory_cloning_proof list
+val xv_separated_nonempty_list_COMMA_bdident_ : EcParsetree.osymbol list
+val xv_separated_nonempty_list_COMMA___anonymous_2_ :
+  (EcParsetree.pqsymbol * EcParsetree.psymbol option) list
+val xv_separated_nonempty_list_COMMA___anonymous_1_ :
+  EcParsetree.pfrange list
+val xv_separated_nonempty_list_COLON__lident_ : string list
+val xv_separated_nonempty_list_AMP_sform_ : EcParsetree.pformula list
+val xv_separated_nonempty_list_AMP_lqident_ : EcParsetree.pqsymbol list
+val xv_separated_nonempty_list_AMP_loc_simpl_type_exp__ :
+  EcParsetree.pty list
+val xv_separated_list_empty_inlinepat_ :
+  ([ `DIFF | `UNION ] * EcParsetree.inline_pat1) list
+val xv_separated_list_SEMICOLON_form_r_none__ : EcParsetree.pformula list
+val xv_separated_list_SEMICOLON_form_r_hole__ : EcParsetree.pformula list
+val xv_separated_list_SEMICOLON_fel_pred_spec_ : EcParsetree.pfel_spec_preds
+val xv_separated_list_PIPE_match_branch_ :
+  (EcParsetree.ppattern * EcParsetree.pstmt) list
+val xv_separated_list_PIPE_ip_ctor_def_ : EcParsetree.ppind_ctor list
+val xv_separated_list_PIPE___anonymous_3_none__ :
+  (EcParsetree.ppattern * EcParsetree.pformula) list
+val xv_separated_list_PIPE___anonymous_3_hole__ :
+  (EcParsetree.ppattern * EcParsetree.pformula) list
+val xv_separated_list_COMMA_typed_vars_or_anons_ :
+  (EcParsetree.osymbol * EcParsetree.pty) list list
+val xv_separated_list_COMMA_nt_binding1_ :
+  (EcParsetree.psymbol * EcParsetree.pty) list
+val xv_separated_list_COMMA_loc_type_exp__ : EcParsetree.pty list
+val xv_separated_list_COMMA_ident_ : EcParsetree.psymbol list
+val xv_separated_list_COMMA_form_r_none__ : EcParsetree.pformula list
+val xv_separated_list_COMMA_form_r_hole__ : EcParsetree.pformula list
+val xv_separated_list_COMMA_expr_ : EcParsetree.pexpr list
+val xv_separated_list_COMMA___anonymous_2_ :
+  (EcParsetree.pqsymbol * EcParsetree.psymbol option) list
+val xv_separated_list_COMMA___anonymous_1_ : EcParsetree.pfrange list
+val xv_sep_tcfc_COLON_loc_tactics__ :
+  EcParsetree.tfocus * EcParsetree.ptactics EcLocation.located
+val xv_semrndpos1 : bool * EcParsetree.pcodepos1
+val xv_semrndpos : (bool * EcParsetree.pcodepos1) EcUtils.doption
+val xv_section_open : EcParsetree.osymbol_r
+val xv_section_close : EcParsetree.osymbol_r
+val xv_search : EcParsetree.pformula
+val xv_sbinop : string
+val xv_s_codepos1 : EcParsetree.pcodepos1 EcUtils.doption
+val xv_rwside : EcParsetree.rwside
+val xv_rwrepeat : EcParsetree.trepeat
+val xv_rwpterms : (EcParsetree.rwside * EcParsetree.ppterm) list
+val xv_rwpterm : EcParsetree.rwside * EcParsetree.ppterm
+val xv_rwpr_arg : EcParsetree.psymbol * EcParsetree.pformula option
+val xv_rwocc : EcParsetree.rwocci
+val xv_rweqv_res : EcParsetree.pexpr
+val xv_rweqv_proc :
+  EcParsetree.pexpr list EcLocation.located * EcParsetree.pexpr option
+val xv_rwarg1 : EcParsetree.rwarg1
+val xv_rwarg : EcParsetree.rwarg
+val xv_rnd_info :
+  (EcParsetree.pformula, EcParsetree.pformula option, EcParsetree.pformula)
+  EcParsetree.rnd_tac_info
+val xv_rlist2_tident_empty_ : EcParsetree.psymbol list
+val xv_rlist2_rwpterm_COMMA_ : (EcParsetree.rwside * EcParsetree.ppterm) list
+val xv_rlist1_uident_DOT_ : EcParsetree.psymbol list
+val xv_rlist1_typaram_COMMA_ : EcParsetree.ptyvardecls
+val xv_rlist1_tyd_name_COMMA_ :
+  (EcParsetree.ptyparams * EcParsetree.psymbol) list
+val xv_rlist1_tactic_chain_r_SEMICOLON_ : EcParsetree.ptactic_chain list
+val xv_rlist1_subtactic_SEMICOLON_ : EcParsetree.ptactic list
+val xv_rlist1_rec_field_def_SEMICOLON_ : EcParsetree.precord
+val xv_rlist1_qident_inparam_COMMA_ : EcParsetree.poracles
+val xv_rlist1_qident_COMMA_ : EcParsetree.pqsymbol list
+val xv_rlist1_prefix_DOT_UIDENT__empty_ : string list
+val xv_rlist1_nm1_codepos_empty_ :
+  (EcParsetree.pcodepos1 * EcParsetree.pbranch_select) list
+val xv_rlist1_mod_ident1_DOT_ : EcParsetree.pmsymbol
+val xv_rlist1_memtype_decl_COMMA_ : EcParsetree.pmemtype
+val xv_rlist1_mem_restr_el_COMMA_ : EcParsetree.pmod_restr_mem
+val xv_rlist1_lp_field_SEMICOLON_ :
+  (EcParsetree.pqsymbol * EcParsetree.psymbol) list
+val xv_rlist1_form_field_SEMICOLON_ :
+  EcParsetree.pformula EcParsetree.rfield list
+val xv_rlist1_UIDENT_DOT_ : string list
+val xv_rlist0_typaram_COMMA_ : EcParsetree.ptyvardecls
+val xv_rlist0_qident_inparam_COMMA_ : EcParsetree.poracles
+val xv_rlist0_prefix_DOT_UIDENT__empty_ : string list
+val xv_rlist0_nm1_codepos_empty_ :
+  (EcParsetree.pcodepos1 * EcParsetree.pbranch_select) list
+val xv_rlist0_memtype_decl_COMMA_ : EcParsetree.pmemtype
+val xv_rlist0_mem_restr_el_COMMA_ : EcParsetree.pmod_restr_mem
+val xv_revert : EcParsetree.prevert
+val xv_ret_stmt : EcParsetree.pexpr option
+val xv_repl_kind : EcParsetree.trans_kind
+val xv_repl_hyp : EcParsetree.pformula * EcParsetree.pformula
+val xv_reduction : EcParsetree.puserred
+val xv_record_def : EcParsetree.precord
+val xv_rec_field_def : EcParsetree.psymbol * EcParsetree.pty
+val xv_realize : EcParsetree.prealize
+val xv_qoident : EcParsetree.pqsymbol
+val xv_qident_or_res_or_glob : EcParsetree.glob_or_var
+val xv_qident_inparam : EcParsetree.qident_inparam
+val xv_qident : EcParsetree.pqsymbol
+val xv_ptybindings_opdecl :
+  EcParsetree.ptybindings * EcParsetree.ptybindings option
+val xv_ptybindings_decl : EcParsetree.ptybindings
+val xv_ptybindings : EcParsetree.ptybindings
+val xv_ptybinding1 : EcParsetree.ptybinding list
+val xv_pty_varty : EcParsetree.ptybinding
+val xv_pterm : EcParsetree.ppterm
+val xv_pside_force : bool * string EcLocation.located
+val xv_pside_ : string
+val xv_pside : string
+val xv_prover_kind1 : prover
+val xv_prover_kind : prover list
+val xv_proofend : EcParsetree.save
+val xv_prog_r : EcParsetree.prog_r
+val xv_prog : EcParsetree.prog
+val xv_prod_form : EcParsetree.pformula option * EcParsetree.pformula option
+val xv_procop : EcParsetree.pprocop
+val xv_print : EcParsetree.pprint
+val xv_prefix_SLASH_pterm_ : EcParsetree.ppterm
+val xv_prefix_PCENT__lident_ : string
+val xv_prefix_OF_plist1_sform_AMP__ : EcParsetree.pformula list
+val xv_prefix_FROM_uident_ : EcParsetree.psymbol
+val xv_prefix_EQ_smt_option_ : pi
+val xv_prefix_EQ_loc_opbody__ :
+  [< `Case of EcParsetree.pop_branch list
+   | `Form of EcParsetree.pformula
+   | `Reft of EcParsetree.psymbol * EcParsetree.pformula
+   > `Case `Form ]
+  EcLocation.located
+val xv_prefix_ELSE_block_ : EcParsetree.pstmt
+val xv_prefix_DOT_UIDENT_ : string
+val xv_prefix_COMMA_list_loc_intro_pattern___ : EcParsetree.intropattern
+val xv_prefix_COLON_semrndpos_ :
+  (bool * EcParsetree.pcodepos1) EcUtils.doption
+val xv_prefix_COLON_revert_ : EcParsetree.prevert
+val xv_prefix_COLON_paren_loc_type_exp___ : EcParsetree.pty
+val xv_prefix_COLON_loc_type_exp__ : EcParsetree.pty
+val xv_prefix_AT_word_ : int
+val xv_prefix_AS_uident_ : EcParsetree.psymbol
+val xv_predicate : EcParsetree.ppredicate
+val xv_pred_tydom : EcParsetree.pty list
+val xv_pragma_r : string
+val xv_pragma : string EcLocation.located
+val xv_postfix_boption_UNDERSCORE__COLON_ : bool
+val xv_plist2_qident_COMMA_ : EcParsetree.pqsymbol list
+val xv_plist2_loc_type_exp__COMMA_ : EcParsetree.pty list
+val xv_plist2_loc_simpl_type_exp__STAR_ : EcParsetree.pty list
+val xv_plist2_loc_simpl_type_exp__AMP_ : EcParsetree.pty list
+val xv_plist2_list_loc_intro_pattern___PIPE_ : EcParsetree.intropattern list
+val xv_plist2_lident_COMMA_ : EcParsetree.psymbol list
+val xv_plist2_im_stmt_base_r_empty__PIPE_ : EcParsetree.pim_regexp list
+val xv_plist2_bdident_COMMA_ : EcParsetree.osymbol list
+val xv_plist1_user_red_info_COMMA_ :
+  (EcParsetree.pqsymbol list * int option) list
+val xv_plist1_uqident_COMMA_ : EcParsetree.pqsymbol list
+val xv_plist1_tyvar_byname1_COMMA_ :
+  (EcParsetree.psymbol * EcParsetree.pty) list
+val xv_plist1_typaram_COMMA_ : EcParsetree.ptyparams
+val xv_plist1_tident_COMMA_ : EcParsetree.psymbol list
+val xv_plist1_tcfc_rg_COMMA_ : EcParsetree.tfocus1 list
+val xv_plist1_tactic_genip_empty_ : EcParsetree.introgenpattern list
+val xv_plist1_sig_param_COMMA_ : EcParsetree.pmodule_params
+val xv_plist1_sform_AMP_ : EcParsetree.pformula list
+val xv_plist1_sep_tcfc_COLON_loc_tactics___PIPE_ :
+  (EcParsetree.tfocus * EcParsetree.ptactics EcLocation.located) list
+val xv_plist1_qident_or_res_or_glob_COMMA_ : EcParsetree.glob_or_var list
+val xv_plist1_qident_COMMA_ : EcParsetree.pqsymbol list
+val xv_plist1_pty_varty_COMMA_ : EcParsetree.ptybinding list
+val xv_plist1_opcase_COMMA_ : EcParsetree.pop_pattern list
+val xv_plist1_oident_COMMA_ : EcParsetree.psymbol list
+val xv_plist1_lqident_AMP_ : EcParsetree.pqsymbol list
+val xv_plist1_loc_type_exp__COMMA_ : EcParsetree.pty list
+val xv_plist1_loc_tactics0__PIPE_ : EcParsetree.ptactic_core list
+val xv_plist1_loc_simpl_type_exp__STAR_ : EcParsetree.pty list
+val xv_plist1_loc_simpl_type_exp__AMP_ : EcParsetree.pty list
+val xv_plist1_loc_mod_qident__COMMA_ :
+  EcParsetree.pmsymbol EcLocation.located list
+val xv_plist1_list_loc_intro_pattern___PIPE_ : EcParsetree.intropattern list
+val xv_plist1_lident_COMMA_ : EcParsetree.psymbol list
+val xv_plist1_im_stmt_base_r_empty__PIPE_ : EcParsetree.pim_regexp list
+val xv_plist1_ident_COMMA_ : EcParsetree.psymbol list
+val xv_plist1_form_r_none__COMMA_ : EcParsetree.pformula list
+val xv_plist1_form_r_hole__COMMA_ : EcParsetree.pformula list
+val xv_plist1_expr_COMMA_ : EcParsetree.pexpr list
+val xv_plist1_dt_ctor_def_PIPE_ : EcParsetree.pdatatype
+val xv_plist1_clone_rename_kind_COMMA_ :
+  EcParsetree.theory_renaming_kind list
+val xv_plist1_clone_override_COMMA_ :
+  (EcParsetree.pqsymbol * EcParsetree.theory_override) list
+val xv_plist1_clone_lemma_1_COMMA_ : EcParsetree.theory_cloning_proof list
+val xv_plist1_bdident_COMMA_ : EcParsetree.osymbol list
+val xv_plist1__lident_COLON_ : string list
+val xv_plist0_typed_vars_or_anons_COMMA_ :
+  (EcParsetree.osymbol * EcParsetree.pty) list list
+val xv_plist0_nt_binding1_COMMA_ :
+  (EcParsetree.psymbol * EcParsetree.pty) list
+val xv_plist0_match_branch_PIPE_ :
+  (EcParsetree.ppattern * EcParsetree.pstmt) list
+val xv_plist0_loc_type_exp__COMMA_ : EcParsetree.pty list
+val xv_plist0_ip_ctor_def_PIPE_ : EcParsetree.ppind_ctor list
+val xv_plist0_inlinepat_empty_ :
+  ([ `DIFF | `UNION ] * EcParsetree.inline_pat1) list
+val xv_plist0_ident_COMMA_ : EcParsetree.psymbol list
+val xv_plist0_form_r_none__SEMICOLON_ : EcParsetree.pformula list
+val xv_plist0_form_r_none__COMMA_ : EcParsetree.pformula list
+val xv_plist0_form_r_hole__SEMICOLON_ : EcParsetree.pformula list
+val xv_plist0_form_r_hole__COMMA_ : EcParsetree.pformula list
+val xv_plist0_fel_pred_spec_SEMICOLON_ : EcParsetree.pfel_spec_preds
+val xv_plist0_expr_COMMA_ : EcParsetree.pexpr list
+val xv_plist0___anonymous_3_none__PIPE_ :
+  (EcParsetree.ppattern * EcParsetree.pformula) list
+val xv_plist0___anonymous_3_hole__PIPE_ :
+  (EcParsetree.ppattern * EcParsetree.pformula) list
+val xv_plist0___anonymous_2_COMMA_ :
+  (EcParsetree.pqsymbol * EcParsetree.psymbol option) list
+val xv_plist0___anonymous_1_COMMA_ : EcParsetree.pfrange list
+val xv_phoare_body_none_ : EcParsetree.pformula_r
+val xv_phoare_body_hole_ : EcParsetree.pformula_r
+val xv_phltactic : EcParsetree.phltactic
+val xv_phint : [ `Rewrite | `Simplify | `Solve ]
+val xv_pgtybindings : EcParsetree.pgtybindings
+val xv_pgtybinding1 : EcParsetree.pgtybinding list
+val xv_pgoptions : EcParsetree.ppgoptions
+val xv_pgoptionkw : string EcLocation.located
+val xv_pgoption : bool * EcParsetree.ppgoption
+val xv_pfpos : EcParsetree.pfindex
+val xv_pfoffset : int
+val xv_pffilter_pattern : EcParsetree.pffilter_pattern
+val xv_pffilter : EcParsetree.pffilter
+val xv_pcutdef1 : EcParsetree.pcutdef
+val xv_pcutdef : EcParsetree.pcutdef
+val xv_paren_tcd_toptactic_ : (string * (int * int)) * EcParsetree.ptactics
+val xv_paren_rlist1_tactic_chain_r_SEMICOLON__ :
+  EcParsetree.ptactic_chain list
+val xv_paren_plist2_loc_type_exp__COMMA__ : EcParsetree.pty list
+val xv_paren_plist1_typaram_COMMA__ : EcParsetree.ptyparams
+val xv_paren_plist1_tident_COMMA__ : EcParsetree.psymbol list
+val xv_paren_plist1_qident_COMMA__ : EcParsetree.pqsymbol list
+val xv_paren_plist1_lident_COMMA__ : EcParsetree.psymbol list
+val xv_paren_plist0_form_r_none__COMMA__ : EcParsetree.pformula list
+val xv_paren_plist0_form_r_hole__COMMA__ : EcParsetree.pformula list
+val xv_paren_nonempty_list_word__ : int list
+val xv_paren_mcptn_binop__ : EcParsetree.ppattern
+val xv_paren_lvmatch_ : EcParsetree.plvmatch
+val xv_paren_loc_type_exp__ : EcParsetree.pty
+val xv_paren_list_dbmap1__ : EcParsetree.pdbhint
+val xv_paren_im_stmt_ : EcParsetree.pim_regexp
+val xv_paren_expr_ : EcParsetree.pexpr
+val xv_paren___anonymous_7_ :
+  EcParsetree.pexpr list EcLocation.located * EcParsetree.pexpr option
+val xv_paren___anonymous_6_ :
+  EcParsetree.pqsymbol * EcParsetree.ptyannot option *
+  EcParsetree.pformula list
+val xv_paren_PUNIOP_ : string
+val xv_param_decl : EcParsetree.fun_params
+val xv_outline_kind : EcParsetree.outline_kind
+val xv_ordering_op : string
+val xv_oracle_restr : EcParsetree.poracles
+val xv_or3_clone_proof_clone_rename_clone_clear_ :
+  [ `Or13 of EcParsetree.theory_cloning_proof list
+  | `Or23 of EcParsetree.theory_renaming list
+  | `Or33 of EcParsetree.theory_cloning_clear list ]
+val xv_option_word_ : int option
+val xv_option_uident_ : EcParsetree.osymbol_r
+val xv_option_tyvars_decl_ : EcParsetree.ptyvardecls option
+val xv_option_tvars_app_ : EcParsetree.ptyannot option
+val xv_option_tcfc_set_ : EcParsetree.tfocus1 list option
+val xv_option_tc_inth_ : EcParsetree.pqsymbol option
+val xv_option_tactic_core_ : EcParsetree.ptactic_core option
+val xv_option_subtype_rename_ : (string * string) option
+val xv_option_side_ : EcParsetree.oside
+val xv_option_sform_ : EcParsetree.pformula option
+val xv_option_seq_prefix_EQ_loc_opbody___option_opax___ :
+  ([< `Case of EcParsetree.pop_branch list
+    | `Form of EcParsetree.pformula
+    | `Reft of EcParsetree.psymbol * EcParsetree.pformula
+    > `Case `Form ]
+   EcLocation.located * EcParsetree.psymbol option)
+  option
+val xv_option_s_codepos1_ : EcParsetree.pdocodepos1
+val xv_option_rwrepeat_ : EcParsetree.trepeat option
+val xv_option_rwocc_ : EcParsetree.rwocc
+val xv_option_rweqv_res_ : EcParsetree.pexpr option
+val xv_option_rweqv_proc_ :
+  (EcParsetree.pexpr list EcLocation.located * EcParsetree.pexpr option)
+  option
+val xv_option_ptybindings_opdecl_ :
+  (EcParsetree.ptybindings * EcParsetree.ptybindings option) option
+val xv_option_ptybindings_decl_ : EcParsetree.ptybindings option
+val xv_option_ptybindings_ : EcParsetree.ptybindings option
+val xv_option_prefix_OF_plist1_sform_AMP___ :
+  EcParsetree.pformula list option
+val xv_option_prefix_FROM_uident__ : EcParsetree.psymbol option
+val xv_option_prefix_EQ_smt_option__ : pi option
+val xv_option_prefix_ELSE_block__ : EcParsetree.pstmt option
+val xv_option_prefix_COMMA_list_loc_intro_pattern____ :
+  EcParsetree.intropattern option
+val xv_option_prefix_COLON_semrndpos__ : EcParsetree.psemrndpos option
+val xv_option_prefix_COLON_revert__ : EcParsetree.prevert option
+val xv_option_prefix_COLON_paren_loc_type_exp____ : EcParsetree.pty option
+val xv_option_prefix_COLON_loc_type_exp___ :
+  EcParsetree.pty_r EcLocation.located option
+val xv_option_prefix_AT_word__ : int option
+val xv_option_prefix_AS_uident__ : EcParsetree.osymbol_r
+val xv_option_phint_ : [ `Rewrite | `Simplify | `Solve ] option
+val xv_option_pgtybindings_ : EcParsetree.pgtybindings option
+val xv_option_pgoptions_ : EcParsetree.ppgoptions option
+val xv_option_pfpos_ : EcParsetree.pfindex option
+val xv_option_pfoffset_ : int option
+val xv_option_paren_plist1_lident_COMMA___ : EcParsetree.psymbol list option
+val xv_option_oracle_restr_ : EcParsetree.poracles option
+val xv_option_opax_ : EcParsetree.psymbol option
+val xv_option_occurences_ : int list option
+val xv_option_nt_bindings_ :
+  (EcParsetree.psymbol * EcParsetree.pty) list option
+val xv_option_mod_remove_var_ : EcParsetree.psymbol list option
+val xv_option_mod_cast_ : EcParsetree.pqsymbol list option
+val xv_option_mempred_binding_ : EcParsetree.mempred_binding option
+val xv_option_loc_pside__ : EcParsetree.psymbol option
+val xv_option_lident_ : EcParsetree.psymbol option
+val xv_option_inlineopt_ : EcParsetree.inlineopt
+val xv_option_import_flag_ : [ `Export | `Import ] option
+val xv_option_im_stmt_seq_ : EcParsetree.pim_regexp list option
+val xv_option_hoare_bd_cmp_ : EcParsetree.phoarecmp option
+val xv_option_gpterm_conseq__ :
+  EcParsetree.pformula option EcUtils.tuple2 EcParsetree.gppterm option
+val xv_option_form_h_ : EcParsetree.pformula option
+val xv_option_eqobs_in_pos_ : EcParsetree.pcodepos1 EcUtils.tuple2 option
+val xv_option_eqobs_in_inv_ : EcParsetree.pformula option
+val xv_option_eqobs_in_eqpost_ : EcParsetree.pformula option
+val xv_option_do_repeat_ : EcParsetree.trepeat option
+val xv_option_debug_global_ : [ `Break | `Timed ] option
+val xv_option_dbmap_flag_ : EcParsetree.include_exclude option
+val xv_option_crushmode_ : EcParsetree.crushmode option
+val xv_option_cqoptions_ : EcParsetree.pcqoptions option
+val xv_option_codepos1_ : EcParsetree.pcodepos1 option
+val xv_option_clone_with_ :
+  (EcParsetree.pqsymbol * EcParsetree.theory_override) list option
+val xv_option_clone_opts_ : EcParsetree.theory_cloning_options option
+val xv_option_clone_import_ : [ `Export | `Import | `Include ] option
+val xv_option_bracket_theory_clear_items__ : EcParsetree.theory_clear option
+val xv_option_bracket_plist1_clone_rename_kind_COMMA___ :
+  EcParsetree.theory_renaming_kind list option
+val xv_option_bracket_nonempty_list_ident___ :
+  EcParsetree.psymbol list option
+val xv_option_bracket_nonempty_list_clone_lemma_tag___ :
+  EcParsetree.theory_cloning_proof_tag list option
+val xv_option_bracket_minclude_proc__ : EcParsetree.minclude_proc option
+val xv_option_bracket_list_user_red_option___ :
+  EcParsetree.puseroption list option
+val xv_option_bracket_list_tident___ : EcParsetree.psymbol list option
+val xv_option_bracket_list_ident___ : EcParsetree.psymbol list option
+val xv_option_bracket_form_h__ : EcParsetree.pformula option
+val xv_option_bracket_byequivopt__ : bool option
+val xv_option_brace_sword__ : int option
+val xv_option_brace_list_qident___ : EcParsetree.pqsymbol list option
+val xv_option_abrvopts_ : EcParsetree.abrvopts option
+val xv_option___anonymous_4_ : EcParsetree.pexpr option
+val xv_option_UNDERSCORE_ : unit option
+val xv_option_SEMICOLON_ : unit option
+val xv_option_PLUS_ : unit option
+val xv_option_PIPE_ : unit option
+val xv_option_COLON_ : unit option
+val xv_option_AT_ : unit option
+val xv_opptn : EcParsetree.ppattern
+val xv_operator : EcParsetree.poperator
+val xv_opclmode : EcParsetree.clmode
+val xv_opcase : EcParsetree.pop_pattern
+val xv_opbr : EcParsetree.pop_branch
+val xv_opbody :
+  [< `Case of EcParsetree.pop_branch list
+   | `Form of EcParsetree.pformula
+   | `Reft of EcParsetree.psymbol * EcParsetree.pformula
+   > `Case `Form ]
+val xv_opax : EcParsetree.psymbol
+val xv_op_or_const : [ `Const | `Op ]
+val xv_oident : EcParsetree.psymbol
+val xv_occurences : int list
+val xv_o_codepos1 : EcParsetree.pcodepos1 option
+val xv_numop : string
+val xv_nt_bindings : (EcParsetree.psymbol * EcParsetree.pty) list
+val xv_nt_binding1 : EcParsetree.psymbol * EcParsetree.pty
+val xv_nt_argty : EcParsetree.psymbol list * EcParsetree.pty
+val xv_nt_arg1 :
+  EcParsetree.psymbol * (EcParsetree.psymbol list * EcParsetree.pty option)
+val xv_notation : EcParsetree.pnotation
+val xv_nonempty_list_word_ : int list
+val xv_nonempty_list_var_or_anon_ :
+  EcParsetree.osymbol_r EcLocation.located list
+val xv_nonempty_list_uident_ : EcParsetree.psymbol list
+val xv_nonempty_list_theory_require_1_ :
+  (EcParsetree.psymbol * EcParsetree.psymbol option) list
+val xv_nonempty_list_simplify_arg_ :
+  [ `Beta
+  | `Delta of EcParsetree.pqsymbol list
+  | `Eta
+  | `Iota
+  | `Logic
+  | `ModPath
+  | `User
+  | `Zeta ] list
+val xv_nonempty_list_sform_r_none__ : EcParsetree.pformula list
+val xv_nonempty_list_sform_r_hole__ : EcParsetree.pformula list
+val xv_nonempty_list_search_ : EcParsetree.pformula list
+val xv_nonempty_list_rwarg_ : EcParsetree.rwarg list
+val xv_nonempty_list_qoident_ : EcParsetree.pqsymbol list
+val xv_nonempty_list_qident_ : EcParsetree.pqsymbol list
+val xv_nonempty_list_ptybinding1_ : EcParsetree.ptybinding list list
+val xv_nonempty_list_prefix_SLASH_pterm__ : EcParsetree.ppterm list
+val xv_nonempty_list_pgtybinding1_ : EcParsetree.pgtybinding list list
+val xv_nonempty_list_pgoption_ : EcParsetree.ppgoptions
+val xv_nonempty_list_opbr_ : EcParsetree.pop_branch list
+val xv_nonempty_list_loc_mod_qident__ :
+  EcParsetree.pmsymbol EcLocation.located list
+val xv_nonempty_list_loc_ipcore_name__ : EcParsetree.psymbol list
+val xv_nonempty_list_loc_intro_pattern__ : EcParsetree.intropattern
+val xv_nonempty_list_ident_ : EcParsetree.psymbol list
+val xv_nonempty_list_fun_update_ :
+  (EcParsetree.pcodepos_range EcLocation.located * EcParsetree.pupdate_item)
+  list list
+val xv_nonempty_list_cqoption_ : EcParsetree.pcqoptions
+val xv_nonempty_list_clone_rename_1_ : EcParsetree.theory_renaming list
+val xv_nonempty_list_clone_opt_ : EcParsetree.theory_cloning_options
+val xv_nonempty_list_clone_lemma_tag_ :
+  EcParsetree.theory_cloning_proof_tag list
+val xv_nonempty_list_clone_clear_1_ :
+  EcParsetree.theory_cloning_clear list list
+val xv_nonempty_list_caseoption_ : EcParsetree.pcaseoptions
+val xv_nonempty_list_bracket_hintoption__ : EcParsetree.phintoption list
+val xv_nonempty_list_bdident_ : EcParsetree.osymbol list
+val xv_nonempty_list_abrvopt_ : EcParsetree.abrvopts
+val xv_none : EcParsetree.pformula_r
+val xv_nm1_codepos : EcParsetree.pcodepos1 * EcParsetree.pbranch_select
+val xv_namespace : string list
+val xv_module_import : EcParsetree.pmsymbol EcLocation.located list
+val xv_mod_update_var : EcParsetree.pupdate_var
+val xv_mod_update_fun : EcParsetree.pupdate_fun
+val xv_mod_type_with_restr : EcParsetree.pmodule_type_restr
+val xv_mod_type : EcParsetree.pqsymbol
+val xv_mod_restr : EcParsetree.pmod_restr
+val xv_mod_remove_var : EcParsetree.psymbol list
+val xv_mod_qident : EcParsetree.pmsymbol
+val xv_mod_params : EcParsetree.pmodule_params
+val xv_mod_item : EcParsetree.pstructure_item
+val xv_mod_ident1 :
+  EcParsetree.psymbol * EcParsetree.pmsymbol EcLocation.located list option
+val xv_mod_header_params :
+  EcParsetree.pmodule_header * EcParsetree.pmodule_params
+val xv_mod_header : EcParsetree.pmodule_header
+val xv_mod_def_or_decl : EcParsetree.pmodule_def_or_decl
+val xv_mod_cast : EcParsetree.pqsymbol list
+val xv_mod_body : EcParsetree.pmodule_expr_r
+val xv_minclude_proc : EcParsetree.minclude_proc
+val xv_mident : EcParsetree.psymbol
+val xv_memtype_decl : EcParsetree.pmemtype_el
+val xv_memtype : EcParsetree.pmemtype
+val xv_mempred_binding : EcParsetree.mempred_binding
+val xv_mem_restr_el : EcParsetree.pmod_restr_mem_el
+val xv_mem_restr : EcParsetree.pmod_restr_mem
+val xv_mcptn_sbinop_ : EcParsetree.ppattern
+val xv_mcptn_binop_ : EcParsetree.ppattern
+val xv_match_branch : EcParsetree.ppattern * EcParsetree.pstmt
+val xv_lvmatch : EcParsetree.plvmatch
+val xv_lvalue_var : EcParsetree.pqsymbol
+val xv_lvalue_u : EcParsetree.plvalue_r
+val xv_lvalue : EcParsetree.plvalue_r EcLocation.located
+val xv_lqident : EcParsetree.pqsymbol
+val xv_lpattern_u : EcParsetree.plpattern_r
+val xv_lpattern : EcParsetree.plpattern_r EcLocation.located
+val xv_lp_field : EcParsetree.pqsymbol * EcParsetree.psymbol
+val xv_loption_separated_nonempty_list_empty_inlinepat__ :
+  ([ `DIFF | `UNION ] * EcParsetree.inline_pat1) list
+val xv_loption_separated_nonempty_list_SEMICOLON_form_r_none___ :
+  EcParsetree.pformula list
+val xv_loption_separated_nonempty_list_SEMICOLON_form_r_hole___ :
+  EcParsetree.pformula list
+val xv_loption_separated_nonempty_list_SEMICOLON_fel_pred_spec__ :
+  EcParsetree.pfel_spec_preds
+val xv_loption_separated_nonempty_list_PIPE_match_branch__ :
+  (EcParsetree.ppattern * EcParsetree.pstmt) list
+val xv_loption_separated_nonempty_list_PIPE_ip_ctor_def__ :
+  EcParsetree.ppind_ctor list
+val xv_loption_separated_nonempty_list_PIPE___anonymous_3_none___ :
+  (EcParsetree.ppattern * EcParsetree.pformula) list
+val xv_loption_separated_nonempty_list_PIPE___anonymous_3_hole___ :
+  (EcParsetree.ppattern * EcParsetree.pformula) list
+val xv_loption_separated_nonempty_list_COMMA_typed_vars_or_anons__ :
+  (EcParsetree.osymbol * EcParsetree.pty) list list
+val xv_loption_separated_nonempty_list_COMMA_nt_binding1__ :
+  (EcParsetree.psymbol * EcParsetree.pty) list
+val xv_loption_separated_nonempty_list_COMMA_loc_type_exp___ :
+  EcParsetree.pty list
+val xv_loption_separated_nonempty_list_COMMA_ident__ :
+  EcParsetree.psymbol list
+val xv_loption_separated_nonempty_list_COMMA_form_r_none___ :
+  EcParsetree.pformula list
+val xv_loption_separated_nonempty_list_COMMA_form_r_hole___ :
+  EcParsetree.pformula list
+val xv_loption_separated_nonempty_list_COMMA_expr__ : EcParsetree.pexpr list
+val xv_loption_separated_nonempty_list_COMMA___anonymous_2__ :
+  (EcParsetree.pqsymbol * EcParsetree.psymbol option) list
+val xv_loption_separated_nonempty_list_COMMA___anonymous_1__ :
+  EcParsetree.pfrange list
+val xv_logtactic : EcParsetree.logtactic
+val xv_locality : EcTypes.locality
+val xv_local_type : EcTypes.is_local option
+val xv_loc_decl_r : EcParsetree.pfunction_local
+val xv_loc_decl_names : [ `Single | `Tuple ] * EcParsetree.psymbol list
+val xv_loc_decl : EcParsetree.pfunction_local
+val xv_loc_word_ : int EcLocation.located
+val xv_loc_uniop_ : string EcLocation.located
+val xv_loc_tyvar_annot_ : EcParsetree.ptyannot
+val xv_loc_type_exp_ : EcParsetree.pty
+val xv_loc_tcfc_ : EcParsetree.tfocus EcLocation.located
+val xv_loc_tactics0_ : EcParsetree.ptactic_core
+val xv_loc_tactics_ : EcParsetree.ptactics EcLocation.located
+val xv_loc_tactic_core_r_ : EcParsetree.ptactic_core
+val xv_loc_tactic_chain_r_ : EcParsetree.ptactic_chain EcLocation.located
+val xv_loc_sword_ : int EcLocation.located
+val xv_loc_swap_info_ :
+  (EcParsetree.oside * EcParsetree.pswap_kind) EcLocation.located
+val xv_loc_simpl_type_exp_ : EcParsetree.pty
+val xv_loc_sform_u_none__ : EcParsetree.pformula
+val xv_loc_sform_u_hole__ : EcParsetree.pformula
+val xv_loc_sbinop_ : string EcLocation.located
+val xv_loc_rwarg1_ : EcParsetree.rwarg1 EcLocation.located
+val xv_loc_realize_ : EcParsetree.prealize EcLocation.located
+val xv_loc_pside__ : string EcLocation.located
+val xv_loc_pside_ : string EcLocation.located
+val xv_loc_proofend_ : EcParsetree.save EcLocation.located
+val xv_loc_prog_r_ : EcParsetree.prog
+val xv_loc_prefix_PCENT__lident__ : string EcLocation.located
+val xv_loc_pragma_r_ : string EcLocation.located
+val xv_loc_plist1_form_r_none__COMMA__ :
+  EcParsetree.pformula list EcLocation.located
+val xv_loc_plist1_form_r_hole__COMMA__ :
+  EcParsetree.pformula list EcLocation.located
+val xv_loc_plist0_form_r_none__SEMICOLON__ :
+  EcParsetree.pformula list EcLocation.located
+val xv_loc_plist0_form_r_hole__SEMICOLON__ :
+  EcParsetree.pformula list EcLocation.located
+val xv_loc_plist0_expr_COMMA__ : EcParsetree.pexpr list EcLocation.located
+val xv_loc_phoare_body_none__ : EcParsetree.pformula_r EcLocation.located
+val xv_loc_paren_rlist1_tactic_chain_r_SEMICOLON___ :
+  EcParsetree.ptactic_chain list EcLocation.located
+val xv_loc_ordering_op_ : string EcLocation.located
+val xv_loc_option_side__ : EcParsetree.oside EcLocation.located
+val xv_loc_opclmode_ : EcParsetree.clmode EcLocation.located
+val xv_loc_opbody_ :
+  [< `Case of EcParsetree.pop_branch list
+   | `Form of EcParsetree.pformula
+   | `Reft of EcParsetree.psymbol * EcParsetree.pformula
+   > `Case `Form ]
+  EcLocation.located
+val xv_loc_numop_ : string EcLocation.located
+val xv_loc_nonempty_list_bdident__ :
+  EcParsetree.osymbol list EcLocation.located
+val xv_loc_mod_qident_ : EcParsetree.pmsymbol EcLocation.located
+val xv_loc_mod_item_ : EcParsetree.pstructure_item EcLocation.located
+val xv_loc_mod_header_params_ :
+  (EcParsetree.pmodule_header * EcParsetree.pmodule_params)
+  EcLocation.located
+val xv_loc_mod_body_ : EcParsetree.pmodule_expr
+val xv_loc_lvalue_u_ : EcParsetree.plvalue_r EcLocation.located
+val xv_loc_lpattern_u_ : EcParsetree.plpattern_r EcLocation.located
+val xv_loc_locality_ : EcTypes.locality EcLocation.located
+val xv_loc_loc_decl_names_ :
+  ([ `Single | `Tuple ] * EcParsetree.psymbol list) EcLocation.located
+val xv_loc_ipcore_name_ : EcParsetree.psymbol
+val xv_loc_intro_pattern_ : EcParsetree.intropattern1 EcLocation.located
+val xv_loc_interleave_info_ : EcParsetree.interleave_info EcLocation.located
+val xv_loc_instr_ : EcParsetree.pinstr_r EcLocation.located
+val xv_loc_hoare_body_none__ : EcParsetree.pformula_r EcLocation.located
+val xv_loc_gpterm_arg_ : EcParsetree.ppt_arg EcLocation.located
+val xv_loc_fun_decl_ : EcParsetree.pfunction_decl EcLocation.located
+val xv_loc_form_u_none__ : EcParsetree.pformula_r EcLocation.located
+val xv_loc_form_u_hole__ : EcParsetree.pformula_r EcLocation.located
+val xv_loc_form_chained_orderings_none__ :
+  (EcParsetree.pformula_r * EcParsetree.pformula) EcLocation.located
+val xv_loc_form_chained_orderings_hole__ :
+  (EcParsetree.pformula_r * EcParsetree.pformula) EcLocation.located
+val xv_loc_fident_ : EcParsetree.pgamepath
+val xv_loc_equiv_body_none__ : EcParsetree.pformula_r EcLocation.located
+val xv_loc_empty_ : unit EcLocation.located
+val xv_loc_ehoare_body_none__ : EcParsetree.pformula_r EcLocation.located
+val xv_loc_codepos_or_range_ : EcParsetree.pcodepos_range EcLocation.located
+val xv_loc_binop_ : string EcLocation.located
+val xv_loc_bdident__ : EcParsetree.osymbol_r EcLocation.located
+val xv_loc_bdident_ : EcParsetree.osymbol EcLocation.located
+val xv_loc_base_instr_ : EcParsetree.pinstr_r EcLocation.located
+val xv_loc__uident_ : EcParsetree.psymbol
+val xv_loc__tident_ : EcParsetree.psymbol
+val xv_loc__oident_ : EcParsetree.psymbol
+val xv_loc__mident_ : EcParsetree.psymbol
+val xv_loc__lident_ : string EcLocation.located
+val xv_loc__ident_ : string EcLocation.located
+val xv_loc__genqident_clone_lemma_base__ :
+  (string list *
+   [ `All of EcParsetree.theory_cloning_proof_tag list | `Named of string ])
+  EcLocation.located
+val xv_loc__genqident__uident__ : EcSymbols.qsymbol EcLocation.located
+val xv_loc__genqident__lident__ : EcSymbols.qsymbol EcLocation.located
+val xv_loc__genqident__ident__ : EcSymbols.qsymbol EcLocation.located
+val xv_loc__genqident_STAR__ : (string list * unit) EcLocation.located
+val xv_loc__boident_ : string EcLocation.located
+val xv_loc_UNDERSCORE_ : unit EcLocation.located
+val xv_loc_UINT_ : BI.zint EcLocation.located
+val xv_loc_SUBST_ : unit EcLocation.located
+val xv_loc_STRING_ : string EcLocation.located
+val xv_loc_SPLIT_ : unit EcLocation.located
+val xv_loc_RES_ : unit EcLocation.located
+val xv_loc_RBOOL_ : unit EcLocation.located
+val xv_loc_NOP_ : string EcLocation.located
+val xv_loc_DOTDOT_ : unit EcLocation.located
+val xv_list_var_decl_ : EcParsetree.pupdate_var list
+val xv_list_user_red_option_ : EcParsetree.puseroption list
+val xv_list_uqident_ : EcParsetree.pqsymbol list
+val xv_list_tyci_op_ :
+  (EcParsetree.psymbol * (EcParsetree.pty list * EcParsetree.pqsymbol)) list
+val xv_list_tyci_ax_ : (EcParsetree.psymbol * EcParsetree.ptactic_core) list
+val xv_list_tident_ : EcParsetree.psymbol list
+val xv_list_theory_clear_item1_ : EcParsetree.theory_clear
+val xv_list_tc_op_ : (EcParsetree.psymbol * EcParsetree.pty) list
+val xv_list_tc_ax_ : (EcParsetree.psymbol * EcParsetree.pformula) list
+val xv_list_smt_info1_ : smt list
+val xv_list_signature_item_ : EcParsetree.pmodule_sig_struct_body
+val xv_list_sig_params_ : EcParsetree.pmodule_params list
+val xv_list_sform_ : EcParsetree.pformula list
+val xv_list_qoident_ : EcParsetree.pqsymbol list
+val xv_list_qident_ : EcParsetree.pqsymbol list
+val xv_list_ptybinding1_ : EcParsetree.ptybinding list list
+val xv_list_prover_kind1_ : prover list
+val xv_list_prefix_SLASH_pterm__ : EcParsetree.ppterm list
+val xv_list_pffilter_ : EcParsetree.pffilter list
+val xv_list_or3_clone_proof_clone_rename_clone_clear__ :
+  [ `Or13 of EcParsetree.theory_cloning_proof list
+  | `Or23 of EcParsetree.theory_renaming list
+  | `Or33 of EcParsetree.theory_cloning_clear list ] list
+val xv_list_nt_arg1_ :
+  (EcParsetree.psymbol * (EcParsetree.psymbol list * EcParsetree.pty option))
+  list
+val xv_list_mod_update_var_ : EcParsetree.pupdate_var list
+val xv_list_mod_update_fun_ : EcParsetree.pupdate_fun list
+val xv_list_lqident_ : EcParsetree.pqsymbol list
+val xv_list_loc_decl_ : EcParsetree.pfunction_local list
+val xv_list_loc_mod_item__ : EcParsetree.pstructure
+val xv_list_loc_ipcore_name__ : EcParsetree.psymbol list
+val xv_list_loc_intro_pattern__ : EcParsetree.intropattern
+val xv_list_loc_instr__ : EcParsetree.pstmt
+val xv_list_loc_gpterm_arg__ : EcParsetree.ppt_arg EcLocation.located list
+val xv_list_interleavepos_ : (int * int) list
+val xv_list_ident_ : EcParsetree.psymbol list
+val xv_list_genpattern_ : EcParsetree.genpattern list
+val xv_list_eqobs_in_eqglob1_ :
+  (EcParsetree.pgamepath option EcUtils.tuple2 * EcParsetree.pformula) list
+val xv_list_dbmap1_ : EcParsetree.pdbhint
+val xv_list_bdident_ : EcParsetree.osymbol list
+val xv_lident : string EcLocation.located
+val xv_lemma_decl :
+  EcParsetree.psymbol * EcParsetree.ptyvardecls option *
+  EcParsetree.mempred_binding option * EcParsetree.pgtybindings option *
+  EcParsetree.pformula
+val xv_is_uniop : unit
+val xv_is_numop : unit
+val xv_is_local : EcTypes.is_local
+val xv_is_binop : unit
+val xv_ipsubsttop : [ `LtoR | `RtoL ] option
+val xv_iplist1_r_sform_COMMA_ : EcParsetree.pformula list
+val xv_iplist1_r_loc_swap_info__COMMA_ :
+  (EcParsetree.oside * EcParsetree.pswap_kind) EcLocation.located list
+val xv_iplist1_r_loc_gpterm_arg__empty_ :
+  EcParsetree.ppt_arg EcLocation.located list
+val xv_iplist1_sform_COMMA_ : EcParsetree.pformula list
+val xv_iplist1_loc_swap_info__COMMA_ :
+  (EcParsetree.oside * EcParsetree.pswap_kind) EcLocation.located list
+val xv_iplist1_loc_gpterm_arg__empty_ :
+  EcParsetree.ppt_arg EcLocation.located list
+val xv_ipcore_name : string
+val xv_ipcore : EcParsetree.ipcore
+val xv_ip_repeat : int option
+val xv_ip_ctor_def : EcParsetree.ppind_ctor
+val xv_ioption_word_ : int option
+val xv_ioption_prefix_COLON_loc_type_exp___ :
+  EcParsetree.pty_r EcLocation.located option
+val xv_ioption_postfix_boption_UNDERSCORE__COLON__ : bool option
+val xv_ioption_nonempty_list_bracket_hintoption___ :
+  EcParsetree.phintoption list option
+val xv_ioption_ip_repeat_ : int option option
+val xv_ioption_caseoptions_ : EcParsetree.pcaseoptions option
+val xv_ioption_brace_nonempty_list_loc_ipcore_name____ :
+  EcParsetree.psymbol list option
+val xv_intro_pattern : EcParsetree.intropattern1
+val xv_interleavepos : int * int
+val xv_interleave_info : EcParsetree.interleave_info
+val xv_instr : EcParsetree.pinstr_r
+val xv_inlinesubpat : EcParsetree.psymbol list * EcParsetree.psymbol option
+val xv_inlinepat1 : EcParsetree.inline_pat1
+val xv_inlinepat : [ `DIFF | `UNION ] * EcParsetree.inline_pat1
+val xv_inlineopt : [ `UseTuple of bool ]
+val xv_indpred_def : EcParsetree.ppind_ctor list
+val xv_import_flag : [ `Export | `Import ]
+val xv_im_stmt_seq_r : EcParsetree.pim_regexp list
+val xv_im_stmt_seq_named : EcParsetree.pim_regexp
+val xv_im_stmt_seq : EcParsetree.pim_regexp list
+val xv_im_stmt_base_r_empty_ : EcParsetree.pim_regexp
+val xv_im_stmt_base_r_SEMICOLON_ : EcParsetree.pim_regexp
+val xv_im_stmt_base_empty_ : EcParsetree.pim_regexp
+val xv_im_stmt_base_SEMICOLON_ : EcParsetree.pim_regexp
+val xv_im_stmt_atomic : EcParsetree.pim_regexp
+val xv_im_stmt : EcParsetree.pim_regexp
+val xv_im_repeat_mark : EcParsetree.pim_repeat
+val xv_im_range_question : int option
+val xv_im_range : int option EcUtils.tuple2
+val xv_im_block_start : EcParsetree.anchor
+val xv_im_block_end : EcParsetree.anchor
+val xv_im_block : EcParsetree.pim_block
+val xv_im_base_repeat_mark : EcParsetree.pim_repeat_kind
+val xv_if_option : EcParsetree.pcond_info
+val xv_if_expr : EcParsetree.pinstr_r
+val xv_if_else_expr : EcParsetree.pscond list * EcParsetree.pstmt
+val xv_ident : string EcLocation.located
+val xv_icodepos_r : EcParsetree.pcp_match
+val xv_icodepos : EcParsetree.pcp_match
+val xv_icasemode_full_opt : bool * bool
+val xv_icasemode : EcParsetree.icasemode
+val xv_iboption_TILD_ : bool
+val xv_iboption_SLASH_ : bool
+val xv_iboption_MINUS_ : bool
+val xv_iboption_HAT_ : bool
+val xv_iboption_AT_ : bool
+val xv_iboption_ABSTRACT_ : bool
+val xv_hole : EcParsetree.pformula_r
+val xv_hoare_body_none_ : EcParsetree.pformula_r
+val xv_hoare_body_hole_ : EcParsetree.pformula_r
+val xv_hoare_bd_cmp : EcParsetree.phoarecmp
+val xv_hintoption : EcParsetree.phintoption
+val xv_hint : EcParsetree.phint
+val xv_have_or_suff : [ `Have | `Suff ]
+val xv_gpterm_head_option_form_h__ :
+  bool * EcParsetree.pformula option EcParsetree.ppt_head
+val xv_gpterm_head_conseq_xt_ :
+  bool *
+  (EcParsetree.pformula option EcUtils.tuple2 *
+   EcParsetree.conseq_info option)
+  EcParsetree.ppt_head
+val xv_gpterm_head_conseq_ :
+  bool * EcParsetree.pformula option EcUtils.tuple2 EcParsetree.ppt_head
+val xv_gpterm_head_call_info_ :
+  bool * EcParsetree.call_info EcParsetree.ppt_head
+val xv_gpterm_arg : EcParsetree.ppt_arg
+val xv_gpterm_conseq_xt_ : EcParsetree.conseq_ppterm
+val xv_gpterm_conseq_ :
+  EcParsetree.pformula option EcUtils.tuple2 EcParsetree.gppterm
+val xv_gpterm_call_info_ : EcParsetree.call_info EcParsetree.gppterm
+val xv_gprover_info : EcParsetree.pprover_infos
+val xv_gpoterm_head_form_h_ :
+  bool * EcParsetree.pformula option EcParsetree.ppt_head
+val xv_gpoterm_form_h_ : EcParsetree.ppterm
+val xv_global_action : EcParsetree.global_action
+val xv_global : EcParsetree.global
+val xv_genqident_clone_lemma_base_ :
+  (string list *
+   [ `All of EcParsetree.theory_cloning_proof_tag list | `Named of string ])
+  EcLocation.located
+val xv_genqident__uident_ : EcParsetree.pqsymbol
+val xv_genqident__lident_ : EcParsetree.pqsymbol
+val xv_genqident__ident_ : EcParsetree.pqsymbol
+val xv_genqident_STAR_ : (string list * unit) EcLocation.located
+val xv_genpattern : EcParsetree.genpattern
+val xv_fun_update :
+  (EcParsetree.pcodepos_range EcLocation.located * EcParsetree.pupdate_item)
+  list
+val xv_fun_def_body : EcParsetree.pfunction_body
+val xv_fun_decl : EcParsetree.pfunction_decl
+val xv_form_u_none_ : EcParsetree.pformula_r
+val xv_form_u_hole_ : EcParsetree.pformula_r
+val xv_form_r_none_ : EcParsetree.pformula
+val xv_form_r_hole_ : EcParsetree.pformula
+val xv_form_ordering_none_ :
+  string EcLocation.located * EcParsetree.ptyannot option *
+  EcParsetree.pformula * EcParsetree.pformula
+val xv_form_ordering_hole_ :
+  string EcLocation.located * EcParsetree.ptyannot option *
+  EcParsetree.pformula * EcParsetree.pformula
+val xv_form_or_double_form : EcParsetree.pformula EcUtils.doption
+val xv_form_h : EcParsetree.pformula
+val xv_form_field : EcParsetree.pformula EcParsetree.rfield
+val xv_form_chained_orderings_none_ :
+  EcParsetree.pformula_r * EcParsetree.pformula
+val xv_form_chained_orderings_hole_ :
+  EcParsetree.pformula_r * EcParsetree.pformula
+val xv_form : EcParsetree.pformula
+val xv_fident : EcParsetree.pmsymbol * EcParsetree.psymbol
+val xv_fel_pred_specs : EcParsetree.pfel_spec_preds
+val xv_fel_pred_spec : EcParsetree.pgamepath * EcParsetree.pformula
+val xv_f_or_mod_ident : EcParsetree.f_or_mod_ident
+val xv_expr : EcParsetree.pexpr
+val xv_equiv_body_none_ : EcParsetree.pformula_r
+val xv_equiv_body_hole_ : EcParsetree.pformula_r
+val xv_eqobs_in_pos : EcParsetree.pcodepos1 EcUtils.tuple2
+val xv_eqobs_in_inv : EcParsetree.pformula
+val xv_eqobs_in_eqpost : EcParsetree.pformula
+val xv_eqobs_in_eqinv :
+  (EcParsetree.pgamepath option EcUtils.tuple2 * EcParsetree.pformula) list *
+  EcParsetree.pformula option
+val xv_eqobs_in_eqglob1 :
+  EcParsetree.pgamepath option EcUtils.tuple2 * EcParsetree.pformula
+val xv_eqobs_in : EcParsetree.sim_info
+val xv_empty : unit
+val xv_ehoare_body_none_ : EcParsetree.pformula_r
+val xv_ehoare_body_hole_ : EcParsetree.pformula_r
+val xv_eager_tac : EcParsetree.phltactic
+val xv_eager_info : EcParsetree.eager_info
+val xv_eager_body_none_ : EcParsetree.pformula_r
+val xv_eager_body_hole_ : EcParsetree.pformula_r
+val xv_dt_ctor_def : EcParsetree.psymbol * EcParsetree.pty list
+val xv_do_repeat : EcParsetree.trepeat
+val xv_debug_global : [ `Break | `Timed ]
+val xv_dbmap_target : [ `Lemma | `Theory ] * EcParsetree.pqsymbol
+val xv_dbmap_flag : EcParsetree.include_exclude
+val xv_dbmap1 : EcParsetree.pdbmap1
+val xv_dbhint : EcParsetree.pdbhint
+val xv_datatype_def : EcParsetree.pdatatype
+val xv_crushmode : EcParsetree.crushmode
+val xv_cqoptions : EcParsetree.pcqoptions
+val xv_cqoptionkw : string EcLocation.located
+val xv_cqoption : bool * EcParsetree.pcqoption
+val xv_coq_info : EcProvers.coq_mode option
+val xv_conseq_xt :
+  EcParsetree.pformula option EcUtils.tuple2 * EcParsetree.conseq_info option
+val xv_conseq : EcParsetree.pformula option EcUtils.tuple2
+val xv_codepos_range : EcParsetree.pcodepos_range
+val xv_codepos_or_range : EcParsetree.pcodepos_range
+val xv_codepos1_wo_off : EcParsetree.pcp_base
+val xv_codepos1 : EcParsetree.pcodepos1
+val xv_codepos : EcParsetree.pcodepos
+val xv_codeoffset1 : EcParsetree.pcodeoffset1
+val xv_cltyparams : EcParsetree.psymbol list
+val xv_clone_with : (EcParsetree.pqsymbol * EcParsetree.theory_override) list
+val xv_clone_rename_kind : EcParsetree.theory_renaming_kind
+val xv_clone_rename_1 : EcParsetree.theory_renaming
+val xv_clone_rename : EcParsetree.theory_renaming list
+val xv_clone_proof : EcParsetree.theory_cloning_proof list
+val xv_clone_override : EcParsetree.pqsymbol * EcParsetree.theory_override
+val xv_clone_opts : EcParsetree.theory_cloning_options
+val xv_clone_opt : bool * EcParsetree.theory_cloning_option
+val xv_clone_lemma_tag : EcParsetree.theory_cloning_proof_tag
+val xv_clone_lemma_base :
+  [ `All of EcParsetree.theory_cloning_proof_tag list | `Named of string ]
+val xv_clone_lemma_1_core :
+  [ `All of
+      EcParsetree.pqsymbol option * EcParsetree.theory_cloning_proof_tag list
+  | `Named of EcParsetree.pqsymbol * EcParsetree.clmode ]
+val xv_clone_lemma_1 : EcParsetree.theory_cloning_proof
+val xv_clone_lemma : EcParsetree.theory_cloning_proof list
+val xv_clone_import : [ `Export | `Import | `Include ]
+val xv_clone_clear_1 : EcParsetree.theory_cloning_clear list
+val xv_clone_clear : EcParsetree.theory_cloning_clear list
+val xv_cbv :
+  [ `Beta
+  | `Delta of EcParsetree.pqsymbol list
+  | `Eta
+  | `Iota
+  | `Logic
+  | `ModPath
+  | `User
+  | `Zeta ] list
+val xv_caseoptions : EcParsetree.pcaseoptions
+val xv_caseoption : bool * EcParsetree.pcaseoption
+val xv_call_info : EcParsetree.call_info
+val xv_byequivopt : bool
+val xv_branch_select : EcParsetree.pbranch_select
+val xv_bracket_theory_clear_items_ : EcParsetree.theory_clear
+val xv_bracket_smt_info_ : EcParsetree.pprover_infos
+val xv_bracket_rwpr_arg_ : EcParsetree.psymbol * EcParsetree.pformula option
+val xv_bracket_plist1_clone_rename_kind_COMMA__ :
+  EcParsetree.theory_renaming_kind list
+val xv_bracket_plist0_ip_ctor_def_PIPE__ : EcParsetree.ppind_ctor list
+val xv_bracket_nonempty_list_pgoption__ : EcParsetree.ppgoptions
+val xv_bracket_nonempty_list_ident__ : EcParsetree.psymbol list
+val xv_bracket_nonempty_list_cqoption__ : EcParsetree.pcqoptions
+val xv_bracket_nonempty_list_clone_opt__ : EcParsetree.theory_cloning_options
+val xv_bracket_nonempty_list_clone_lemma_tag__ :
+  EcParsetree.theory_cloning_proof_tag list
+val xv_bracket_nonempty_list_caseoption__ : EcParsetree.pcaseoptions
+val xv_bracket_nonempty_list_abrvopt__ : EcParsetree.abrvopts
+val xv_bracket_minclude_proc_ : EcParsetree.minclude_proc
+val xv_bracket_list_user_red_option__ : EcParsetree.puseroption list
+val xv_bracket_list_tident__ : EcParsetree.psymbol list
+val xv_bracket_list_ident__ : EcParsetree.psymbol list
+val xv_bracket_hintoption_ : EcParsetree.phintoption
+val xv_bracket_form_h_ : EcParsetree.pformula
+val xv_bracket_empty_ : unit
+val xv_bracket_byequivopt_ : bool
+val xv_brace_sword_ : int
+val xv_brace_stmt_ : EcParsetree.pstmt
+val xv_brace_pside__ : string
+val xv_brace_plist1_qident_COMMA__ : EcParsetree.pqsymbol list
+val xv_brace_nonempty_list_loc_ipcore_name___ : EcParsetree.psymbol list
+val xv_brace_list_qident__ : EcParsetree.pqsymbol list
+val xv_brace___anonymous_0_ : bool * string EcLocation.located
+val xv_boption_VAR_ : bool
+val xv_boption_UNDERSCORE_ : bool
+val xv_boption_TILD_ : bool
+val xv_boption_SUFF_ : bool
+val xv_boption_STAR_ : bool
+val xv_boption_NOT_ : bool
+val xv_boption_MINUS_ : bool
+val xv_boption_FOR_ : bool
+val xv_boption_FAIL_ : bool
+val xv_boption_EQ_ : bool
+val xv_boident : EcParsetree.psymbol
+val xv_block : EcParsetree.pstmt
+val xv_binop : string
+val xv_bdident_ : EcParsetree.osymbol_r
+val xv_bdident : EcParsetree.osymbol
+val xv_bdhoare_split : EcParsetree.bdh_split
+val xv_base_instr : EcParsetree.pinstr_r
+val xv_axiom_tc : EcParsetree.paxiom_kind
+val xv_axiom : EcParsetree.paxiom
+val xv_async_while_tac_info : EcParsetree.async_while_info
+val xv_app_bd_info : EcParsetree.p_app_xt_info
+val xv_addrw :
+  EcTypes.is_local * EcParsetree.pqsymbol * EcParsetree.pqsymbol list
+val xv_abrvopts : EcParsetree.abrvopts
+val xv_abrvopt : bool * EcParsetree.abrvopt
+val xv_abbreviation : EcParsetree.pabbrev
+val xv__uident : string
+val xv__tident : string
+val xv__oident : string
+val xv__mident : string
+val xv__lident : string
+val xv__ident : string
+val xv__genqident_clone_lemma_base_ :
+  string list *
+  [ `All of EcParsetree.theory_cloning_proof_tag list | `Named of string ]
+val xv__genqident__uident_ : EcSymbols.qsymbol
+val xv__genqident__lident_ : EcSymbols.qsymbol
+val xv__genqident__ident_ : EcSymbols.qsymbol
+val xv__genqident_STAR_ : string list * unit
+val xv__boident : string
+val xv___rlist1_uident_DOT_ : EcParsetree.psymbol list
+val xv___rlist1_typaram_COMMA_ :
+  (EcParsetree.psymbol * EcParsetree.pqsymbol list) list
+val xv___rlist1_tyd_name_COMMA_ :
+  (EcParsetree.ptyparams * EcParsetree.psymbol) list
+val xv___rlist1_tident_empty_ : EcParsetree.psymbol list
+val xv___rlist1_tactic_chain_r_SEMICOLON_ : EcParsetree.ptactic_chain list
+val xv___rlist1_subtactic_SEMICOLON_ : EcParsetree.ptactic list
+val xv___rlist1_rwpterm_COMMA_ :
+  (EcParsetree.rwside * EcParsetree.ppterm) list
+val xv___rlist1_rec_field_def_SEMICOLON_ :
+  (EcParsetree.psymbol * EcParsetree.pty) list
+val xv___rlist1_qident_inparam_COMMA_ : EcParsetree.qident_inparam list
+val xv___rlist1_qident_COMMA_ : EcParsetree.pqsymbol list
+val xv___rlist1_prefix_DOT_UIDENT__empty_ : string list
+val xv___rlist1_nm1_codepos_empty_ :
+  (EcParsetree.pcodepos1 * EcParsetree.pbranch_select) list
+val xv___rlist1_mod_ident1_DOT_ :
+  (EcParsetree.psymbol * EcParsetree.pmsymbol EcLocation.located list option)
+  list
+val xv___rlist1_memtype_decl_COMMA_ : EcParsetree.pmemtype_el list
+val xv___rlist1_mem_restr_el_COMMA_ : EcParsetree.pmod_restr_mem_el list
+val xv___rlist1_lp_field_SEMICOLON_ :
+  (EcParsetree.pqsymbol * EcParsetree.psymbol) list
+val xv___rlist1_form_field_SEMICOLON_ :
+  EcParsetree.pformula EcParsetree.rfield list
+val xv___rlist1_UIDENT_DOT_ : string list
+val xv___anonymous_8 : int
+val xv___anonymous_7 :
+  EcParsetree.pexpr list EcLocation.located * EcParsetree.pexpr option
+val xv___anonymous_6 :
+  EcParsetree.pqsymbol * EcParsetree.ptyannot option *
+  EcParsetree.pformula list
+val xv___anonymous_5 : bool
+val xv___anonymous_4 : EcParsetree.pexpr
+val xv___anonymous_3_none_ : EcParsetree.ppattern * EcParsetree.pformula
+val xv___anonymous_3_hole_ : EcParsetree.ppattern * EcParsetree.pformula
+val xv___anonymous_2 : EcParsetree.pqsymbol * EcParsetree.psymbol option
+val xv___anonymous_1 : EcParsetree.pfrange
+val xv___anonymous_0 : bool * string EcLocation.located
+val xv_ID___anonymous_8_ : int
+val xv_ID___anonymous_5_ : bool
+val menhir_end_marker : int
