@@ -467,6 +467,28 @@ let textDocumentDocumentSymbol ~id params =
     (* Document not found - return empty list *)
     Ok []
 
+let textDocumentReferences ~id params =
+  let Request.Client.ReferenceParams.{ textDocument; position; context } = params in
+  
+  try
+    (* Get document state *)
+    let st = Hashtbl.find states (Uri.path textDocument.uri) in
+    
+    (* Placeholder: return current position as a reference *)
+    let location = Request.Client.Location.{
+      uri = textDocument.uri;
+      range = {
+        start = position;
+        end_ = position;
+      };
+    } in
+    
+    Ok [location]
+    
+  with
+  | Not_found ->
+    Ok []
+
 let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,string) result * events =
   fun ~id req ->
   match req with
@@ -482,6 +504,8 @@ let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,
     textDocumentDefinition ~id params, []
   | DocumentSymbol params ->
     textDocumentDocumentSymbol ~id params, []
+  | References params ->
+    textDocumentReferences ~id params, []
   | UnknownRequest -> log "Received unknown request"; Ok(()), []
 
 let dispatch_ext_request : type a. id:int -> a Request.Client.params -> (a,string) result * events =

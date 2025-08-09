@@ -254,6 +254,26 @@ module Request = struct
 
     end
 
+    module ReferenceContext = struct
+      type t = {
+        includeDeclaration : bool;
+      } [@@deriving yojson]
+    end
+
+    module ReferenceParams = struct
+      type t = {
+        textDocument : TextDocumentIdentifier.t;
+        position : Position.t;
+        context : ReferenceContext.t;
+      } [@@deriving yojson] [@@yojson.allow_extra_fields]
+    end
+
+    module ReferenceResult = struct
+
+      type t = Location.t list [@@deriving yojson]
+
+    end
+
     type 'rsp params =
     | Initialize : InitializeParams.t -> InitializeResult.t params
     | Shutdown : unit params
@@ -261,6 +281,7 @@ module Request = struct
     | Completion : CompletionParams.t -> CompletionResult.t params
     | Definition : DefinitionParams.t -> DefinitionResult.t params
     | DocumentSymbol : DocumentSymbolParams.t -> DocumentSymbolResult.t params
+    | References : ReferenceParams.t -> ReferenceResult.t params
     | UnknownRequest : unit params
 
     type t = Pack : int * _ params -> t
@@ -273,6 +294,7 @@ module Request = struct
       | "textDocument/completion" -> Pack (id, Completion CompletionParams.(t_of_yojson params))
       | "textDocument/definition" -> Pack (id, Definition DefinitionParams.(t_of_yojson params))
       | "textDocument/documentSymbol" -> Pack (id, DocumentSymbol DocumentSymbolParams.(t_of_yojson params))
+      | "textDocument/references" -> Pack (id, References ReferenceParams.(t_of_yojson params))
       | _ -> Pack (id, UnknownRequest)
 
     let yojson_of_response : type a. a params -> a -> Yojson.Safe.t =
@@ -284,6 +306,7 @@ module Request = struct
         | Completion _ -> CompletionResult.yojson_of_t resp
         | Definition _ -> DefinitionResult.yojson_of_t resp
         | DocumentSymbol _ -> DocumentSymbolResult.yojson_of_t resp
+        | References _ -> ReferenceResult.yojson_of_t resp
         | UnknownRequest -> yojson_of_unit resp
 
     type 'b dispatch = {
