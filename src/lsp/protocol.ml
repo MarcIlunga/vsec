@@ -206,12 +206,61 @@ module Request = struct
 
     end
 
+    module DocumentSymbolParams = struct
+
+      type t = {
+        textDocument : TextDocumentIdentifier.t;
+      } [@@deriving yojson] [@@yojson.allow_extra_fields]
+
+    end
+
+    module SymbolKind = struct
+      type t = int [@@deriving yojson]
+      
+      let file = 1
+      let module_ = 2  
+      let namespace = 3
+      let package = 4
+      let class_ = 5
+      let method_ = 6
+      let property = 7
+      let field = 8
+      let constructor = 9
+      let enum = 10
+      let interface = 11
+      let function_ = 12
+      let variable = 13
+      let constant = 14
+      let string = 15
+      let number = 16
+      let boolean = 17
+      let array = 18
+    end
+
+    module DocumentSymbol = struct
+
+      type t = {
+        name : string;
+        kind : SymbolKind.t;
+        range : Range.t;
+        selectionRange : Range.t;
+      } [@@deriving yojson]
+
+    end
+
+    module DocumentSymbolResult = struct
+
+      type t = DocumentSymbol.t list [@@deriving yojson]
+
+    end
+
     type 'rsp params =
     | Initialize : InitializeParams.t -> InitializeResult.t params
     | Shutdown : unit params
     | Hover : HoverParams.t -> HoverResult.t option params
     | Completion : CompletionParams.t -> CompletionResult.t params
     | Definition : DefinitionParams.t -> DefinitionResult.t params
+    | DocumentSymbol : DocumentSymbolParams.t -> DocumentSymbolResult.t params
     | UnknownRequest : unit params
 
     type t = Pack : int * _ params -> t
@@ -223,6 +272,7 @@ module Request = struct
       | "textDocument/hover" -> Pack (id, Hover HoverParams.(t_of_yojson params))
       | "textDocument/completion" -> Pack (id, Completion CompletionParams.(t_of_yojson params))
       | "textDocument/definition" -> Pack (id, Definition DefinitionParams.(t_of_yojson params))
+      | "textDocument/documentSymbol" -> Pack (id, DocumentSymbol DocumentSymbolParams.(t_of_yojson params))
       | _ -> Pack (id, UnknownRequest)
 
     let yojson_of_response : type a. a params -> a -> Yojson.Safe.t =
@@ -233,6 +283,7 @@ module Request = struct
         | Hover _ -> yojson_of_option HoverResult.yojson_of_t resp
         | Completion _ -> CompletionResult.yojson_of_t resp
         | Definition _ -> DefinitionResult.yojson_of_t resp
+        | DocumentSymbol _ -> DocumentSymbolResult.yojson_of_t resp
         | UnknownRequest -> yojson_of_unit resp
 
     type 'b dispatch = {

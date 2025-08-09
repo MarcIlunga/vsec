@@ -434,6 +434,39 @@ let textDocumentDefinition ~id params =
     (* Document not found - return empty list *)
     Ok []
 
+let textDocumentDocumentSymbol ~id params =
+  let Request.Client.DocumentSymbolParams.{ textDocument } = params in
+  
+  try
+    (* Get document state *)
+    let st = Hashtbl.find states (Uri.path textDocument.uri) in
+    let doc = Dm.DocumentManager.Internal.document st in
+    
+    (* Extract symbols from document sentences *)
+    let sentences = Dm.Document.sentences doc in
+    
+    let symbols = List.fold_left (fun acc (sentence : Dm.Document.sentence) ->
+      let name = "Sentence at " ^ (string_of_int sentence.start) in
+      let range = {
+        LspData.Range.start = { line = 0; character = sentence.start };
+        end_ = { line = 0; character = sentence.stop };
+      } in
+      let symbol = Request.Client.DocumentSymbol.{
+        name;
+        kind = Request.Client.SymbolKind.function_;
+        range;
+        selectionRange = range;
+      } in
+      symbol :: acc
+    ) [] sentences in
+    
+    Ok (List.rev symbols)
+    
+  with
+  | Not_found ->
+    (* Document not found - return empty list *)
+    Ok []
+
 let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,string) result * events =
   fun ~id req ->
   match req with
@@ -447,6 +480,8 @@ let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,
     textDocumentCompletion ~id params, []
   | Definition params ->
     textDocumentDefinition ~id params, []
+  | DocumentSymbol params ->
+    textDocumentDocumentSymbol ~id params, []
   | UnknownRequest -> log "Received unknown request"; Ok(()), []
 
 let dispatch_ext_request : type a. id:int -> a Request.Client.params -> (a,string) result * events =
