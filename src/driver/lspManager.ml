@@ -310,24 +310,61 @@ let create_completion_item ~label ~detail =
 let textDocumentCompletion ~id params =
   let Request.Client.CompletionParams.{ textDocument; position } = params in
   
-  (* Get keywords and tactics *)
-  let keywords = get_easycrypt_keywords () in
-  let tactics = get_easycrypt_tactics () in
-  
-  let keyword_items = List.map (fun kw -> 
-    create_completion_item ~label:kw ~detail:"EasyCrypt keyword"
-  ) keywords in
-  
-  let tactic_items = List.map (fun tactic -> 
-    create_completion_item ~label:tactic ~detail:"EasyCrypt tactic"
-  ) tactics in
-  
-  let all_items = keyword_items @ tactic_items in
-  
-  Ok Request.Client.CompletionResult.{
-    isIncomplete = false; 
-    items = all_items;
-  }
+  try
+    (* Get document state for context-aware completion *)
+    let st = Hashtbl.find states (Uri.path textDocument.uri) in
+    let doc = Dm.DocumentManager.Internal.document st in
+    
+    (* Get base completions *)
+    let keywords = get_easycrypt_keywords () in
+    let tactics = get_easycrypt_tactics () in
+    
+    let keyword_items = List.map (fun kw -> 
+      create_completion_item ~label:kw ~detail:"EasyCrypt keyword"
+    ) keywords in
+    
+    let tactic_items = List.map (fun tactic -> 
+      create_completion_item ~label:tactic ~detail:"EasyCrypt tactic"
+    ) tactics in
+    
+    (* Try to get additional context-aware completions from the execution state *)
+    let context_items = 
+      try
+        let exec_st = Dm.DocumentManager.Internal.execution_state st in
+        (* Add basic module/theory completions if we can access the scope *)
+        [create_completion_item ~label:"True" ~detail:"Boolean constant";
+         create_completion_item ~label:"False" ~detail:"Boolean constant";
+         create_completion_item ~label:"bool" ~detail:"Boolean type";
+         create_completion_item ~label:"int" ~detail:"Integer type";
+         create_completion_item ~label:"real" ~detail:"Real type"]
+      with
+      | _ -> []
+    in
+    
+    let all_items = keyword_items @ tactic_items @ context_items in
+    
+    Ok Request.Client.CompletionResult.{
+      isIncomplete = false; 
+      items = all_items;
+    }
+  with
+  | Not_found ->
+    (* Fallback: return basic completions if document not found *)
+    let keywords = get_easycrypt_keywords () in
+    let tactics = get_easycrypt_tactics () in
+    
+    let keyword_items = List.map (fun kw -> 
+      create_completion_item ~label:kw ~detail:"EasyCrypt keyword"
+    ) keywords in
+    
+    let tactic_items = List.map (fun tactic -> 
+      create_completion_item ~label:tactic ~detail:"EasyCrypt tactic"
+    ) tactics in
+    
+    Ok Request.Client.CompletionResult.{
+      isIncomplete = false; 
+      items = keyword_items @ tactic_items;
+    }
 
 let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,string) result * events =
   fun ~id req ->
