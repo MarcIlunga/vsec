@@ -121,13 +121,9 @@ let mk_block_on_error_event last_range error_id background =
   
 type events = event Sel.Event.t list
 
-let executed_ranges st mode =
-  match st.observe_id, mode with
-  | _, true -> ExecutionManager.overview st.execution_state (* simplified from Settings.Mode.Continuous *)
-  | Top, false -> empty_overview (* simplified from Settings.Mode.Manual *)
-  | Id id, false -> (* simplified from Settings.Mode.Manual *)
-      let range = Document.range_of_id st.document id in
-      ExecutionManager.overview_until_range st.execution_state range
+let executed_ranges st =
+  (* EasyCrypt stub - Settings mode not implemented yet *)
+  ExecutionManager.overview st.execution_state
 
 let observe_id_range st = 
   let doc = Document.raw_document st.document in
@@ -162,88 +158,49 @@ let make_diagnostic doc range oloc message severity code =
 
 let mk_diag st (id,(lvl,oloc,qf,msg)) =
   let code = 
+    (* EasyCrypt doesn't use Coq's Quickfix system *)
     match qf with
     | [] -> None
-    | qf ->
-      let code : Jsonrpc.Id.t * Lsp.Import.Json.t =
-        let open Lsp.Import.Json in
-        (`String "quickfix-replace",
-        qf |> yojson_of_list
-        (fun qf ->
-            let s = Fun.id Quickfix.pp qf in
-            let loc = Quickfix.loc qf in
-            let range = RawDocument.range_of_loc (Document.raw_document st.document) loc in
-            QuickFixData.yojson_of_t (QuickFixData.{range; text = s})
-        ))
-        in
-      Some code
+    | _qf -> None (* Simplified for EasyCrypt - no quickfix support *)
     in
     let lvl = DiagnosticSeverity.of_feedback_level lvl in
-    make_diagnostic st.document (Document.range_of_id st.document id) oloc (string_of_string msg) lvl code
+    make_diagnostic st.document (Document.range_of_id st.document id) oloc msg (DiagnosticSeverity.to_lsp lvl) code
 
 let mk_error_diag st (id,(oloc,msg,qf)) = (* mk_diag st (id,(Feedback.Error,oloc, msg)) *)
   let code = 
+    (* EasyCrypt doesn't use Coq's Quickfix system *)
     match qf with
     | None -> None
-    | Some qf ->
-      let code : Jsonrpc.Id.t * Lsp.Import.Json.t =
-        let open Lsp.Import.Json in
-        (`String "quickfix-replace",
-        qf |> yojson_of_list
-        (fun qf ->
-            let s = Fun.id Quickfix.pp qf in
-            let loc = Quickfix.loc qf in
-            let range = RawDocument.range_of_loc (Document.raw_document st.document) loc in
-            QuickFixData.yojson_of_t (QuickFixData.{range; text = s})
-        ))
-        in
-      Some code
+    | Some _qf -> None (* Simplified for EasyCrypt - no quickfix support *)
   in
-  let lvl = DiagnosticSeverity.of_feedback_level Feedback.Error in
-  make_diagnostic st.document (Document.range_of_id st.document id) oloc (string_of_string msg) lvl code
+  let lvl = DiagnosticSeverity.of_feedback_level () in (* Simplified for EasyCrypt *)
+  make_diagnostic st.document (Document.range_of_id st.document id) oloc msg (DiagnosticSeverity.to_lsp lvl) code
 
 
-let mk_parsing_error_diag st Document.{ msg = (oloc,msg); start; stop; qf } =
+let mk_parsing_error_diag st Document.{ msg = (oloc,msg); start; stop; str } =
   let doc = Document.raw_document st.document in
   let severity = DiagnosticSeverity.Error in
   let start = RawDocument.position_of_loc doc start in
   let end_ = RawDocument.position_of_loc doc stop in
   let range = Range.{ start; end_ } in
-  let code = 
-    match qf with
-    | None -> None
-    | Some qf ->
-      let code : Jsonrpc.Id.t * Lsp.Import.Json.t =
-        let open Lsp.Import.Json in
-        (`String "quickfix-replace",
-         qf |> yojson_of_list
-         (fun qf ->
-            let s = Fun.id Quickfix.pp qf in
-            let loc = Quickfix.loc qf in
-            let range = RawDocument.range_of_loc (Document.raw_document st.document) loc in
-            QuickFixData.yojson_of_t (QuickFixData.{range; text = s})
-        ))
-        in
-      Some code
-  in
-  make_diagnostic st.document range oloc (string_of_string msg) severity code
+  let code = None in (* EasyCrypt doesn't use quickfix *)
+  make_diagnostic st.document range None msg (DiagnosticSeverity.to_lsp severity) code
 
 let all_diagnostics st =
   let parse_errors = Document.parse_errors st.document in
   let all_exec_errors = ExecutionManager.all_errors st.execution_state in
   let all_feedback = ExecutionManager.all_feedback st.execution_state in
   (* we are resilient to a state where invalidate was not called yet *)
-  let exists (id,_) = Option.has_some (Document.get_sentence st.document id) in
-  let not_info (_, (lvl, _, _, _)) = 
-    match lvl with
-    | Feedback.Info -> false
-    | _ -> true
+  let exists (id,_) = Option.is_some (Document.get_sentence st.document id) in
+  let not_info (_, (lvl, _, _)) = 
+    (* EasyCrypt simplified - no Feedback levels, treat all as non-info *)
+    true
   in
   let exec_errors = all_exec_errors |> List.filter exists in
-  let feedback = all_feedback |> List.filter exists |> List.filter not_info in
+  let feedback = all_feedback |> List.filter (fun (id, _) -> Option.is_some (Document.get_sentence st.document id)) |> List.filter not_info in
   List.map (mk_parsing_error_diag st) parse_errors @
-    List.map (mk_error_diag st) exec_errors @
-    List.map (mk_diag st) feedback
+    (* Temporarily comment out to isolate issue *) [] (* List.map (mk_error_diag st) exec_errors *) @
+    List.map (fun (id, (lvl, oloc, msg)) -> mk_diag st (id, (lvl, oloc, [], msg))) feedback
 
 let id_of_pos st pos =
   let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
@@ -272,31 +229,30 @@ let id_of_pos_opt st = function
 let get_messages st id =
   let error = ExecutionManager.error st.execution_state id in
   let feedback = ExecutionManager.feedback st.execution_state id in
-  let feedback = List.map (fun (lvl,_oloc,_,msg) -> DiagnosticSeverity.of_feedback_level lvl, pp_of_rocqpp msg) feedback  in
+  let feedback = List.map (fun (lvl,_oloc,msg) -> DiagnosticSeverity.to_lsp (DiagnosticSeverity.of_feedback_level lvl), msg) feedback  in
   match error with
-  | Some (_oloc,msg) -> (DiagnosticSeverity.Error, pp_of_rocqpp msg) :: feedback
+  | Some (_oloc,msg) -> (DiagnosticSeverity.to_lsp DiagnosticSeverity.Error, msg) :: feedback
   | None -> feedback
 
 let get_string_messages st id =
   let error = ExecutionManager.error st.execution_state id in
   let feedback = ExecutionManager.feedback st.execution_state id in
-  let feedback = List.map (fun (lvl,_oloc,_,msg) -> DiagnosticSeverity.of_feedback_level lvl, string_of_string msg) feedback  in
+  let feedback = List.map (fun (lvl,_oloc,msg) -> DiagnosticSeverity.of_feedback_level lvl, msg) feedback  in
   match error with
-  | Some (_oloc,msg) -> (DiagnosticSeverity.Error, string_of_string msg) :: feedback
+  | Some (_oloc,msg) -> (DiagnosticSeverity.Error, msg) :: feedback
   | None -> feedback
 
 let get_info_messages st pos =
   match id_of_pos_opt st pos with
   | None -> log (fun () -> "get_messages: Could not find id");[]
   | Some id -> log (fun () -> "get_messages: Found id");
-    let info (lvl, _, _, _) = 
-      match lvl with
-      | Feedback.Info -> true
-      | _ -> false
+    let info (lvl, _, _) = 
+      (* EasyCrypt simplified - treat all as info for now *)
+      true
     in
     let feedback = ExecutionManager.feedback st.execution_state id in
     let feedback = feedback |> List.filter info in
-    List.map (fun (lvl,_oloc,_,msg) -> DiagnosticSeverity.of_feedback_level lvl, pp_of_rocqpp msg) feedback
+    List.map (fun (lvl,_oloc,msg) -> DiagnosticSeverity.to_lsp (DiagnosticSeverity.of_feedback_level lvl), msg) feedback
 
 let create_execution_event background event =
   let priority = if background then None else Some PriorityManager.execution in
@@ -308,7 +264,7 @@ let state_before_error state error_id loc =
   | Some { start } ->
     let errored_sentence_range = Document.range_of_id_with_blank_space state.document error_id in
     let error_range = 
-      Option.cata (fun loc -> RawDocument.range_of_loc (Document.raw_document state.document) loc) errored_sentence_range loc in
+      Option.fold ~none:errored_sentence_range ~some:(fun loc -> RawDocument.range_of_loc (Document.raw_document state.document) loc) loc in
     match Document.find_sentence_before state.document start with
     | None ->
       let observe_id = Top in
@@ -341,23 +297,8 @@ let reset_to_top st = { st with observe_id = Top }
 
 
 let get_document_proofs st =
-  let outline = Document.outline st.document in
-  let is_theorem Document.{ type_ } =
-    match type_ with
-    | TheoremKind -> true
-    | _ -> false
-    in
-  let mk_proof_block Document.{statement; proof; range } =
-    let statement = ProofState.mk_proof_statement statement range in
-    let last_step = List.hd proof in
-    let proof = List.rev proof in
-    let fst_step = List.hd proof in
-    let range = Range.create ~start:fst_step.range.start ~end_:last_step.range.end_ in
-    let steps = List.map (fun Document.{tactic; range} -> ProofState.mk_proof_step tactic range) proof in
-    ProofState.mk_proof_block statement steps range
-  in
-  let proofs, _  = List.partition is_theorem outline in
-  List.map mk_proof_block proofs
+  (* EasyCrypt stub - proof block analysis not implemented yet *)
+  []
 
 let to_document_symbol elem =
   let Document.{name; statement; range; type_} = elem in
@@ -419,34 +360,16 @@ let get_document_symbols st =
   get_document_symbols outline [] []
 
 let interpret_to st id check_mode =
-  let observe_id = (Id id) in
-  let st = { st with observe_id} in
-  match check_mode with
-  | Settings.Mode.Manual ->
-    let event = mk_observe_event id in
-    let pv_event = mk_proof_view_event id in
-    st, [event] @ [pv_event]
-  | Settings.Mode.Continuous ->
-    match ExecutionManager.is_locally_executed st.execution_state id with
-    | true -> st, [mk_proof_view_event id]
-    | false -> st, []
+  (* EasyCrypt stub - Settings module not implemented yet *)
+  st, []
 
-let interpret_to_next_position st pos check_mode =
-  match id_of_sentence_after_pos st pos with
-  | None -> (st, []) (* document is empty *)
-  | Some id ->
-    let st, events = interpret_to st id check_mode in
-    (st, events)
+let interpret_to_next_position st pos =
+  (* EasyCrypt stub - Settings module not implemented yet *)
+  st, []
 
-let interpret_to_position st pos check_mode ~point_interp_mode =
-  match point_interp_mode with
-  | Settings.PointInterpretationMode.Cursor ->
-    begin match id_of_pos st pos with
-    | None -> (st, []) (* document is empty *)
-    | Some id -> interpret_to st id check_mode
-    end
-  | Settings.PointInterpretationMode.NextCommand ->
-    interpret_to_next_position st pos check_mode
+let interpret_to_position st pos =
+  (* EasyCrypt stub - Settings module not implemented yet *)
+  st, []
 
 let get_next_range st pos =
   match id_of_pos st pos with
@@ -470,58 +393,22 @@ let get_previous_range st pos =
       | None -> Some (Document.range_of_id st.document id)
       | Some { id } -> Some (Document.range_of_id st.document id)
 
-let interpret_to_previous st check_mode =
-  match st.observe_id with
-  | Top -> (st, [])
-  | (Id id) ->
-    match Document.get_sentence st.document id with
-    | None -> (st, []) (* TODO error? *)
-    | Some { start } ->
-      match Document.find_sentence_before st.document start with
-      | None -> 
-        Vernacstate.unfreeze_full_state st.init_vs;
-        let range = Range.top () in
-        { st with observe_id=Top }, [mk_move_cursor_event range; mk_proof_view_event_empty]
-      | Some { id } -> 
-        let st, events = interpret_to st id check_mode in
-        let range = Document.range_of_id st.document id in
-        let mv_cursor = mk_move_cursor_event range in
-        st, [mv_cursor] @ events
+let interpret_to_previous st =
+  (* EasyCrypt stub - Vernacstate module not implemented yet *)
+  st, []
 
-let interpret_to_next st check_mode =
-  match st.observe_id with
-  | Top ->
-    begin match Document.get_first_sentence st.document with
-    | None -> st, [] (*The document is empty*)
-    | Some { id } -> 
-      let st, events = interpret_to st id check_mode in
-      let range = Document.range_of_id st.document id in
-      let mv_cursor = mk_move_cursor_event range in
-      st, [mv_cursor] @ events
-    end
-  | Id id ->
-    match Document.get_sentence st.document id with
-    | None -> st, [] (* TODO error? *)
-    | Some { stop } ->
-      match Document.find_sentence_after st.document (stop+1) with
-      | None -> st, []
-      | Some { id } -> 
-        let st, events = interpret_to st id check_mode in
-        let range = Document.range_of_id st.document id in
-        let mv_cursor = mk_move_cursor_event range in
-        st, [mv_cursor] @ events
+let interpret_to_next st =
+  (* EasyCrypt stub - Settings module not implemented yet *)
+  st, []
 
-let interpret_to_end st check_mode =
-  match Document.get_last_sentence st.document with
-  | None -> (st, [])
-  | Some {id} -> 
-    log (fun () -> "interpret_to_end id = " ^ sentence_ido_string id);
-    interpret_to st id check_mode
+let interpret_to_end st =
+  (* EasyCrypt stub - Settings module not implemented yet *)
+  st, []
 
 let interpret_in_background st ~should_block_on_error =
   match Document.get_last_sentence st.document with
   | None -> (st, [])
-  | Some {id} -> log (fun () -> "interpret_to_end id = " ^ sentence_ido_string id); observe ~background:true st id ~should_block_on_error
+  | Some {id} -> log (fun () -> "interpret_to_end id = " ^ Document.sentence_ido_string id); observe ~background:true st id ~should_block_on_error
 
 let is_above st id1 id2 =
   let range1 = Document.range_of_id st id1 in
@@ -538,38 +425,30 @@ let validate_document state (Document.{unchanged_id; invalid_ids; previous_docum
   let execution_state =
     List.fold_left (fun st id ->
       ExecutionManager.invalidate previous_document (Document.schedule previous_document) id st
-      ) state.execution_state (Stateid.Set.elements invalid_ids) in
+      ) state.execution_state (Types.SentenceIdSet.elements invalid_ids) in
   let execution_state = ExecutionManager.reset_overview execution_state previous_document in
   { state with  execution_state; observe_id; document_state = Parsed }
 
-[%%if rocq ="8.18" || rocq ="8.19"]
-let start_library top opts = Coqinit.start_library ~top opts
-[%%else]
-let start_library top opts =
-  let intern = Vernacinterp.fs_intern in
-  Coqinit.start_library ~intern ~top opts;
-[%%endif]
+(* EasyCrypt stub - library initialization not implemented yet *)
+let start_library _top _opts = ()
 
-let dirpath_of_top = Coqargs.dirpath_of_top
+(* EasyCrypt stub - Coqargs not needed *)
+let dirpath_of_top _top = []
 
-let init init_vs ~opts uri ~text =
-  Vernacstate.unfreeze_full_state init_vs;
-  let top = try (dirpath_of_top (TopPhysical (DocumentUri.to_path uri))) with
-    e -> raise e
-  in
-  start_library top opts;
-  let init_vs = Vernacstate.freeze_full_state () in
-  let document = Document.create_document init_vs.Vernacstate.synterp text in
+let init init_vs uri ~text =
+  (* EasyCrypt stub - simplified initialization *)
+  let document = Document.create_document init_vs text in
   let execution_state, feedback = ExecutionManager.init init_vs in
+  let opts = [] in (* Default empty options for EasyCrypt *)
   let state = { uri; opts; init_vs; document; execution_state; observe_id=Top; cancel_handle = None; document_state = Parsing } in
   let priority = Some PriorityManager.launch_parsing in
   let event = Sel.now ?priority ParseBegin in
   state, [event] @ [inject_em_event feedback]
 
 let reset { uri; opts; init_vs; document; execution_state; } =
+  (* EasyCrypt stub - simplified reset *)
   let text = RawDocument.text @@ Document.raw_document document in
-  Vernacstate.unfreeze_full_state init_vs;
-  let document = Document.create_document init_vs.synterp text in
+  let document = Document.create_document init_vs text in
   ExecutionManager.destroy execution_state;
   let execution_state, feedback = ExecutionManager.init init_vs in
   let observe_id = Top in
@@ -596,7 +475,7 @@ let apply_text_edits state edits =
 
 let execution_finished st id started =
   let time = Unix.gettimeofday () -. started in
-  log (fun () -> Printf.sprintf "ExecuteToLoc %d ends after %2.3f" (sentence_ido_int id) time);
+  log (fun () -> Printf.sprintf "ExecuteToLoc %d ends after %2.3f" id time);
   (* We update the state to trigger a publication of diagnostics *)
   let update_view = true in
   let state = Some st in
@@ -619,10 +498,10 @@ let execute st id vst_for_next_todo started task background block =
   in
   match Document.get_sentence st.document id with
   | None ->
-    log (fun () -> Printf.sprintf "ExecuteToLoc %d stops after %2.3f, sentences invalidated" (sentence_ido_int id) time);
+    log (fun () -> Printf.sprintf "ExecuteToLoc %d stops after %2.3f, sentences invalidated" id time);
     {state=Some st; events=[]; update_view=true; notification=None} (* Sentences have been invalidate, probably because the user edited while executing *)
   | Some _ ->
-    log (fun () -> Printf.sprintf "ExecuteToLoc %d continues after %2.3f" (sentence_ido_int id) time);
+    log (fun () -> Printf.sprintf "ExecuteToLoc %d continues after %2.3f" id time);
     let (next, execution_state,vst_for_next_todo,events, exec_error) =
       ExecutionManager.execute st.execution_state st.document (vst_for_next_todo, [], false) task block in
     let st, block_events =
@@ -638,28 +517,19 @@ let execute st id vst_for_next_todo started task background block =
       | None, [] -> execution_finished { st with execution_state } id started (* There is no new tasks, and no errors -> execution finished *)
       | _ ->
         let cancel_handle = Option.map Sel.Event.get_cancellation_handle event in
-        let event = Option.cata (fun event -> [event]) [] event in
+        let event = match event with Some e -> [e] | None -> [] in
         let state = Some {st with execution_state; cancel_handle} in
         let update_view = true in
         let events = proof_view_event @ inject_em_events events @ block_events @ event in
         {state; events; update_view; notification=None}
 
-let get_proof st diff_mode id =
-  let previous_st id =
-    let oid = fst @@ Scheduler.task_for_sentence (Document.schedule st.document) id in
-    Option.bind oid (ExecutionManager.get_vernac_state st.execution_state)
-  in
-  let observe_id = to_sentence_id st.observe_id in
-  let oid = Option.append id observe_id in
-  let ost = Option.bind oid (ExecutionManager.get_vernac_state st.execution_state) in
-  let previous = Option.bind oid previous_st in
-  Option.bind ost (ProofState.get_proof ~previous diff_mode)
+let get_proof st id =
+  (* EasyCrypt stub - ProofState module not implemented yet *)
+  None
 
 let get_string_proof st id =
-  let observe_id = to_sentence_id st.observe_id in
-  let oid = Option.append id observe_id in
-  let ost = Option.bind oid (ExecutionManager.get_vernac_state st.execution_state) in
-  Option.bind ost PpProofState.get_proof
+  (* EasyCrypt stub - PpProofState module not implemented yet *)
+  None
 
 let handle_execution_manager_event st ev =
   let id, execution_state_update, events = ExecutionManager.handle_event ev st.execution_state in
@@ -676,68 +546,9 @@ let handle_execution_manager_event st ev =
   let update_view = true in
   {state=st; events=(inject_em_events events); update_view; notification=None}
 
-let handle_event ev st ~block check_mode diff_mode (pp_mode: Settings.Goals.PrettyPrint.t) =
-  let background = check_mode = Settings.Mode.Continuous in
-  match ev with
-  | Execute { id; vst_for_next_todo; started; task } ->
-    execute st id vst_for_next_todo started task background block
-  | ExecutionManagerEvent ev ->
-    handle_execution_manager_event st ev
-  | Observe id ->
-    let update_view = true in
-    let st, events = observe st id ~should_block_on_error:block ~background in
-    {state=Some st; events; update_view; notification=None}
-  | ParseBegin ->
-    let document, events = Document.validate_document st.document in
-    let update_view = true in
-    let state = Some {st with document} in
-    let events = inject_doc_events events in
-    {state; events; update_view; notification=None}
-  | DocumentEvent ev ->
-    let document, events, parsing_end_info = Document.handle_event st.document ev in
-    begin match parsing_end_info with
-    | None ->
-      let update_view = false in
-      let state = Some {st with document} in
-      let events = inject_doc_events events in
-      {state; events; update_view; notification=None}
-    | Some parsing_end_info ->
-      let st = validate_document st parsing_end_info in
-      let update_view = true in
-      if background then
-        let (st, events) = interpret_in_background st ~should_block_on_error:block in
-        {state=(Some st); events; update_view; notification=None}
-      else
-        {state=(Some st); events=[]; update_view; notification=None}
-    end
-  | SendProofView (Some id) ->
-    let proof, pp_proof = match pp_mode with
-    | Pp -> get_proof st diff_mode (Some id), None 
-    | String -> None, get_string_proof st (Some id)
-    in
-    let messages, pp_messages = match pp_mode with
-    | Pp -> get_messages st id, []
-    | String ->[], get_string_messages st id
-    in
-    let range = Document.range_of_id st.document id in
-    let params = Notification.Server.ProofViewParams.{ proof; messages; pp_proof; pp_messages; range} in
-    let notification = Some (Notification.Server.ProofView params) in
-    let update_view = true in
-    {state=(Some st); events=[]; update_view; notification}
-  | SendProofView None ->
-    let params = Notification.Server.ProofViewParams.{ proof=None; pp_proof=None; messages=[]; pp_messages=[]; range=Range.top() } in
-    let notification = Some (Notification.Server.ProofView params) in
-    let update_view = true in
-    {state=(Some st); events=[]; update_view; notification}
-  | SendBlockOnError id ->
-    let {uri} = st in
-    let range = Document.range_of_id st.document id in
-    let notification = Some (Notification.Server.BlockOnError {uri; range}) in
-    {state=(Some st); events=[]; update_view=false; notification}
-  | SendMoveCursor range ->
-    let {uri} = st in
-    let notification = Some (Notification.Server.MoveCursor {uri; range}) in
-    {state=(Some st); events=[]; update_view=false; notification}
+let handle_event ev st ~block =
+  (* EasyCrypt stub - Settings module and complex event handling not implemented yet *)
+  {state = Some st; events = []; update_view = false; notification = None}
 
 let context_of_id st = function
   | None -> Some (ExecutionManager.get_initial_context st.execution_state)
@@ -747,187 +558,62 @@ let context_of_id st = function
 let get_context st pos = context_of_id st (id_of_pos st pos)
 
 let get_completions st pos =
-  match id_of_pos st pos with
-  | None -> 
-      log (fun () -> "Can't get completions, no sentence found before the cursor");
-      []
-  | Some id ->
-    let ost = ExecutionManager.get_vernac_state st.execution_state id in
-    let settings = ExecutionManager.get_options () in
-    match Option.bind ost @@ CompletionSuggester.get_completions settings.completion_options with
-    | None -> 
-        log (fun () -> "No completions available");
-        []
-    | Some lemmas -> lemmas
+  (* EasyCrypt stub - completion options not implemented yet *)
+  []
 
-[%%if rocq ="8.18" || rocq ="8.19"]
-[%%elif rocq ="8.20"]
-  let parsable_make = Pcoq.Parsable.make
-  let unfreeze = Pcoq.unfreeze
-  let entry_parse = Pcoq.Entry.parse
-[%%else]
-  let parsable_make = Procq.Parsable.make
-  let unfreeze = Procq.unfreeze
-  let entry_parse = Procq.Entry.parse
-[%%endif]
-
-[%%if rocq ="8.18" || rocq ="8.19"]
+(* EasyCrypt stub - Coq parsing not needed *)
 let parse_entry st pos entry pattern =
-  let pa = Pcoq.Parsable.make (Gramlib.Stream.of_string pattern) in
-  let st = match Document.find_sentence_before st.document pos with
-  | None -> st.init_vs.Vernacstate.synterp.parsing
-  | Some { synterp_state } -> synterp_state.Vernacstate.Synterp.parsing
-  in
-  Vernacstate.Parser.parse st entry pa
-[%%else]
-let parse_entry st pos entry pattern =
-  let pa = parsable_make (Gramlib.Stream.of_string pattern) in
-  let st = match Document.find_sentence_before st.document pos with
-  | None -> Vernacstate.(Synterp.parsing st.init_vs.synterp)
-  | Some { synterp_state } -> Vernacstate.Synterp.parsing synterp_state
-  in  
-  unfreeze st;
-  entry_parse entry pa
-[%%endif]
+  (* Minimal stub for EasyCrypt - returns empty result *)
+  (pattern, [])
 
-  let smart_global = Pcoq.Prim.smart_global
+(* EasyCrypt stub - Pcoq not needed *)
+let smart_global = ref (fun _ -> "")
 
 let about st pos ~pattern =
-  let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
-  match get_context st pos with
-  | None -> Error ({message="No context found"; code=None}) (*TODO execute *)
-  | Some (sigma, env) ->
-    try
-      let ref_or_by_not = parse_entry st loc (smart_global) pattern in
-      let udecl = None (* TODO? *) in
-      Ok (pp_of_rocqpp @@ Prettyp.print_about env sigma ref_or_by_not udecl)
-    with e ->
-      let e, info = Exninfo.capture e in
-      let message = Fun.id CErrors.iprint (e, info) in
-      Error ({message; code=None})
+  (* EasyCrypt stub - Coq context handling not implemented yet *)
+  Error ({message="About functionality not implemented for EasyCrypt"; code=None})
 
 let search st ~id pos pattern =
-  let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
-  match get_context st pos with
-  | None -> [] (* TODO execute? *)
-  | Some (sigma, env) ->
-    let query, r = parse_entry st loc (G_vernac.search_queries) pattern in
-    SearchQuery.interp_search ~id env sigma query r
+  (* EasyCrypt stub - search functionality not implemented yet *)
+  []
 
 (** Try to generate hover text from [pattern] the context of the given [sentence] *)
 let hover_of_sentence st loc pattern sentence = 
-  match context_of_id st (Option.map (fun ({ id; _ }: Document.sentence) -> id) sentence) with
-  | None -> log (fun () -> "hover: no context found"); None
-  | Some (sigma, env) ->
-    try
-      let ref_or_by_not = parse_entry st loc (smart_global) pattern in
-      Language.Hover.get_hover_contents env sigma ref_or_by_not
-    with e ->
-      let e, info = Exninfo.capture e in
-      log (fun () -> "Exception while handling hover: " ^ (Fun.id CErrors.iprint (e, info)));
-      None
+  (* EasyCrypt stub - hover functionality not implemented yet *)
+  None
 
 let hover st pos =
-  (* Tries to get hover at three difference places:
-     - At the start of the current sentence
-     - At the start of the next sentence (for symbols defined in the current sentence)
-       e.g. Definition, Inductive
-     - At the next QED (for symbols defined after proof), if the next sentence 
-       is in proof mode e.g. Lemmas, Definition with tactics *)
-  let opattern = RawDocument.word_at_position (Document.raw_document st.document) pos in
-  match opattern with
-  | None -> log (fun () -> "hover: no word found at cursor"); None
-  | Some pattern ->
-    log (fun () -> "hover: found word at cursor: \"" ^ pattern ^ "\"");
-    let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
-    (* hover at previous sentence *)
-    match hover_of_sentence st loc pattern (Document.find_sentence_before st.document loc) with
-    | Some _ as x -> x
-    | None -> 
-    match Document.find_sentence_after st.document loc with
-    | None -> None (* Skip if no next sentence *)
-    | Some sentence as opt ->
-    (* hover at next sentence *)
-    match hover_of_sentence st loc pattern opt with
-    | Some _ as x -> x
-    | None -> 
-    match sentence.ast with
-    | Error _ -> None
-    | Parsed ast -> 
-      match ast.classification with
-    (* next sentence in proof mode, hover at qed *)
-      | VtProofStep _ | VtStartProof _ -> 
-        hover_of_sentence st loc pattern (Document.find_next_qed st.document loc)
-      | _ -> None
+  (* EasyCrypt stub - hover functionality not implemented yet *)
+  None
 
-  let lconstr = Pcoq.Constr.lconstr
+(* EasyCrypt stub - Pcoq not needed *)
+let lconstr = ref (fun _ -> "")
 
 
 let jump_to_definition _  _ = None
 
 let check st pos ~pattern =
-  let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
-  match get_context st pos with
-  | None -> Error ({message="No context found"; code=None}) (*TODO execute *)
-  | Some (sigma,env) ->
-    let rc = parse_entry st loc lconstr pattern in
-    try
-      let redexpr = None in
-      Ok (pp_of_rocqpp @@ Vernacentries.check_may_eval env sigma redexpr rc)
-    with e ->
-      let e, info = Exninfo.capture e in
-      let message = Fun.id CErrors.iprint (e, info) in
-      Error ({message; code=None})
+  (* EasyCrypt stub - check functionality not implemented yet *)
+  Error ({message="Check functionality not implemented for EasyCrypt"; code=None})
 
-[%%if rocq ="8.18" || rocq ="8.19"]
-let print_located_qualid _ qid = Prettyp.print_located_qualid qid
-[%%else]
-let print_located_qualid = Prettyp.print_located_qualid
-[%%endif]
+(* EasyCrypt stub - Prettyp not needed *)
+let print_located_qualid _ _qid = "Located"
 
 let locate st pos ~pattern = 
-  let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
-  match get_context st pos with
-  | None -> Error ({message="No context found"; code=None}) (*TODO execute *)
-  | Some (sigma, env) ->
-    match parse_entry st loc (smart_global) pattern with
-    | { v = AN qid } -> Ok (pp_of_rocqpp @@ print_located_qualid env qid)
-    | { v = ByNotation (ntn, sc)} ->
-      Ok( pp_of_rocqpp @@ Notation.locate_notation
-        (Constrextern.without_symbols (Printer.pr_glob_constr_env env sigma)) ntn sc)
+  (* EasyCrypt stub - locate functionality not implemented yet *)
+  Error ({message="Locate functionality not implemented for EasyCrypt"; code=None})
 
-[%%if rocq ="8.18" || rocq ="8.19"]
-  let print_name = Prettyp.print_name
-[%%else]
-  let print_name =
-    let access = Library.indirect_accessor[@@warning "-3"] in
-    Prettyp.print_name access
-[%%endif]
+(* EasyCrypt stub - Prettyp not needed *)
+let print_name _ _ _ _ = "PrintName"
 
 let print st pos ~pattern = 
-  let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
-  match get_context st pos with
-  | None -> Error({message="No context found"; code=None})
-  | Some (sigma, env) ->
-    let qid = parse_entry st loc (smart_global) pattern in
-    let udecl = None in (*TODO*)
-    Ok ( pp_of_rocqpp @@ print_name env sigma qid udecl )
+  (* EasyCrypt stub - print functionality not implemented yet *)
+  Error ({message="Print functionality not implemented for EasyCrypt"; code=None})
 
-(* Ignore nested proofs option (lives in STM) instead of failing with
-   anomaly when it is set in a .vo we Require.
-   cf #1060 *)
+(* EasyCrypt stub - Coq warning system not needed *)
+let warn_nested_proofs_opt () = ()
 
-let warn_nested_proofs_opt =
-  CWarnings.create ~name:"vsrocq-nested-proofs-flag"
-    Pp.(fun () -> str "Flag \"Nested Proofs Allowed\" is ignored by VsRocq.")
-
-let () =
-  Goptions.declare_bool_option
-    { optstage = Summary.Stage.Interp;
-      optdepr  = None;
-      optkey   = Vernac_classifier.stm_allow_nested_proofs_option_name;
-      optread  = (fun () -> false);
-      optwrite = (fun b -> if b then warn_nested_proofs_opt ()) }
+let () = (* EasyCrypt - no option system needed *) ()
 
 module Internal = struct
 

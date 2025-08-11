@@ -101,8 +101,9 @@ val apply_text_edit : document -> text_edit -> document
 (** [apply_text_edits doc edits] updates the text of [doc] with [edits]. The new
     text is not parsed or executed. *)
 val apply_text_edits : document -> text_edit list -> document
-(** [apply_text_edits doc edits] updates the text of [doc] with [edits]. The new
-    text is not parsed or executed. *)
+
+val sentence_ido_string : sentence_id -> string
+(** [sentence_ido_string id] converts a sentence ID to string representation *)
 
 type sentence_state =
   | Error of parsing_error

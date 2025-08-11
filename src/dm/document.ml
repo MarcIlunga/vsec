@@ -478,24 +478,12 @@ let handle_parse_error start parsing_start msg ({errors; parsed;} as parse_state
   (* TODO: we could count the \n between start and stop and increase Loc.line_nb *)
   create_parsing_event (ParseEvent parse_state)
 
+(* Minimal stub for handle_parse_more - TODO: Restore parsing functionality *)
 let handle_parse_more ({loc; synterp_state; raw; parsed; parsed_comments} as parse_state) =
-  let start = 0 in (* placeholder - simplified for EasyCrypt *)
-  log (fun () -> "Start of parse is: " ^ (string_of_int start));
-  begin
-    (* FIXME should we save lexer state? *)
-    match None, [] with (* placeholder - simplified EasyCrypt parsing *)
-    | None, _ (* EOI *) -> create_parsing_event (Invalidate parse_state)
-    | Some ast, comments ->
-      let stop = start + 50 in (* placeholder - simplified for EasyCrypt *)
-      let begin_line, begin_char, end_char =
-              match ast.loc with
-              | Some lc -> lc.line_nb, lc.bp, lc.ep
-              | None -> assert false
-      in
-      let str = String.sub (RawDocument.text raw) begin_char (end_char - begin_char) in
-      let sstr = Stream.of_string str in
-      let lex = CLexer.Lexer.tok_func sstr in
-      let tokens = stream_tok 0 [] lex begin_line begin_char in
+  log (fun () -> "handle_parse_more: minimal stub");
+  create_parsing_event (Invalidate parse_state) (* Simplified return for minimal LSP *)
+
+(* COMMENTED OUT - Complex parsing logic - TODO: Restore for full LSP functionality 
       begin
         try
           log (fun () -> "Parsed: " ^ ast); (* EasyCrypt AST is already a string *)
@@ -532,7 +520,7 @@ let handle_parse_more ({loc; synterp_state; raw; parsed; parsed_comments} as par
       junk_sentence_end stream;
       handle_parse_error start start (loc, CErrors.iprint_no_report (e,info)) (Some qf) {parse_state with stream} synterp_state
   end
-
+*)
 
 let rec unchanged_id id = function
   | [] -> id
@@ -599,10 +587,10 @@ let validate_document ({ parsed_loc; raw_doc; cancel_handle } as document) =
   let top_id = Option.map (fun sentence -> sentence.id) (find_sentence_strictly_before document parsed_loc) in
   let text = RawDocument.text raw_doc in
   let stream = Stream.of_string text in
-  while Stream.count stream < stop do Stream.junk () stream done;
+  while Stream.count stream < stop do Stream.junk stream done;
   log (fun () -> Format.sprintf "Parsing more from pos %i" stop);
   let started = Unix.gettimeofday () in
-  let parsed_state = {stop; top_id;synterp_state; stream; raw=raw_doc; parsed=[]; errors=[]; parsed_comments=[]; loc=None; started; previous_document=document} in
+  let parsed_state = {stop; top_id;synterp_state; raw=raw_doc; parsed=[]; errors=[]; parsed_comments=[]; loc=None; started; previous_document=document} in
   let priority = Some PriorityManager.parsing in
   let event = Sel.now ?priority (ParseEvent parsed_state) in
   let cancel_handle = Some (Sel.Event.get_cancellation_handle event) in
@@ -658,6 +646,8 @@ let apply_text_edit document edit =
   let raw_doc, start = RawDocument.apply_text_edit document.raw_doc edit in
   let parsed_loc = min document.parsed_loc start in
   { document with raw_doc; parsed_loc }
+
+let sentence_ido_string id = string_of_int id (* Simple implementation for EasyCrypt *)
 
 let apply_text_edits document edits =
   let doc' = { document with raw_doc = document.raw_doc } in

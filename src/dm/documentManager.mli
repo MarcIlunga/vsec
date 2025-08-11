@@ -43,7 +43,7 @@ type handled_event = {
     state : state option;
     events: events;
     update_view: bool;
-    (* notification: Notification.Server.t option; - commented out for EasyCrypt *)
+    notification: string option; (* simplified from Notification.Server.t for EasyCrypt *)
 }
 
 val is_parsing : state -> bool

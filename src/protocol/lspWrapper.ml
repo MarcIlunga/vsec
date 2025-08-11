@@ -59,5 +59,8 @@ module DiagnosticSeverity = struct
   
   let yojson_of_t v = Lsp.Types.DiagnosticSeverity.yojson_of_t v
   let t_of_yojson v = Lsp.Types.DiagnosticSeverity.t_of_yojson v
+  
+  (* Simplified feedback level conversion for EasyCrypt *)
+  let of_feedback_level _lvl = `Error (* Simplified - treat all as errors for now *)
 end
 

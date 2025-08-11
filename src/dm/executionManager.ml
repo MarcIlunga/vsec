@@ -19,7 +19,7 @@ open Types
 
 let Log log = Log.mk_log "executionManager"
 
-type feedback_message = DiagnosticSeverity.t * EasyCryptLocation.t option * string
+type feedback_message = Protocol.LspWrapper.DiagnosticSeverity.t * EasyCryptLocation.t option * string
 
 type execution_status =
   | Success of EcLib.EcScope.scope option
@@ -178,7 +178,8 @@ let definition_using e s ~fixnames:_ ~using ~terms =
 let interp_qed_delayed ~proof_using ~state_id ~st =
   (* Simplified stub for EasyCrypt - replaces entire Coq proof delegation system *)
   log (fun () -> Printf.sprintf "EasyCrypt qed stub for sentence %d" state_id);
-  st, success st, [] (* Return unchanged state and no events *)
+  let assign _proof = () in (* Stub function that does nothing *)
+  st, success st, assign
 
 let cut_overview task state document =
   let range = match task with
@@ -368,7 +369,7 @@ let handle_feedback state (_,id, fb) =
   match fb with
   | (_, _, _, msg) ->
     begin match SM.find id state.of_sentence with
-    | (s,fl) -> update_all id s (fl @ [(Types.DiagnosticSeverity.Error, None, "feedback message")]) state
+    | (s,fl) -> update_all id s (fl @ [(Lsp.Types.DiagnosticSeverity.Error, None, "feedback message")]) state
     | exception Not_found -> 
         log (fun () -> "Received feedback on non-existing state id " ^ string_of_int id ^ ": " ^ msg);
         state
@@ -412,7 +413,7 @@ let find_fulfilled_opt x m =
 
 let exec_error_of_execution_status id v = match v with
   | Success _ -> None
-  | Error ((loc, _), _) -> Some (id, loc)
+  | Error ((loc, _), _) -> Some (id, Some loc)
 
 let get_vs_and_exec_error st id =
   match fst @@ SM.find id st.of_sentence with
@@ -423,12 +424,12 @@ let get_vs_and_exec_error st id =
 
 let is_locally_executed st id =
   match find_fulfilled_opt id st.of_sentence with
-  | Some (Success (Some _) | Error (_,_,Some _)) -> true
+  | Some (Success (Some _) | Error (_, Some _)) -> true
   | _ -> false
 
 let is_remotely_executed st id =
   match find_fulfilled_opt id st.of_sentence with
-  | Some (Success None | Error (_,_,None)) -> true
+  | Some (Success None | Error (_, None)) -> true
   | _ -> false
   
   
@@ -440,12 +441,20 @@ let destroy st =
   Queue.iter (fun (h,c,_) -> DelegationManager.cancel_job h; Sel.Event.cancel c) jobs
 
 
-let last_opt l = try Some (List.last l).id with Failure _ -> None
+let last_opt l = 
+  match List.rev l with
+  | [] -> None
+  | last :: _ -> Some last.id
 
 let prepare_task task : prepared_task list =
   match task with
   | Skip { id; error } -> [PSkip { id; error }]
-  | Block { id; synterp; error } -> [PBlock {id; synterp; error}]
+  | Block { id; synterp; error } -> 
+      let error_str = match error with
+        | (None, msg) -> ("(no location)", msg)
+        | (Some loc, msg) -> (Types.EasyCryptLocation.string_of_location loc, msg)
+      in
+      [PBlock {id; synterp; error = error_str}]
   | Exec e -> [PExec e]
   | Query e -> [PQuery e]
   | OpaqueProof { terminator; opener_id; tasks; proof_using} ->
@@ -453,7 +462,7 @@ let prepare_task task : prepared_task list =
       | DelegateProofsToWorkers _ ->
           log (fun () -> "delegating proofs to workers");
           let last_step_id = last_opt tasks in
-          [PDelegate {terminator_id = terminator.id; opener_id; last_step_id; tasks; proof_using}]
+          [PDelegate {terminator_id = terminator.id; opener_id; last_step_id; tasks}]
       | CheckProofsInMaster ->
           log (fun () -> "running the proof in master as per config");
           List.map (fun x -> PExec x) tasks @ [PExec terminator]
@@ -470,12 +479,13 @@ let id_of_prepared_task = function
 
 let purge_state = function
   | Success _ -> Success None
-  | Error(e,_,_) -> Error (e,None,None)
+  | Error(e,_) -> Error (e,None)
 
 (* TODO move to proper place *)
 let worker_execute ~doc_id ~send_back (vs,events) { id; ast; synterp; error_recovery } =
-  let vs = { vs with Vernacstate.synterp } in
-  log (fun () -> "worker interp " ^ sentence_ido_string id);
+  (* In EasyCrypt, use the synterp state directly since EcScope doesn't have field updates like Coq *)
+  let vs = synterp in
+  log (fun () -> "worker interp " ^ Document.sentence_ido_string id);
   let vs, v, ev = interp_ast ~doc_id ~state_id:id ~st:vs ~error_recovery ast in
   send_back (ProofJob.UpdateExecStatus (id,purge_state v));
   (vs, events @ ev)
@@ -483,6 +493,7 @@ let worker_execute ~doc_id ~send_back (vs,events) { id; ast; synterp; error_reco
 (* The execution of Qed for a non-delegated proof checks the proof is completed.
    When the proof is delegated this step is performed by the worker, which
    sends back an update on the Qed sentence in case the proof is unfinished *)
+(* COMMENTED OUT - Complex Coq proof management function - TODO: Adapt for EasyCrypt
 let worker_ensure_proof_is_over vs send_back terminator_id =
   let f = Declare.Proof.close_proof in
   let open Vernacstate in (* shadows Declare *)
@@ -491,14 +502,15 @@ let worker_ensure_proof_is_over vs send_back terminator_id =
   | None -> assert false
   | Some lemmas ->
       let proof = Vernacstate.LemmaStack.get_top lemmas in
-      try let _ = f ~opaque:Vernacexpr.Opaque ~keep_body_ucst_separate:false proof in ()
-      with e ->
-        let e, info = Exninfo.capture e in
-        let loc = Loc.get_loc info in
-        let qf = Result.value ~default:[] @@ Quickfix.from_exception e in
-        let msg = CErrors.iprint (e, info) in
-        let status = error loc (Some qf) msg vs in
-        send_back (ProofJob.UpdateExecStatus (terminator_id,status))
+      (* Simplified for EasyCrypt - complex Coq proof handling commented out *)
+      log (fun () -> "EasyCrypt proof stub - skipping complex proof handling")
+*)
+
+(* Minimal stub for EasyCrypt - TODO: implement proper proof completion check *)
+let worker_ensure_proof_is_over vs send_back terminator_id =
+  log (fun () -> "worker_ensure_proof_is_over: minimal stub for EasyCrypt");
+  (* For now, just assume the proof is complete *)
+  ()
 
 let worker_main { ProofJob.tasks; initial_vernac_state = vs; doc_id; terminator_id } ~send_back =
   try
@@ -507,41 +519,42 @@ let worker_main { ProofJob.tasks; initial_vernac_state = vs; doc_id; terminator_
     flush_all ();
     exit 0
   with e ->
-    let e, info = Exninfo.capture e in
-    let message = CErrors.iprint_no_report (e, info) in
-    Feedback.msg_debug @@ "======================= worker ===========================";
-    Feedback.msg_debug message;
-    Feedback.msg_debug @@ "==========================================================";
+    let message = Printexc.to_string e in
+    log (fun () -> "======================= worker exception ===========================");
+    log (fun () -> message);
+    log (fun () -> "==========================================================");
     exit 1
 
 let execute_task st (vs, events, interrupted) task =
   if interrupted then begin
-    let st = update st (id_of_prepared_task task) (Error ((None,"interrupted"),None,None)) in
+    let st = update st (id_of_prepared_task task) (Error ((Types.EasyCryptLocation.dummy,"interrupted"), None)) in
     let todo = [] in
     ({st with todo}, vs, events, true, None)
   end else
     try
       match task with
       | PBlock { id; synterp; error = err} ->
-        let vs = { vs with Vernacstate.synterp } in
-        let (loc, pp) = err in
-        let v = error loc None pp vs in
-        let parse_error = Some (id, loc) in
+        (* In EasyCrypt, use synterp directly since EcScope doesn't have field updates *)
+        let vs = synterp in
+        let (loc_str, pp) = err in
+        let v = error EasyCryptLocation.dummy pp vs in
+        let parse_error = Some (id, Some EasyCryptLocation.dummy) in
         let st = update st id v in
         (st, vs, events, false, parse_error)
       | PSkip { id; error = err } ->
           let v = match err with
             | None -> success vs
-            | Some msg -> error None None msg vs
+            | Some msg -> error EasyCryptLocation.dummy msg vs
           in
           let st = update st id v in
           (st, vs, events, false, None)
       | PExec { id; ast; synterp; error_recovery } ->
-          let vs = { vs with Vernacstate.synterp } in
+          (* In EasyCrypt, use synterp directly since EcScope doesn't have field updates *)
+        let vs = synterp in
           let vs, st, ev, exec_error =
             if is_locally_executed st id then
               let vs, exec_error = get_vs_and_exec_error st id in
-              log (fun () -> Format.asprintf "skipping execution of already executed %s" (sentence_ido_string id));
+              log (fun () -> Format.asprintf "skipping execution of already executed %s" (Document.sentence_ido_string id));
               vs, st, [], exec_error
             else
               let vs, v, ev = interp_ast ~doc_id:st.doc_id ~state_id:id ~st:vs ~error_recovery ast in
@@ -551,37 +564,39 @@ let execute_task st (vs, events, interrupted) task =
           in
           (st, vs, events @ ev, false, exec_error)
       | PQuery { id; ast; synterp; error_recovery } ->
-          let vs = { vs with Vernacstate.synterp } in
+          (* In EasyCrypt, use synterp directly since EcScope doesn't have field updates *)
+        let vs = synterp in
           let _, v, ev = interp_ast ~doc_id:st.doc_id ~state_id:id ~st:vs ~error_recovery ast in
           let st = update st id v in
           (st, vs, events @ ev, false, None)
-      | PDelegate { terminator_id; opener_id; last_step_id; tasks; proof_using } ->
+      | PDelegate { terminator_id; opener_id; last_step_id; tasks } ->
           begin match find_fulfilled_opt opener_id st.of_sentence with
           | Some (Success _) ->
             let job =  { ProofJob.tasks; initial_vernac_state = vs; doc_id = st.doc_id; terminator_id } in
             let job_id = DelegationManager.mk_job_handle (0,terminator_id) in
             (* The proof was successfully opened *)
-            let last_vs, _v, assign = interp_qed_delayed ~state_id:terminator_id ~proof_using ~st:vs in
+            let last_vs, _v, assign = interp_qed_delayed ~state_id:terminator_id ~proof_using:None ~st:vs in
             let complete_job status =
               try match status with
               | Success None ->
                 log (fun () -> "Resolved future (without sending back the witness)");
-                assign (`Exn (Failure "no proof",Exninfo.null))
+                assign (`Exn (Failure "no proof", Printexc.get_raw_backtrace ()))
               | Success (Some vernac_st) ->
                 let f proof =
                   log (fun () -> "Resolved future");
-                  assign (`Val (Declare.Proof.return_proof proof))
+                  assign (`Val proof) (* Simplified for EasyCrypt *)
                 in
-                Vernacstate.LemmaStack.with_top (Option.get @@ vernac_st.Vernacstate.interp.lemmas) ~f
-              | Error ((loc,err),_,_) ->
+                (* Simplified for EasyCrypt - skip complex Coq lemma stack handling *)
+                f ()
+              | Error ((loc,err),_) ->
                   log (fun () -> "Aborted future");
-                  assign (`Exn (CErrors.UserError err, Option.fold_left Loc.add_loc Exninfo.null loc))
-              with exn when CErrors.noncritical exn ->
-                assign (`Exn (CErrors.UserError("error closing proof"), Exninfo.null))
+                  assign (`Exn (Failure err, Printexc.get_raw_backtrace ()))
+              with exn ->
+                assign (`Exn (Failure("error closing proof"), Printexc.get_raw_backtrace ()))
             in
             let st = update st terminator_id (success last_vs) in
             let st = List.fold_left (fun st id ->
-               if Option.equal Stateid.equal (Some id) last_step_id then
+               if Option.equal Int.equal (Some id) last_step_id then
                  update_all id (Delegated (job_id,Some complete_job)) [] st
                else
                  update_all id (Delegated (job_id,None)) [] st)
@@ -599,10 +614,10 @@ let execute_task st (vs, events, interrupted) task =
             (st, vs,events,false, None)
           end
     with Sys.Break ->
-      let st = update st (id_of_prepared_task task) (Error ((None,"interrupted"),None,None)) in
+      let st = update st (id_of_prepared_task task) (Error ((Types.EasyCryptLocation.dummy,"interrupted"), None)) in
       (st, vs, events, true, None)
 
-let execute st document (vs, events, interrupted) task block_on_first_error =
+let execute st document (vs, events, interrupted) task block_on_first_error : (prepared_task option * state * EcLib.EcScope.scope * event Sel.Event.t list * errored_sentence) =
   let st, vst_for_next_todo, events, _, exec_error =
     execute_task st (vs, events, interrupted) task in
   match block_on_first_error, exec_error with
@@ -623,14 +638,14 @@ let build_tasks_for document sch st id block =
     begin match find_fulfilled_opt id st.of_sentence with
     | Some (Success (Some vs)) ->
       (* We reached an already computed state *)
-      log (fun () -> "Reached computed state " ^ sentence_ido_string id);
+      log (fun () -> "Reached computed state " ^ Document.sentence_ido_string id);
       vs, tasks, st, None
-    | Some (Error((loc, _),_,Some vs)) ->
+    | Some (Error((loc, _), Some vs)) ->
       (* We try to be resilient to an error *)
-      log (fun () -> "Error resiliency on state " ^ sentence_ido_string id);
-      vs, tasks, st, Some (id, loc)
+      log (fun () -> "Error resiliency on state " ^ Document.sentence_ido_string id);
+      vs, tasks, st, Some (id, Some loc)
     | _ ->
-      log (fun () -> "Non (locally) computed state " ^ sentence_ido_string id);
+      log (fun () -> "Non (locally) computed state " ^ Document.sentence_ido_string id);
       let (base_id, task) = task_for_sentence sch id in
       begin match base_id with
       | None -> (* task should be executed in initial state *)
@@ -665,13 +680,13 @@ let build_tasks_for document sch st id block =
 let all_errors st =
   List.fold_left (fun acc (id, (p,_)) ->
     match p with
-    | Done (Error ((loc,e),qf,_)) -> (id,(loc,e,qf)) :: acc
+    | Done (Error ((loc,e), st_opt)) -> (id,(Some loc,e)) :: acc (* EasyCrypt - no quickfix *)
     | _ -> acc)
     [] @@ SM.bindings st.of_sentence
 
 let error st id =
   match SM.find_opt id st.of_sentence with
-  | Some (Done (Error (err,_,_)), _) -> Some err
+  | Some (Done (Error ((loc,msg),_)), _) -> Some (Some loc, msg)
   | _ -> None
 
 let feedback st id =
@@ -694,39 +709,16 @@ let shift_overview st ~before ~after ~start ~offset =
     let r_start', r_stop' = shift_loc r_start r_stop in
     Range.create ~start:(RawDocument.position_of_loc after r_start') ~end_:(RawDocument.position_of_loc after r_stop')
   in
-  let processed = List.Smart.map shift_range st.overview.processed in
-  let processing = List.Smart.map shift_range st.overview.processing in
-  let prepared = List.Smart.map shift_range st.overview.prepared in
+  let processed = List.map shift_range st.overview.processed in
+  let processing = List.map shift_range st.overview.processing in
+  let prepared = List.map shift_range st.overview.prepared in
   let overview = {processed; processing; prepared} in
   {st with overview}
 
 let shift_diagnostics_locs st ~start ~offset =
-  let shift_loc loc =
-    let (loc_start, loc_stop) = Loc.unloc loc in
-    if loc_start >= start then Loc.shift_loc offset offset loc
-    else if loc_stop > start then Loc.shift_loc 0 offset loc
-    else loc
-  in
-  let shift_feedback (level, oloc, qf, msg as feedback) =
-    match oloc with
-    | None -> feedback
-    | Some loc ->
-      let loc' = shift_loc loc in
-      if loc' == loc then feedback else (level, Some loc', qf, msg)
-  in
-  let shift_error (sentence_state, feedbacks as orig) =
-    let sentence_state' = match sentence_state with
-      | Done (Error ((Some loc,e),qf,st)) ->
-        let loc' = shift_loc loc in
-        if loc' == loc then sentence_state else
-        Done (Error ((Some loc',e),qf,st))
-      | _ -> sentence_state
-    in
-    let feedbacks' = List.Smart.map shift_feedback feedbacks in
-    if sentence_state' == sentence_state && feedbacks' == feedbacks then orig else
-    (sentence_state', feedbacks')
-  in
-  { st with of_sentence = SM.map shift_error st.of_sentence }
+  (* Simplified stub for EasyCrypt - diagnostic location shifting not implemented *)
+  log (fun () -> Printf.sprintf "EasyCrypt stub: shift_diagnostics_locs start=%d offset=%d" start offset);
+  st (* Return unchanged state *)
 
 let executed_ids st =
   SM.fold (fun id (p,_) acc ->
@@ -746,13 +738,13 @@ let invalidate1 of_sentence id =
 
 let cancel1 todo invalid_id =
   let task_of_id = function
-    | PSkip { id } | PExec { id } | PQuery { id } | PBlock { id } -> Stateid.equal id invalid_id
+    | PSkip { id } | PExec { id } | PQuery { id } | PBlock { id } -> Int.equal id invalid_id
     | PDelegate _ -> false
   in
   List.filter task_of_id todo
 
 let rec invalidate document schedule id st =
-  log (fun () -> "Invalidating: " ^ sentence_ido_string id);
+  log (fun () -> "Invalidating: " ^ Document.sentence_ido_string id);
   let of_sentence = invalidate1 st.of_sentence id in
   let todo = cancel1 st.todo id in
   let old_jobs = Queue.copy jobs in
@@ -769,40 +761,39 @@ let rec invalidate document schedule id st =
     List.(concat (map (fun tasks -> map id_of_prepared_task tasks) !removed)) in
   if of_sentence == st.of_sentence then st else
   let deps = Scheduler.dependents schedule id in
-  Stateid.Set.fold (invalidate document schedule) deps { st with of_sentence; todo }
+  SentenceIdSet.fold (invalidate document schedule) deps { st with of_sentence; todo }
 
+(* Coq-specific context management commented out for EasyCrypt *)
 let context_of_state st =
-    Vernacstate.Interp.unfreeze_interp_state st;
-    begin match st.lemmas with
-    | None ->
-      let env = Global.env () in
-      let sigma = Evd.from_env env in
-      sigma, env
-    | Some lemmas ->
-      let open Declare in
-      let open Vernacstate in
-      lemmas |> LemmaStack.with_top ~f:Proof.get_current_context
-    end
+  log (fun () -> "EasyCrypt stub: context_of_state");
+  (* Return dummy context - TODO: implement EasyCrypt context if needed *)
+  ()
 
 let get_context st id =
-  match find_fulfilled_opt id st.of_sentence with
-  | None -> log (fun () -> "Cannot find state for get_context"); None
-  | Some (Error _) -> log (fun () -> "Context requested in error state"); None
-  | Some (Success None) -> log (fun () -> "Context requested in a remotely checked state"); None
-  | Some (Success (Some { interp = st })) ->
-    Some (context_of_state st)
+  log (fun () -> Printf.sprintf "EasyCrypt stub: get_context for id %d" id);
+  None (* EasyCrypt doesn't need Coq's context management *)
 
 let get_initial_context st =
-  context_of_state st.initial.Vernacstate.interp
+  log (fun () -> "EasyCrypt stub: get_initial_context");
+  st.initial (* Return the initial EasyCrypt scope *)
 
 let get_vernac_state st id =
   match find_fulfilled_opt id st.of_sentence with
   | None -> log (fun () -> "Cannot find state for get_context"); None
-  | Some (Error (_,_,None)) -> log (fun () -> "State requested after error with no state"); None
+  | Some (Error (_, None)) -> log (fun () -> "State requested after error with no state"); None
   | Some (Success None) -> log (fun () -> "State requested in a remotely checked state"); None
   | Some (Success (Some st))
-  | Some (Error (_,_, Some st)) ->
+  | Some (Error (_, Some st)) ->
     Some st
+
+let get_easycrypt_state st id =
+  log (fun () -> Printf.sprintf "get_easycrypt_state for id %d" id);
+  match find_fulfilled_opt id st.of_sentence with
+  | None -> None
+  | Some (Error (_, None)) -> None
+  | Some (Success None) -> None
+  | Some (Success (Some scope))
+  | Some (Error (_, Some scope)) -> Some scope
 
 module ProofWorkerProcess = struct
   type options = ProofWorker.options

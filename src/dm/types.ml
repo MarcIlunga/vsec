@@ -24,6 +24,16 @@ module DiagnosticSeverity = struct
     | Warning 
     | Information 
     | Hint
+    
+  (* Simplified feedback level conversion for EasyCrypt *)
+  let of_feedback_level _lvl = Error (* Simplified - treat all as errors for now *)
+  
+  (* Convert to LSP DiagnosticSeverity *)
+  let to_lsp = function
+    | Error -> Lsp.Types.DiagnosticSeverity.Error
+    | Warning -> Lsp.Types.DiagnosticSeverity.Warning
+    | Information -> Lsp.Types.DiagnosticSeverity.Information
+    | Hint -> Lsp.Types.DiagnosticSeverity.Hint
 end
 
 module RangeList = struct
@@ -93,6 +103,9 @@ module EasyCryptLocation = struct
   }
   
   let dummy = { start_line = 0; start_col = 0; end_line = 0; end_col = 0 }
+  
+  let string_of_location loc = 
+    Printf.sprintf "%d:%d-%d:%d" loc.start_line loc.start_col loc.end_line loc.end_col
 end
 
 type text_edit = Range.t * string

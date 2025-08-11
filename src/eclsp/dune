@@ -4,4 +4,5 @@
  (modules ecLsp lspManager)
  (flags -linkall -rectypes)
  (package vsec-language-server)
- (libraries sel yojson dm lsp jsonrpc protocol easycrypt.ecLib))
+ (libraries sel yojson lsp jsonrpc protocol dm easycrypt.ecLib)
+)

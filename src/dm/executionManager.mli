@@ -21,6 +21,7 @@ open Protocol.LspWrapper
 type delegation_mode =
   | CheckProofsInMaster
   | SkipProofs
+  | DelegateProofsToWorkers of { number_of_workers : int }
 
 type options = {
   delegation_mode : delegation_mode;
@@ -69,6 +70,9 @@ val get_initial_context : state -> EcLib.EcScope.scope
 (** Returns the EasyCrypt scope state after the sentence *)
 val get_easycrypt_state : state -> sentence_id -> EcLib.EcScope.scope option
 
+(** Returns the vernac state after the sentence - EasyCrypt equivalent *)
+val get_vernac_state : state -> sentence_id -> EcLib.EcScope.scope option
+
 (** Events for the main loop *)
 val handle_event : event -> state -> (sentence_id option * state option * events)
 
@@ -77,7 +81,7 @@ val handle_event : event -> state -> (sentence_id option * state option * events
 type prepared_task
 val get_id_of_executed_task : prepared_task -> sentence_id
 val build_tasks_for : Document.document -> Scheduler.schedule -> state -> sentence_id -> bool -> EcLib.EcScope.scope * state * prepared_task option * errored_sentence
-val execute : state -> Document.document -> EcLib.EcScope.scope * events * bool -> prepared_task -> bool -> (prepared_task option * state * EcLib.EcScope.scope * events * errored_sentence)
+val execute : state -> Document.document -> (EcLib.EcScope.scope * event Sel.Event.t list * bool) -> prepared_task -> bool -> (prepared_task option * state * EcLib.EcScope.scope * event Sel.Event.t list * errored_sentence)
 
 val update_processed : sentence_id -> state -> Document.document -> state
 val prepare_overview : state -> LspWrapper.Range.t list -> state
