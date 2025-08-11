@@ -11,23 +11,32 @@
 (*   See LICENSE file.                                                    *)
 (*                                                                        *)
 (**************************************************************************)
-open Util
-open Printer
-open Protocol.Printing
+(* TODO: Replace with EasyCrypt search system *)
+(* open Util - Coq module, commented out for build success *)
+(* open Printer - Coq module, commented out for build success *)
+(* open Protocol.Printing - may need adaptation *)
 open Protocol.LspWrapper
+open Types
 
 (* Note: this queue is not very useful today, as we process results in the main
 vsrocq process, which does not allow for real asynchronous processing of results. *)
 let query_results_queue = Queue.create ()
 
 let query_feedback : notification Sel.Event.t =
-  Sel.On.queue query_results_queue (fun x -> QueryResultNotification x)
+  (* TODO: Replace with proper EasyCrypt search notification *)
+  Sel.On.queue query_results_queue (fun x -> { method_ = "search/result"; params = None })
 
-[%%if rocq = "8.18"]
-open Vernacexpr
-open Pp
+(* TODO: Replace with EasyCrypt search implementation *)
+(* open Vernacexpr - Coq module *)
+(* open Pp - Coq module *)
 (* TODO : remove these two functions when interp_search_restriction is 
   added in the comSearch.mli in Rocq (they're simply copied here for now) *)
+(* TODO: Replace with EasyCrypt search system *)
+let global_module _qid = "" (* placeholder *)
+
+(* Placeholder implementation to satisfy interface *)
+let interp_search ~id:_ _env _evar_map _search_requests _restrictions = []
+(* 
 let global_module qid =
     try Nametab.full_name_module qid
     with Not_found ->  
@@ -58,3 +67,4 @@ let interp_search ~id env sigma s r =
   (Search.search env sigma (List.map (ComSearch.interp_search_request env sigma) s) r |>
     Search.prioritize_search) (adapt_pr_search pr_search);
   [query_feedback]
+*)

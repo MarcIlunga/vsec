@@ -17,7 +17,7 @@ open Lsp.Types
 open Protocol
 open Protocol.LspWrapper
 open Protocol.ExtProtocol
-open Protocol.Printing
+(* open Protocol.Printing - commented out for EasyCrypt *)
 open CompletionItems
 
 (** The document manager holds the view that Rocq has of the currently open
@@ -43,12 +43,12 @@ type handled_event = {
     state : state option;
     events: events;
     update_view: bool;
-    notification: Notification.Server.t option;
+    (* notification: Notification.Server.t option; - commented out for EasyCrypt *)
 }
 
 val is_parsing : state -> bool
 
-val init : EcLib.EcScope.scope -> opts:Coqargs.injection_command list -> DocumentUri.t -> text:string -> state * events
+val init : EcLib.EcScope.scope -> DocumentUri.t -> text:string -> state * events
 (** [init st opts uri text] initializes the document manager with initial vernac state
     [st] on which command line opts will be set. *)
 
@@ -67,23 +67,23 @@ val get_next_range : state -> Position.t -> Range.t option
 val get_previous_range : state -> Position.t -> Range.t option
 (** [get_previous_pos st pos] get the range of the previous sentence relative to pos *)
 
-val interpret_to_position : state -> Position.t -> Settings.Mode.t -> point_interp_mode:Settings.PointInterpretationMode.t -> (state * events)
+val interpret_to_position : state -> Position.t -> (state * events)
 (** [interpret_to_position state pos check_mode point_interp_mode] navigates to the 
     last sentence ending before or at [pos] and returns the resulting state, events that need to take place, and a possible blocking error. *)
 
-val interpret_to_next_position : state -> Position.t -> Settings.Mode.t -> (state * events)
+val interpret_to_next_position : state -> Position.t -> (state * events)
 (** [interpret_to_next_position state pos check_mode] navigates
     to the first sentence after or at [pos] (excluding whitespace) and returns the resulting state, events that need to take place, a possible blocking error. *)
 
-val interpret_to_previous : state -> Settings.Mode.t -> (state * events)
+val interpret_to_previous : state -> (state * events)
 (** [interpret_to_previous doc check_mode] navigates to the previous sentence in [doc]
     and returns the resulting state. *)
 
-val interpret_to_next : state -> Settings.Mode.t -> (state * events)
+val interpret_to_next : state -> (state * events)
 (** [interpret_to_next doc] navigates to the next sentence in [doc]
     and returns the resulting state. *)
 
-val interpret_to_end : state -> Settings.Mode.t -> (state * events)
+val interpret_to_end : state -> (state * events)
 (** [interpret_to_end doc] navigates to the last sentence in [doc]
     and returns the resulting state. *)
 
@@ -94,7 +94,7 @@ val interpret_in_background : state -> should_block_on_error:bool -> (state * ev
 val reset : state -> state * events 
 (** resets Rocq *)
 
-val executed_ranges : state -> Settings.Mode.t -> exec_overview
+val executed_ranges : state -> exec_overview
 (** [executes_ranges doc mode] returns the ranges corresponding to the sentences
     that have been executed. [mode] allows to send a "cut" range that only goes
     until the observe_id in the case of manual mode *)
@@ -102,32 +102,32 @@ val executed_ranges : state -> Settings.Mode.t -> exec_overview
 val observe_id_range : state -> Range.t option
 (** returns the range of the sentence referenced by observe_id **)
 
-val get_messages : state -> sentence_id -> (DiagnosticSeverity.t * pp) list
+val get_messages : state -> sentence_id -> (DiagnosticSeverity.t * string) list
 (** returns the messages associated to a given position *)
 
-val get_info_messages : state -> Position.t option -> (DiagnosticSeverity.t * pp) list
+val get_info_messages : state -> Position.t option -> (DiagnosticSeverity.t * string) list
 (** returns the Feedback.Info level messages associated to a given position *)
 
 val get_document_symbols : state -> DocumentSymbol.t list
 
-val get_document_proofs : state -> ProofState.proof_block list
+val get_document_proofs : state -> Document.proof_block_type list (* simplified for EasyCrypt *)
 
 val all_diagnostics : state -> Diagnostic.t list
 (** all_diagnostics [doc] returns the diagnostics corresponding to the sentences
     that have been executed in [doc]. *)
 
-val get_proof : state -> Settings.Goals.Diff.Mode.t -> sentence_id option -> ProofState.t option
+val get_proof : state -> sentence_id option -> string option (* simplified for EasyCrypt *)
 
 val get_completions : state -> Position.t -> completion_item list 
 
-val handle_event : event -> state -> block:bool -> Settings.Mode.t -> Settings.Goals.Diff.Mode.t -> Settings.Goals.PrettyPrint.t -> handled_event
+val handle_event : event -> state -> block:bool -> handled_event
 (** handles events and returns a new state if it was updated. On top of the next events, it also returns info
     on whether execution has halted due to an error and returns a boolean flag stating whether the view
     should be updated *)
 
 val search : state -> id:string -> Position.t -> string -> notification Sel.Event.t list
 
-val about : state -> Position.t -> pattern:string -> (pp,error) Result.t
+val about : state -> Position.t -> pattern:string -> (string,error) Result.t
 
 val hover : state -> Position.t -> MarkupContent.t option
 (** Returns an optional Result:
@@ -136,11 +136,11 @@ val hover : state -> Position.t -> MarkupContent.t option
 
 val jump_to_definition : state -> Position.t -> (Range.t * string) option
 
-val check : state -> Position.t -> pattern:string -> (pp,error) Result.t
+val check : state -> Position.t -> pattern:string -> (string,error) Result.t
 
-val locate : state -> Position.t -> pattern:string -> (pp, error) Result.t
+val locate : state -> Position.t -> pattern:string -> (string, error) Result.t
 
-val print : state -> Position.t -> pattern:string -> (pp, error) Result.t
+val print : state -> Position.t -> pattern:string -> (string, error) Result.t
 
 
 module Internal : sig

@@ -217,13 +217,133 @@ This roadmap outlines the implementation plan for VsEc (EasyCrypt Language Serve
 - ✅ Protocol Library Integration  
 - ✅ Systematic Error Analysis
 
-**Next Steps**: Phase 6 systematic adaptations will transform this VSRocq foundation into a fully functional EasyCrypt language server.
+## Phase 7: Final Module Resolution and First Build Success
+
+**Priority**: P0 - Immediate Next Steps
+**Dependencies**: Phase 6.1-6.2 complete
+**Goal**: Achieve first successful `dune build` with EasyCrypt integration
+
+### 7.1 Resolve Remaining Module Dependencies 🚧
+**Current build errors (5 remaining)**:
+1. **completionItems.ml**: `Nametab`, `Printer` modules (Coq completion system)
+2. **scheduler.mli**: `Vernacextend.vernac_classification` (Coq AST classification)  
+3. **searchQuery.mli**: Remaining `%%if rocq` conditionals
+4. **delegationManager.ml**: `Log.feedback_add_feeder_on_Message` (Coq feedback)
+5. **parTactic.ml**: Remaining Coq modules (`Evar`, `Proofview`, etc.)
+
+### 7.2 Strategy for Module Resolution
+**Approach**: Progressive simplification to achieve buildable state
+
+1. **Remove/Disable Complex Features Initially**:
+   - Disable completion system (comment out Coq-dependent completion)
+   - Disable proof tactics system (comment out parallel tactics) 
+   - Disable search features (comment out Coq search)
+   - Keep core document management and LSP protocol
+
+2. **Implement EasyCrypt Stubs**:
+   - Create minimal EasyCrypt classification system
+   - Implement basic feedback without Coq feeder
+   - Add placeholder completion system
+
+3. **Achieve First Build Success**:
+   - Focus on core LSP lifecycle working
+   - Document/execution/state management functional
+   - Extension loads in VS Code successfully
+
+### 7.3 Post-Build Success: Feature Restoration
+**After achieving successful build**:
+1. Gradually re-enable features with EasyCrypt implementations
+2. Replace stubs with proper EasyCrypt integration
+3. Implement EasyCrypt-specific completion/search/tactics
+4. Add comprehensive testing
+
+**Success Criteria**: `dune build` completes without errors, LSP starts, basic document operations work.
 
 ## Development Guidelines
 
-**Current Focus**: Phase 6.3 - Resolving remaining Coq module dependencies after successful systematic adaptations.
+**Current Focus**: Phase 7 - Final module resolution to achieve first build success.
 
 **Major Achievement**: Successfully completed systematic bulk migrations using sed commands as requested, transforming 50+ syntax errors into just 5 specific module binding issues!
+
+**Next Immediate Steps**:
+1. **Phase 7.1**: Disable/comment complex Coq-dependent features to achieve build success
+2. **Phase 7.2**: Create minimal EasyCrypt stubs for required functionality  
+3. **Phase 7.3**: Achieve first successful `dune build` and LSP startup
+4. **Phase 7.4**: Incrementally restore features with proper EasyCrypt integration
+
+## Detailed Phase 7 Implementation Plan
+
+### Phase 7.1: Disable Complex Features (Quick Wins) ⬜
+**Approach**: Comment out problematic modules to achieve buildable state
+
+**Task List**:
+1. **completionItems.ml**: 
+   - Comment out all `Nametab` and `Printer` usage
+   - Replace with placeholder functions returning empty lists
+   - Keep module structure intact for future EasyCrypt implementation
+
+2. **parTactic.ml**: 
+   - Comment out entire parallel tactics system initially
+   - Replace with stub implementation that does nothing
+   - Focus on core document processing first
+
+3. **searchQuery.ml/.mli**: 
+   - Remove remaining `%%if rocq` conditionals 
+   - Disable search functionality temporarily
+   - Add placeholder search function
+
+4. **delegationManager.ml**:
+   - Comment out `Log.feedback_add_feeder_on_Message` call
+   - Replace with simple logging function
+   - Keep worker system structure for future use
+
+### Phase 7.2: Create EasyCrypt Stubs ⬜
+**Approach**: Implement minimal working equivalents
+
+**Task List**:
+1. **Add to types.ml**:
+   ```ocaml
+   (* EasyCrypt AST classification placeholder *)
+   module EasyCryptClassification = struct
+     type classification = 
+       | EcProofStep 
+       | EcDefinition 
+       | EcQuery
+       | EcOther
+   end
+   ```
+
+2. **scheduler.mli**: Replace `Vernacextend.vernac_classification` with `EasyCryptClassification.classification`
+
+3. **Basic feedback system**: Replace Coq feedback with simple diagnostic collection
+
+### Phase 7.3: Build Success Target ⬜
+**Goal**: `opam exec -- dune build` completes without errors
+
+**Critical modules that must build**:
+- ✅ dm/types.ml (core types)
+- ✅ protocol/ (LSP protocol layer)  
+- 🚧 dm/ library (document management)
+- 🚧 eclsp/ (main executable)
+
+**Success metrics**:
+- Zero compilation errors
+- No unbound module references
+- All type signatures match
+
+### Phase 7.4: Feature Restoration Roadmap ⬜
+**Approach**: Incrementally replace stubs with EasyCrypt implementations
+
+**Priority order**:
+1. **Core document operations**: parsing, execution, diagnostics
+2. **Basic LSP features**: hover, go-to-definition  
+3. **Advanced features**: completion, search, references
+4. **Proof features**: tactics, proof state management
+
+**Implementation strategy**:
+- One feature at a time to maintain buildable state
+- Comprehensive testing before moving to next feature  
+- Document each EasyCrypt integration pattern for future use
 
 ### Success Criteria for Phase 6
 

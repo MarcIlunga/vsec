@@ -1,9 +1,8 @@
-(* Libnames not needed for EasyCrypt *)
-open Nametab
-open Printer
+(* TODO: Replace with EasyCrypt completion system *)
+(* Temporarily disabled Coq completion system for build success *)
 
 type completion_level = 
-  Fully
+  | Fully
   | Partially
   | No_completion
 
@@ -15,30 +14,28 @@ let symbol_prefix (completes: completion_level option) =
     | Partially -> "☆ "
     | No_completion -> ""
 
+(* Placeholder completion_item type - will be replaced with EasyCrypt equivalent *)
 type completion_item = {
-  ref : Names.GlobRef.t;
-  path : full_path;
-  typ : types;
-  env : Environ.env;
-  sigma : Evd.evar_map;
+  name : string;
+  typ : string;
+  detail : string;
   completes : completion_level option;
-  mutable debug_info : string;
+  debug_info : string;
 }
 
-let mk_completion_item sigma ref env (c : constr) : completion_item = 
+(* Placeholder function - will be replaced with EasyCrypt implementation *)
+let mk_completion_item name typ detail : completion_item = 
   {
-    ref = ref;
-    path = path_of_global ref;
-    typ = c;
-    env = env;
-    sigma = sigma;
+    name = name;
+    typ = typ;
+    detail = detail;
     completes = None;
     debug_info = "";
   }
 
+(* Placeholder function - will be replaced with EasyCrypt implementation *)
 let pp_completion_item (item : completion_item) : (string * string * string * string) =
-  let pr = pr_global item.ref in
-  let name = string_of_string pr in
-  let path = string_of_path item.path ^ "\n" ^ item.debug_info in
-  let typ = string_of_string (pr_ltype_env item.env item.sigma item.typ) in
+  let name = item.name in
+  let path = item.detail ^ "\n" ^ item.debug_info in
+  let typ = item.typ in
   (Printf.sprintf "%s%s" (symbol_prefix item.completes) name, name, typ, path)

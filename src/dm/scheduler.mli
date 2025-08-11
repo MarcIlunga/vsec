@@ -30,18 +30,18 @@ type error_recovery_strategy =
 type executable_sentence = {
   id : sentence_id;
   ast : string;
-  classif : Vernacextend.vernac_classification;
-  synterp : Vernacstate.Synterp.t;
+  classif : EasyCryptClassification.classification;
+  synterp : EcLib.EcScope.scope; (* EasyCrypt state instead of Coq synterp *)
   error_recovery : error_recovery_strategy;
 }
 
 type task =
   | Skip of { id: sentence_id; error: string option }
-  | Block of { id: sentence_id; synterp : Vernacstate.Synterp.t; error: string Loc.located }
+  | Block of { id: sentence_id; synterp : EcLib.EcScope.scope; error: (EasyCryptLocation.t option * string) }
   | Exec of executable_sentence
   | OpaqueProof of { terminator: executable_sentence;
                      opener_id: sentence_id;
-                     proof_using: Vernacexpr.section_subset_expr;
+                     proof_using: string; (* simplified proof_using *)
                      tasks : executable_sentence list; (* non empty list *)
                    }
   | Query of executable_sentence
@@ -52,9 +52,9 @@ type schedule
 
 val initial_schedule : schedule
 
-val schedule_errored_sentence : sentence_id -> string Loc.located -> Vernacstate.Synterp.t -> schedule -> schedule
+val schedule_errored_sentence : sentence_id -> (EasyCryptLocation.t option * string) -> EcLib.EcScope.scope -> schedule -> schedule
 
-val schedule_sentence : sentence_id * (string * Vernacextend.vernac_classification * Vernacstate.Synterp.t) -> state -> schedule -> state * schedule
+val schedule_sentence : sentence_id * (string * EasyCryptClassification.classification * EcLib.EcScope.scope) -> state -> schedule -> state * schedule
 (** Identifies the structure of the document and dependencies between sentences
     in order to easily compute the tasks to interpret the a sentence.
     Input sentence is None on parsing error. *)

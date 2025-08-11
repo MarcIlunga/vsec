@@ -65,9 +65,11 @@ let cancel_job (_,id) =
 (* TODO: this queue should not be here, it should be "per URI" but we want to
    keep here the conversion (STM) feedback -> (LSP) feedback *)
 
-let install_feedback send =
-  Log.feedback_add_feeder_on_Message (fun route span _ lvl loc qf msg ->
-    send (route,span,(lvl,loc, qf, msg)))
+(* TODO: Replace with EasyCrypt feedback system *)
+let install_feedback _send =
+  (* Log.feedback_add_feeder_on_Message - Coq function, commented out for build success *)
+  (* Placeholder - will be replaced with EasyCrypt feedback integration *)
+  ()
     
 module type Worker = sig
   type job_t
@@ -96,11 +98,7 @@ module type Worker = sig
   
   (* for worker toplevels *)
   type options
-  [%%if rocq = "8.18" || rocq = "8.19" || rocq = "8.20"]
   val parse_options : string list -> options * string list
-  [%%else]
-  val parse_options : Coqargs.t -> string list -> options * string list
-  [%%endif]
   (* the sentence ids of the remote_mapping being delegated *)
   val setup_plumbing : options -> ((job_update_request -> unit) * job_t)
   
@@ -247,7 +245,7 @@ let create_process_worker procname cancellation_handle job =
       | ADDR_INET(_,port) -> port
       | _ -> assert false in
     let null = openfile "/dev/null" [O_RDWR] 0o640 in
-    let extra_flags = if CDebug.get_flags () = "all" then [|"-debug"|] else [||] in
+    let extra_flags = [||] in (* TODO: Replace with EasyCrypt debug system *)
     let args = Array.append  [|procname;option_name;string_of_int port|] extra_flags in
     let pid = create_process procname args null stdout stderr in
     close null;

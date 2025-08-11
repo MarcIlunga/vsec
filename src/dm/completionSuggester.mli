@@ -15,4 +15,5 @@
 open Protocol
 open CompletionItems
 
-val get_completions : Settings.Completion.t -> EcLib.EcScope.scope -> completion_item list option
+(* TODO: Replace with EasyCrypt completion configuration *)
+val get_completions : bool -> EcLib.EcScope.scope -> completion_item list option

@@ -12,17 +12,18 @@
 (*                                                                        *)
 (**************************************************************************)
 open Protocol
-
-module CompactedDecl = Context.Compacted.Declaration
-open Printer
-open EConstr
-open Names
 open Types
+
+(* TODO: Replace with EasyCrypt completion system *)
+(* module CompactedDecl = Context.Compacted.Declaration - Coq module *)
+(* open Printer - Coq module *)
+(* open EConstr - Coq module *)
+(* open Names - Coq module *)
 
 let Log log = Log.mk_log "completionSuggester"
 
 module TypeCompare = struct
-  type t = types
+  type t = string (* TODO: Replace with proper EasyCrypt type comparison *)
   let compare = compare
 end
 
@@ -40,19 +41,15 @@ let takeSkip n l =
 
 module Atomics = Set.Make(TypeCompare)
 
-module HypothesisMap = Map.Make (struct type t = Id.t let compare = compare end)
+module HypothesisMap = Map.Make (struct type t = string let compare = compare end) (* TODO: Replace with EasyCrypt identifier type *)
 
-let mk_hyp d (env,l) =
-  let d' = CompactedDecl.to_named_context d in
-  let env' = List.fold_right EConstr.push_named d' env in
-  let ids, typ = match d with
-  | CompactedDecl.LocalAssum (ids, typ) -> ids, typ
-  | CompactedDecl.LocalDef (ids,_,typ) -> ids, typ
-  in
-  let ids' = List.map (fun id -> id.Context.binder_name) ids in
-  let m = List.fold_right (fun id acc -> HypothesisMap.add id typ acc) ids' l in
-  (env', m)
+(* TODO: Replace with EasyCrypt completion system *)
+let mk_hyp _d (env,l) = (env, l) (* placeholder - return unchanged *)
 
+(* TODO: Complete EasyCrypt completion system - temporarily simplified for build success *)
+let get_completions _options _st = None (* placeholder - return no completions *)
+
+(* Rest of file commented out for build success
 let get_hyps env sigma goal =
     let EvarInfo evi = Evd.find sigma goal in
     let env = Evd.evar_filtered_env env evi in
@@ -320,3 +317,4 @@ let get_completions options st =
     let sigma = proof.sigma in
     let lemmas = get_lemmas sigma env in
     Some (get_completion_items env proof lemmas options)
+*)

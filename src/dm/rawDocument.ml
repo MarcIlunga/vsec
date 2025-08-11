@@ -82,8 +82,8 @@ let end_loc raw =
 
 let range_of_loc raw loc =
   let open Range in
-  { start = position_of_loc raw loc.Loc.bp;
-    end_ = position_of_loc raw loc.Loc.ep;
+  { start = position_of_loc raw loc.Types.EasyCryptLocation.start_line; (* TODO: adapt to EasyCryptLocation structure *)
+    end_ = position_of_loc raw loc.Types.EasyCryptLocation.end_line;
   }
 
 let word_at_position raw pos : string option =

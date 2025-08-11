@@ -16,20 +16,12 @@ open Types
 
 val query_feedback : notification Sel.Event.t
 
-[%%if rocq = "8.18"]
+(* TODO: Replace with EasyCrypt search system *)
+(* Temporarily disabled Coq search for build success *)
 val interp_search :
   id:string ->
-  Environ.env ->
-  Evd.evar_map ->
-  (bool * Vernacexpr.search_request) list ->
-  Vernacexpr.search_restriction ->
+  string -> (* simplified environment *)
+  string -> (* simplified evar_map *)
+  (bool * string) list -> (* simplified search_request *)
+  string list -> (* simplified search_restriction *)
   notification Sel.Event.t list
-[%%else]
-val interp_search :
-  id:string ->
-  Environ.env ->
-  Evd.evar_map ->
-  (bool * Vernacexpr.search_request) list ->
-  Libnames.qualid list Vernacexpr.search_restriction ->
-  notification Sel.Event.t list
-[%%endif]
