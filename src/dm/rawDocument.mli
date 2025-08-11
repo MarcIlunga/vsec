@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*                                 VSCoq                                  *)
+(*                                 VSRocq                                 *)
 (*                                                                        *)
 (*                   Copyright INRIA and contributors                     *)
 (*       (see version control and README file for authors & dates)        *)
@@ -11,10 +11,8 @@
 (*   See LICENSE file.                                                    *)
 (*                                                                        *)
 (**************************************************************************)
-open Lsp
-open LspData
+open Lsp.Types
 open Types
-open EcLib
 
 type text_edit = Range.t * string
 
@@ -27,12 +25,9 @@ val position_of_loc : t -> int -> Position.t
 val loc_of_position : t -> Position.t -> int
 val end_loc : t -> int
 
-val range_of_loc : EcLocation.t -> Range.t
+val range_of_loc : t -> EasyCryptLocation.t -> Range.t
 val word_at_position: t -> Position.t -> string option
+val string_in_range: t -> int -> int -> string
 
 (** Applies a text edit, and returns start location *)
 val apply_text_edit : t -> text_edit -> t * int
-
-(** Tests if document text contains only whitespace between the two provided
-    locations, included *)
-val only_whitespace_between : t -> int -> int -> bool

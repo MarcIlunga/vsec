@@ -13,10 +13,18 @@
 (**************************************************************************)
 open Protocol.LspWrapper
 
-(* EasyCrypt uses integer sentence IDs instead of Coq's Stateid.t *)
+(* EasyCrypt uses integer sentence IDs instead of Coq's sentence_id *)
 type sentence_id = int
 module SentenceIdSet = Set.Make(Int)
 type sentence_id_set = SentenceIdSet.t
+
+module DiagnosticSeverity = struct
+  type t = 
+    | Error 
+    | Warning 
+    | Information 
+    | Hint
+end
 
 module RangeList = struct
 
@@ -100,3 +108,9 @@ type error = {
 }
 
 type 'a log = Log : 'a -> 'a log
+
+(* LSP notification type for search queries *)
+type notification = {
+  method_: string;
+  params: Yojson.Safe.t option;
+}

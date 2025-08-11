@@ -18,21 +18,37 @@ install: [
 depends: [
   "ocaml" { >= "4.14" }
   "dune" { >= "3.5" }
+  
+  (* Core EasyCrypt and system dependencies *)
   "easycrypt"
-  "yojson"
-  "jsonrpc" { >= "1.15"}
+  "base"
+  "uri"
   "ocamlfind"
+  "result" { >= "1.5" }
+  
+  (* LSP and JSON-RPC libraries *)
+  "lsp" { >= "1.15" }
+  "jsonrpc" { >= "1.15" }
+  "sel" { >= "0.6.0" }
+  "yojson"
+  
+  (* Sexp support *)
+  "sexplib"
+  "ppx_sexp_conv"
+  
+  (* PPX preprocessing *)
+  "ppx_yojson_conv"
+  "ppx_yojson_conv_lib"
+  "ppx_import"
+  "ppx_deriving" { >= "5.0" }
+  "ppx_optcomp"
+  
+  (* Testing *)
   "ppx_inline_test"
   "ppx_assert"
-  "ppx_sexp_conv"
-  "ppx_deriving"
-  "sexplib"
-  "ppx_yojson_conv"
-  "ppx_import"
-  "ppx_optcomp"
-  "result" { >= "1.5" }
-  "lsp" { >= "1.15"}
-  "sel" {>= "0.6.0"}
+  
+  (* Development tools *)
+  "why3"
 ]
 
 synopsis: "VsEc EasyCrypt language server"
