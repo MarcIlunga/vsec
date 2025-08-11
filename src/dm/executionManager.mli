@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*                                 VSCoq                                  *)
+(*                                 VSec                                   *)
 (*                                                                        *)
 (*                   Copyright INRIA and contributors                     *)
 (*       (see version control and README file for authors & dates)        *)
@@ -13,53 +13,74 @@
 (**************************************************************************)
 
 open Types
-open EcLib
-open Lsp.LspData
+open Protocol
+open Protocol.LspWrapper
 
+(** The execution manager handles EasyCrypt sentence execution and state management *)
 
+type delegation_mode =
+  | CheckProofsInMaster
+  | SkipProofs
+
+type options = {
+  delegation_mode : delegation_mode;
+  enableDiagnostics : bool;
+}
+
+val is_diagnostics_enabled: unit -> bool
 
 (** Execution state, includes the cache *)
 type state
-module ProofJob : sig
-  type t
-end
+type event
+type events = event Sel.Event.t list
+type errored_sentence = (sentence_id * EasyCryptLocation.t option) option
 
-type event =
-  | LocalFeedback of sentence_id * (Severity.t * EcLocation.t option * string)
-  | ProofEvent of ProofJob.t
-type events = event Sel.event list
-(* val pr_event : event -> Pp.t *)
+(* EasyCrypt feedback message - simplified from Coq's feedback system *)
+type feedback_message = DiagnosticSeverity.t * EasyCryptLocation.t option * string
 
-val init : EcScope.scope -> state * event Sel.event
+val pr_event : event -> string
+val init : EcLib.EcScope.scope -> state * event Sel.Event.t
+val destroy : state -> unit
 
-val invalidate : Scheduler.schedule -> sentence_id -> state -> state
-val errors : state -> (sentence_id * (EcLocation.t option * string)) list
-val feedback : state -> (sentence_id * (Severity.t * EcLocation.t option * string)) list
-val shift_locs : state -> int -> int -> state
+val get_options : unit -> options
+val set_options : options -> unit
+val set_default_options : unit -> unit
+val invalidate : Document.document -> Scheduler.schedule -> sentence_id -> state -> state
+
+val error : state -> sentence_id -> (EasyCryptLocation.t option * string) option
+val feedback :  state -> sentence_id -> feedback_message list
+val all_errors : state -> (sentence_id * (EasyCryptLocation.t option * string)) list
+val all_feedback : state -> (sentence_id * feedback_message) list
+
+val reset_overview : state -> Document.document -> state
+val shift_overview : state -> before:RawDocument.t -> after:RawDocument.t -> start:int -> offset:int -> state
+val shift_diagnostics_locs : state -> start:int -> offset:int -> state
 val executed_ids : state -> sentence_id list
-val is_executed : state -> sentence_id -> bool
+
+(** we know if it worked and we have the state in this process *)
+val is_locally_executed : state -> sentence_id -> bool
+
+(** we know if it worked but we do not have the state in this process *)
 val is_remotely_executed : state -> sentence_id -> bool
-(* val get_proof : state -> sentence_id -> Proof.t option
-val get_proofview : state -> sentence_id -> Proof.data option
-val get_context : state -> sentence_id -> (Evd.evar_map * Environ.env) option
-val get_lemmas : Evd.evar_map -> Environ.env -> completion_item list *)
+
+val get_context : state -> sentence_id -> EcLib.EcScope.scope option
+val get_initial_context : state -> EcLib.EcScope.scope
+
+(** Returns the EasyCrypt scope state after the sentence *)
+val get_easycrypt_state : state -> sentence_id -> EcLib.EcScope.scope option
 
 (** Events for the main loop *)
-val handle_event : event -> state -> (state option * events)
+val handle_event : event -> state -> (sentence_id option * state option * events)
 
 (** Execution happens in two steps. In particular the event one takes only
     one task at a time to ease checking for interruption *)
-type prepared_task =
-  | PSkip of sentence_id
-  | PExec of Scheduler.executable_sentence
-  | PQuery of Scheduler.executable_sentence
+type prepared_task
+val get_id_of_executed_task : prepared_task -> sentence_id
+val build_tasks_for : Document.document -> Scheduler.schedule -> state -> sentence_id -> bool -> EcLib.EcScope.scope * state * prepared_task option * errored_sentence
+val execute : state -> Document.document -> EcLib.EcScope.scope * events * bool -> prepared_task -> bool -> (prepared_task option * state * EcLib.EcScope.scope * events * errored_sentence)
 
-val build_tasks_for : Scheduler.schedule -> state -> sentence_id -> Vernacstate.t * prepared_task list
-val execute : state -> Vernacstate.t * events * bool -> prepared_task -> (state * Vernacstate.t * events * bool)
-
-type execution_status =
-  | Success of Vernacstate.t option
-  | Error of string EcLocation.located * Vernacstate.t option
-
-(** For testing *)
-val update : state -> sentence_id -> execution_status -> state
+val update_processed : sentence_id -> state -> Document.document -> state
+val prepare_overview : state -> LspWrapper.Range.t list -> state
+val overview : state -> exec_overview
+val overview_until_range : state -> LspWrapper.Range.t -> exec_overview
+val print_exec_overview_of_state : state -> unit

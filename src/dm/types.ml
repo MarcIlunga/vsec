@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*                                 VSCoq                                  *)
+(*                                 VSec                                   *)
 (*                                                                        *)
 (*                   Copyright INRIA and contributors                     *)
 (*       (see version control and README file for authors & dates)        *)
@@ -11,31 +11,81 @@
 (*   See LICENSE file.                                                    *)
 (*                                                                        *)
 (**************************************************************************)
-open Lsp.LspData
-open EcLib
+open Protocol.LspWrapper
 
-module Stateid = struct
+(* EasyCrypt uses integer sentence IDs instead of Coq's Stateid.t *)
+type sentence_id = int
+module SentenceIdSet = Set.Make(Int)
+type sentence_id_set = SentenceIdSet.t
 
-  type t = int
+module RangeList = struct
 
-  let initial = 1
+  type t = Range.t list
   
-  let fresh =
-    let cur = ref initial in
-    fun () -> incr cur; !cur
+  let insert_or_merge_range r ranges =
+    let ranges = List.sort Range.compare (r :: ranges) in
+    let rec insert_or_merge_sorted_ranges r1 = function
+      | [] -> [r1]
+      | r2 :: l ->
+        if Range.included ~in_:r1 r2 then (*since the ranges are sorted, only r2 can be included in r1*)
+          insert_or_merge_sorted_ranges r1 l
+        else if Range.prefixes ~in_:r2 r1 then
+          begin
+            let range = Range.{start = r1.Range.start; end_ = r2.Range.end_} in
+            insert_or_merge_sorted_ranges range l
+          end
+        else
+          r1 :: (insert_or_merge_sorted_ranges r2 l)
+    in
+    insert_or_merge_sorted_ranges (List.hd ranges) (List.tl ranges)
 
-  let compare = Int.compare
+  let rec remove_or_truncate_range r = function
+  | [] -> []
+  | r1 :: l ->
+    if Range.equals r r1
+    then
+      l
+    else if Range.strictly_included ~in_: r1 r then
+      Range.{ start = r1.Range.start; end_ = r.Range.start} :: Range.{ start = r.Range.end_; end_ = r1.Range.end_} :: l
+    else if Range.prefixes ~in_:r1 r then
+      Range.{ start = r.Range.end_; end_ = r1.Range.end_} :: l
+    else if Range.postfixes ~in_:r1 r then
+      Range.{ start = r1.Range.start; end_ = r.Range.start} :: l
+    else
+      r1 :: (remove_or_truncate_range r l)
 
-  let to_string t = string_of_int t
-
-  let to_int t = t
+    let rec cut_from_range r = function
+    | [] -> []
+    | r1 :: l ->
+      let (<=) x y = Position.compare x y <= 0 in
+      if r.Range.start <= r1.Range.start then
+        l
+      else if r.Range.start <= r1.Range.end_ then
+        Range.{start = r1.Range.start; end_ = r.Range.start} :: l
+      else
+        r1 :: (cut_from_range r l)
 
 end
 
-module StateidSet = Set.Make(Stateid)
+type exec_overview = {
+  prepared: RangeList.t;
+  processing : RangeList.t;
+  processed : RangeList.t;
+}
 
-type sentence_id = Stateid.t
-type sentence_id_set = StateidSet.t
+let empty_overview = {processing = []; processed = []; prepared = []}
+
+(* EasyCrypt doesn't need Coq's Quickfix system *)
+module EasyCryptLocation = struct
+  type t = {
+    start_line: int;
+    start_col: int;
+    end_line: int;
+    end_col: int;
+  }
+  
+  let dummy = { start_line = 0; start_col = 0; end_line = 0; end_col = 0 }
+end
 
 type text_edit = Range.t * string
 
@@ -44,11 +94,9 @@ type link = {
   read_from:  Unix.file_descr;
 }
 
+type error = {
+  code: Jsonrpc.Response.Error.Code.t option;
+  message: string;
+}
+
 type 'a log = Log : 'a -> 'a log
-
-(*TODO: Replace this proper easycrypt data structures *)
-module Vernacstate = struct
-
-  type t = EcScope.scope
-
-end

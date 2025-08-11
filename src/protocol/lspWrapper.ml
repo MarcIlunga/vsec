@@ -1,0 +1,63 @@
+(* LSP Wrapper - Adapted from VSRocq for EasyCrypt *)
+open Lsp.Types
+open Sexplib.Std
+
+module Position = struct
+  include Lsp.Types.Position
+  type t = [%import: Lsp.Types.Position.t] [@@deriving sexp]
+ 
+  let compare pos1 pos2 =
+    match Int.compare pos1.line pos2.line with
+    | 0 -> Int.compare pos1.character pos2.character
+    | x -> x
+
+  let to_string pos = Format.sprintf "(%i,%i)" pos.line pos.character
+end
+
+module Range = struct
+  include Lsp.Types.Range
+  type t = [%import: Lsp.Types.Range.t] [@@deriving sexp]
+  
+  let top () =
+    let start = Position.{ line=0; character=0} in
+    let end_ = Position.{ line=0; character=0} in
+    Range.{start; end_}
+
+  let compare r1 r2 =
+    match Position.compare r1.start r2.start with
+    | 0 -> Position.compare r1.end_ r2.end_
+    | x -> x
+
+  let equals r1 r2 =
+    Position.compare r1.start r2.start == 0 && Position.compare r1.end_ r2.end_ == 0
+
+  let included ~in_ { start; end_ } =
+    let (<=) x y = Position.compare x y <= 0 in
+    in_.start <= start && end_ <= in_.end_
+
+  let strictly_included ~in_ { start; end_ } =
+    let (<) x y = Position.compare x y < 0 in
+    in_.start < start && end_ < in_.end_
+
+  let prefixes ~in_ { start; end_ } =
+    let (<) x y = Position.compare x y < 0 in
+    let (<=) x y = Position.compare x y <= 0 in
+    start <= in_.start && end_ < in_.end_ && in_.start <= end_
+
+  let postfixes ~in_ { start; end_ } =
+    let (<) x y = Position.compare x y < 0 in
+    let (<=) x y = Position.compare x y <= 0 in
+    start <= in_.end_ && in_.start < start && in_.end_ < end_
+
+  let to_string range = 
+    Format.sprintf ("Range (start: %s, end: %s)") 
+      (Position.to_string range.start) (Position.to_string range.end_)
+end
+
+module DiagnosticSeverity = struct
+  type t = [%import: Lsp.Types.DiagnosticSeverity.t] [@@deriving sexp]
+  
+  let yojson_of_t v = Lsp.Types.DiagnosticSeverity.yojson_of_t v
+  let t_of_yojson v = Lsp.Types.DiagnosticSeverity.t_of_yojson v
+end
+
