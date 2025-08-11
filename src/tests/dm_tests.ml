@@ -149,7 +149,6 @@ let%test_unit "step_backward.document_begin" =
   let todo = Sel.(enqueue empty init_events) in
   let st, events = DocumentManager.interpret_to_previous st in
   let st = handle_events todo st in
-  [%test_eq: bool] (Option.is_none (DocumentManager.Internal.observe_id st)) true;
-  ()
+  [%test_eq: bool] (Option.is_none (DocumentManager.Internal.observe_id st)) true
 *)
 *)

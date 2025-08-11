@@ -114,3 +114,16 @@ type notification = {
   method_: string;
   params: Yojson.Safe.t option;
 }
+
+(* EasyCrypt AST classification system to replace Coq's Vernacextend *)
+module EasyCryptClassification = struct
+  type classification = 
+    | EcProofStep    (* Tactic or proof step *)
+    | EcDefinition   (* Axiom, lemma, function definition *)
+    | EcQuery        (* Check, print, search commands *)
+    | EcModule       (* Module-related declarations *)
+    | EcOther        (* Other commands *)
+    
+  (* Default classification for unknown commands *)
+  let classify_string _cmd = EcOther
+end

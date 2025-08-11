@@ -11,7 +11,7 @@
 (*   See LICENSE file.                                                    *)
 (*                                                                        *)
 (**************************************************************************)
-open Gramlib
+(* open Gramlib - Coq module, commented out for EasyCrypt *)
 open Types
 open Lsp.Types
 open Scheduler
@@ -20,7 +20,7 @@ let Log log = Log.mk_log "document"
 
 module LM = Map.Make (Int)
 
-module SM = Map.Make (Stateid)
+module SM = Map.Make (Int) (* Using sentence_id as int instead of Stateid *)
 
 type proof_block_type =
   | TheoremKind
@@ -50,8 +50,8 @@ type outline = outline_element list
 
 type parsed_ast = {
   ast: string;
-  classification: Vernacextend.vernac_classification;
-  tokens: Tok.t list
+  classification: EasyCryptClassification.classification;
+  tokens: string list (* simplified from Tok.t for EasyCrypt *)
 }
 
 type comment = {
@@ -63,8 +63,7 @@ type comment = {
 type parsing_error = {
   start: int;
   stop: int;
-  msg: string Loc.located;
-
+  msg: string * string; (* simplified from Loc.located for EasyCrypt *)
   str: string;
 }
 
@@ -76,7 +75,7 @@ type pre_sentence = {
   parsing_start : int;
   start : int;
   stop : int;
-  synterp_state : Vernacstate.Synterp.t; (* synterp state after this sentence's synterp phase *)
+  synterp_state : EcLib.EcScope.scope; (* EasyCrypt scope state after this sentence's execution *)
   ast : sentence_state;
 }
 
@@ -89,7 +88,7 @@ type sentence = {
   parsing_start : int;
   start : int;
   stop : int;
-  synterp_state : Vernacstate.Synterp.t; (* synterp state after this sentence's synterp phase *)
+  synterp_state : EcLib.EcScope.scope; (* EasyCrypt scope state after this sentence's execution *)
   scheduler_state_before : Scheduler.state;
   scheduler_state_after : Scheduler.state;
   ast : sentence_state;
@@ -105,7 +104,7 @@ type document = {
   outline : outline;
   parsed_loc : int;
   raw_doc : RawDocument.t;
-  init_synterp_state : Vernacstate.Synterp.t;
+  init_synterp_state : EcLib.EcScope.scope;
   cancel_handle: Sel.Event.cancellation_handle option;
 }
 
@@ -114,8 +113,8 @@ type parse_state = {
   stop: int;
   top_id: sentence_id option;
   loc: EasyCryptLocation.t option;
-  synterp_state : Vernacstate.Synterp.t;
-  stream: (unit, char) Gramlib.Stream.t;
+  synterp_state : EcLib.EcScope.scope;
+  (* stream: (unit, char) Gramlib.Stream.t; - commented out for EasyCrypt *)
   raw: RawDocument.t;
   parsed: pre_sentence list;
   errors: parsing_error list;
@@ -159,17 +158,17 @@ let range_of_sentence_with_blank_space raw (sentence : sentence) =
 
 let string_of_id document id =
   match SM.find_opt id document.sentences_by_id with
-  | None -> CErrors.anomaly Pp.(str"Trying to get range of non-existing sentence " ++ Stateid.print id)
+  | None -> failwith ("Trying to get range of non-existing sentence " ^ string_of_int id)
   | Some sentence -> string_of_sentence document.raw_doc sentence
 
 let range_of_id document id =
   match SM.find_opt id document.sentences_by_id with
-  | None -> CErrors.anomaly Pp.(str"Trying to get range of non-existing sentence " ++ Stateid.print id)
+  | None -> failwith ("Trying to get range of non-existing sentence " ^ string_of_int id)
   | Some sentence -> range_of_sentence document.raw_doc sentence
 
 let range_of_id_with_blank_space document id =
   match SM.find_opt id document.sentences_by_id with
-  | None -> CErrors.anomaly Pp.(str"Trying to get range of non-existing sentence " ++ Stateid.print id)
+  | None -> failwith ("Trying to get range of non-existing sentence " ^ string_of_int id)
   | Some sentence -> range_of_sentence_with_blank_space document.raw_doc sentence
 
 let push_proof_step_in_outline document id (outline : outline) =
@@ -183,66 +182,36 @@ let push_proof_step_in_outline document id (outline : outline) =
     {e with proof} :: l
 
 let record_outline document id (ast : string) classif (outline : outline) =
-  let open Vernacextend in
+  let open EasyCryptClassification in
   match classif with
-  | VtProofStep _ | VtQed _ -> push_proof_step_in_outline document id outline
-  | VtStartProof (_, names) ->
-    let vernac_gen_expr = ast.v.expr in
-    let type_ = match vernac_gen_expr with
-      | VernacSynterp _ -> None
-      | VernacSynPure pure -> 
-        match pure with
-        | Vernacexpr.VernacStartTheoremProof _ -> Some TheoremKind
-        | Vernacexpr.VernacDefinition _ -> Some DefinitionType
-        | Vernacexpr.VernacFixpoint _ -> Some DefinitionType
-        | Vernacexpr.VernacCoFixpoint _ -> Some DefinitionType
-        | _ -> None
+  | EcProofStep -> push_proof_step_in_outline document id outline
+  | EcDefinition ->
+    (* Extract name from EasyCrypt AST - placeholder implementation *)
+    let type_ = 
+      if String.contains ast ':' then TheoremKind
+      else if String.contains ast '=' then DefinitionType
+      else TheoremKind
     in
-    let str_names =
-      match names with
-      | [] -> ["default"]
-      | _ -> List.map (fun n -> Names.Id.to_string n) names
+    let name = 
+      (* Simple name extraction - TODO: improve with proper EasyCrypt parsing *)
+      let parts = String.split_on_char ' ' (String.trim ast) in
+      if List.length parts > 1 then List.nth parts 1 else "unnamed"
     in
-
-    begin match type_ with
-    | None -> outline
-    | Some type_ ->
-      let range = range_of_id document id in
-      let statement = string_of_id document id in
-      let elements = List.map (fun name -> {id; type_; name; statement; range; proof=[]}) str_names in
-      List.append elements outline
-    end
-  | VtSideff (names, _) ->
-    let vernac_gen_expr = ast.v.expr in
-    let type_, statement = match vernac_gen_expr with
-      | VernacSynterp (Synterp.EVernacExtend _) when names <> [] -> Some Other, "external"
-      | VernacSynterp (Synterp.EVernacBeginSection  _) -> log (fun () -> Format.sprintf "BEGIN SECTION %s" (string_of_id document id)); Some BeginSection, ""
-      | VernacSynterp (Synterp.EVernacDeclareModuleType  _) -> log (fun () -> Format.sprintf "BEGIN MODULE %s" (string_of_id document id)); Some BeginModule, ""
-      | VernacSynterp (Synterp.EVernacDefineModule  _) -> log (fun () -> Format.sprintf "BEGIN MODULE %s" (string_of_id document id)); Some BeginModule, ""
-      | VernacSynterp (Synterp.EVernacDeclareModule  _) -> log (fun () -> Format.sprintf "BEGIN MODULE %s" (string_of_id document id)); Some BeginModule, ""
-      | VernacSynterp (Synterp.EVernacEndSegment  _) -> log (fun () -> Format.sprintf "END SEGMENT"); Some End, ""
-      | VernacSynterp _ -> None, ""
-      | VernacSynPure pure -> 
-        match pure with
-        | Vernacexpr.VernacStartTheoremProof _ -> Some TheoremKind, string_of_id document id
-        | Vernacexpr.VernacDefinition _ -> Some DefinitionType, string_of_id document id
-        | Vernacexpr.VernacInductive _ -> Some InductiveType, string_of_id document id
-        | Vernacexpr.VernacFixpoint _ -> Some DefinitionType, string_of_id document id
-        | Vernacexpr.VernacCoFixpoint _ -> Some DefinitionType, string_of_id document id
-        | _ -> None, ""
+    let range = range_of_id document id in
+    let statement = string_of_id document id in
+    let element = {id; type_; name; statement; range; proof=[]} in
+    element :: outline
+  | EcModule ->
+    (* Handle EasyCrypt module declarations *)
+    let type_ = BeginModule in
+    let name = 
+      let parts = String.split_on_char ' ' (String.trim ast) in
+      if List.length parts > 1 then List.nth parts 1 else "unnamed_module"
     in
-    let str_names =
-      match names with
-      | [] -> ["default"]
-      | _ -> List.map (fun n -> Names.Id.to_string n) names
-    in
-    begin match type_ with
-    | None -> outline
-    | Some type_ ->
-      let range = range_of_id document id in
-      let element = List.map (fun name -> {id; type_; name; statement; range; proof=[]}) str_names in
-      List.append element outline
-    end
+    let range = range_of_id document id in
+    let statement = string_of_id document id in
+    let element = {id; type_; name; statement; range; proof=[]} in
+    element :: outline
   | _ -> outline
 
 let record_outline document {id; ast} outline =
@@ -263,11 +232,11 @@ let parse_errors parsed =
   List.map snd (LM.bindings parsed.parsing_errors_by_end)
 
 let add_sentence parsed parsing_start start stop (ast: sentence_state) synterp_state scheduler_state_before =
-  let id = Stateid.fresh () in
+  let id = Random.int 100000 in (* Generate fresh sentence id *)
   let scheduler_state_after, schedule = 
     match ast with
     | Error {msg} ->
-      scheduler_state_before, Scheduler.schedule_errored_sentence id msg synterp_state parsed.schedule
+      scheduler_state_before, Scheduler.schedule_errored_sentence id (None, snd msg) synterp_state parsed.schedule
     | Parsed ast ->
       let ast' = (ast.ast, ast.classification, synterp_state) in
       Scheduler.schedule_sentence (id, ast') scheduler_state_before parsed.schedule
@@ -328,12 +297,12 @@ let sentences_sorted_by_loc parsed =
 
 let sentences_before parsed loc =
   let (before,ov,_after) = LM.split loc parsed.sentences_by_end in
-  let before = Option.cata (fun v -> LM.add loc v before) before ov in
+  let before = match ov with Some v -> LM.add loc v before | None -> before in
   List.map (fun (_id,s) -> s) @@ LM.bindings before
 
 let sentences_after parsed loc =
   let (_before,ov,after) = LM.split loc parsed.sentences_by_end in
-  let after = Option.cata (fun v -> LM.add loc v after) after ov in
+  let after = match ov with Some v -> LM.add loc v after | None -> after in
   List.map (fun (_id,s) -> s) @@ LM.bindings after
 
 let parsing_errors_before parsed loc =
@@ -372,7 +341,7 @@ let find_next_qed parsed loc =
     | Error _ -> ()
     | Parsed ast ->
     match ast.classification with
-      | VtQed _ -> raise (Found sentence)
+      | EasyCryptClassification.EcProofStep when String.contains ast.ast 'q' -> raise (Found sentence) (* qed detection *)
       | _ -> () in
   (* We can't use find_first since f isn't monotone *)
   match LM.iter f parsed.sentences_by_end with
@@ -405,7 +374,7 @@ let pos_at_end parsed =
 
 let string_of_parsed_ast { tokens } = 
   (* TODO implement printer for vernac_entry *)
-  "[" ^ String.concat "--" (List.map (Tok.extract_string false) tokens) ^ "]"
+  "[" ^ String.concat "--" tokens ^ "]" (* simplified for EasyCrypt - tokens are already strings *)
 
 let string_of_parsed_ast = function
 | Error e -> "[errored sentence]: " ^ (e.str)
@@ -413,11 +382,11 @@ let string_of_parsed_ast = function
 
 let patch_sentence parsed scheduler_state_before id ({ parsing_start; ast; start; stop; synterp_state } : pre_sentence) =
   let old_sentence = SM.find id parsed.sentences_by_id in
-  log (fun () -> Format.sprintf "Patching sentence %s , %s" (sentence_ido_string id) (string_of_parsed_ast old_sentence.ast));
+  log (fun () -> Format.sprintf "Patching sentence %d , %s" id (string_of_parsed_ast old_sentence.ast));
   let scheduler_state_after, schedule =
     match ast with
     | Error {msg} ->
-      scheduler_state_before, Scheduler.schedule_errored_sentence id msg synterp_state parsed.schedule
+      scheduler_state_before, Scheduler.schedule_errored_sentence id (None, snd msg) synterp_state parsed.schedule
     | Parsed ast ->
       let ast = (ast.ast, ast.classification, synterp_state) in
       Scheduler.schedule_sentence (id,ast) scheduler_state_before parsed.schedule
@@ -425,7 +394,7 @@ let patch_sentence parsed scheduler_state_before id ({ parsing_start; ast; start
   let new_sentence = { old_sentence with ast; parsing_start; start; stop; scheduler_state_before; scheduler_state_after } in
   let sentences_by_id = SM.add id new_sentence parsed.sentences_by_id in
   let sentences_by_end = match LM.find_opt old_sentence.stop parsed.sentences_by_end with
-  | Some { id } when Stateid.equal id new_sentence.id ->
+  | Some { id } when id = new_sentence.id ->
     LM.remove old_sentence.stop parsed.sentences_by_end 
   | _ -> parsed.sentences_by_end
   in
@@ -437,19 +406,8 @@ type diff =
   | Added of pre_sentence list
   | Equal of (sentence_id * pre_sentence) list
 
-let tok_equal t1 t2 =
-  let open Tok in
-  match t1, t2 with
-  | KEYWORD s1, KEYWORD s2 -> CString.equal s1 s2
-  | IDENT s1, IDENT s2 -> CString.equal s1 s2
-  | FIELD s1, FIELD s2 -> CString.equal s1 s2
-  | NUMBER n1, NUMBER n2 -> NumTok.Unsigned.equal n1 n2
-  | STRING s1, STRING s2 -> CString.equal s1 s2
-  | LEFTQMARK, LEFTQMARK -> true
-  | BULLET s1, BULLET s2 -> CString.equal s1 s2
-  | EOI, EOI -> true
-  | QUOTATION(s1,t1), QUOTATION(s2,t2) -> CString.equal s1 s2 && CString.equal t1 t2
-  | _ -> false
+(* Simplified token equality for EasyCrypt - tokens are strings *)
+let tok_equal t1 t2 = String.equal t1 t2
 
 let same_errors (e1 : parsing_error) (e2 : parsing_error) =
   (String.compare e1.str e2.str = 0) && (e1.start = e2.start) && (e1.stop = e2.stop)
@@ -476,11 +434,11 @@ let rec diff old_sentences new_sentences =
 
 let string_of_diff_item doc = function
   | Deleted ids ->
-       ids |> List.map (fun id -> Printf.sprintf "- (id: %d) %s" (sentence_ido_int id) (try string_of_parsed_ast (Option.get (get_sentence doc id)).ast with Option.IsNone -> "missing from doc"))
+       ids |> List.map (fun id -> Printf.sprintf "- (id: %d) %s" id (try string_of_parsed_ast (Option.get (get_sentence doc id)).ast with _ -> "missing from doc"))
   | Added sentences ->
        sentences |> List.map (fun (s : pre_sentence) -> Printf.sprintf "+ %s" (string_of_parsed_ast s.ast))
   | Equal l ->
-       l |> List.map (fun (id, (s : pre_sentence)) -> Printf.sprintf "= (id: %d) %s" (sentence_ido_int id) (string_of_parsed_ast s.ast))
+       l |> List.map (fun (id, (s : pre_sentence)) -> Printf.sprintf "= (id: %d) %s" id (string_of_parsed_ast s.ast))
 
 let string_of_diff doc l =
   String.concat "\n" (List.flatten (List.map (string_of_diff_item doc) l))
@@ -489,32 +447,30 @@ let string_of_diff doc l =
     (*
 let parse_one_sentence stream ~st =
   let pa = Pcoq.Parsable.make stream in
-  Vernacstate.Parser.parse st (Pvernac.main_entry (Some (Vernacinterp.get_default_proof_mode ()))) pa
+  (* EasyCrypt placeholder parsing - TODO: implement proper EasyCrypt parser *)
+  (ast, "")
   (* FIXME: handle proof mode correctly *)
   *)
 
 
 
 let rec junk_sentence_end stream =
-  match Stream.npeek () 2 stream with
-  | ['.'; (' ' | '\t' | '\n' |'\r')] -> Stream.junk () stream
+  match Stream.npeek 2 stream with
+  | ['.'; (' ' | '\t' | '\n' |'\r')] -> Stream.junk stream
   | [] -> ()
-  | _ ->  Stream.junk () stream; junk_sentence_end stream
+  | _ ->  Stream.junk stream; junk_sentence_end stream
 
-[%%if rocq = "8.18"]
-exception E = Stream.Error
-[%%else]
-exception E = Grammar.Error
-[%%endif]
+(* Simplified exception handling for EasyCrypt *)
+exception E of string
 
 
 
 
-let handle_parse_error start parsing_start msg qf ({stream; errors; parsed;} as parse_state) synterp_state =
+let handle_parse_error start parsing_start msg ({errors; parsed;} as parse_state) synterp_state =
   log (fun () -> "handling parse error at " ^ string_of_int start);
-  let stop = Stream.count stream in
+  let stop = start + 10 in (* placeholder - simplified for EasyCrypt *)
   let str = String.sub (RawDocument.text parse_state.raw) parsing_start (stop - parsing_start) in
-  let parsing_error = { msg; start; stop; qf; str} in
+  let parsing_error = { msg; start; stop; str} in
   let sentence = { parsing_start; ast = Error parsing_error; start; stop; synterp_state } in
   let parsed = sentence :: parsed in
   let errors = parsing_error :: errors in
@@ -522,15 +478,15 @@ let handle_parse_error start parsing_start msg qf ({stream; errors; parsed;} as 
   (* TODO: we could count the \n between start and stop and increase Loc.line_nb *)
   create_parsing_event (ParseEvent parse_state)
 
-let handle_parse_more ({loc; synterp_state; stream; raw; parsed; parsed_comments} as parse_state) =
-  let start = Stream.count stream in
+let handle_parse_more ({loc; synterp_state; raw; parsed; parsed_comments} as parse_state) =
+  let start = 0 in (* placeholder - simplified for EasyCrypt *)
   log (fun () -> "Start of parse is: " ^ (string_of_int start));
   begin
     (* FIXME should we save lexer state? *)
-    match parse_one_sentence ?loc stream ~st:synterp_state with
+    match None, [] with (* placeholder - simplified EasyCrypt parsing *)
     | None, _ (* EOI *) -> create_parsing_event (Invalidate parse_state)
     | Some ast, comments ->
-      let stop = Stream.count stream in
+      let stop = start + 50 in (* placeholder - simplified for EasyCrypt *)
       let begin_line, begin_char, end_char =
               match ast.loc with
               | Some lc -> lc.line_nb, lc.bp, lc.ep
@@ -542,10 +498,10 @@ let handle_parse_more ({loc; synterp_state; stream; raw; parsed; parsed_comments
       let tokens = stream_tok 0 [] lex begin_line begin_char in
       begin
         try
-          log (fun () -> "Parsed: " ^ (Fun.id Ppvernac.pr_vernac ast));
+          log (fun () -> "Parsed: " ^ ast); (* EasyCrypt AST is already a string *)
           let entry = get_entry ast in
-          let classification = Vernac_classifier.classify_vernac ast in
-          let synterp_state = Vernacstate.Synterp.freeze () in
+          let classification = EasyCryptClassification.classify_string ast in
+          let synterp_state = synterp_state in (* placeholder - keep current state *)
           let parsed_ast = Parsed { ast = entry; classification; tokens } in
           let sentence = { parsing_start = start; ast = parsed_ast; start = begin_char; stop; synterp_state } in
           let parsed = sentence :: parsed in
@@ -566,12 +522,9 @@ let handle_parse_more ({loc; synterp_state; stream; raw; parsed; parsed_comments
       let qf = Result.value ~default:[] @@ Quickfix.from_exception e in
       junk_sentence_end stream;
       handle_parse_error start start (loc, CErrors.iprint_no_report (e, info)) (Some qf) {parse_state with stream} synterp_state
-    | exception (CLexer.Error.E _ as exn) -> (* May be more problematic to handle for the diff *)
-      let e, info = Exninfo.capture exn in
-      let loc = get_loc_from_info_or_exn e info in
-      let qf = Result.value ~default:[] @@ Quickfix.from_exception exn in
-      junk_sentence_end stream;
-      handle_parse_error start start (loc,CErrors.iprint_no_report (e, info)) (Some qf) {parse_state with stream} synterp_state
+    | exception (E msg as exn) -> (* Simplified exception handling for EasyCrypt *)
+      let loc = None in
+      handle_parse_error start start ("Error", msg) parse_state synterp_state
     | exception exn ->
       let e, info = Exninfo.capture exn in
       let loc = Loc.get_loc @@ info in
@@ -613,7 +566,7 @@ let invalidate top_edit top_id parsed_doc new_sentences =
   let rec remove_old parsed_doc invalid_ids = function
     | [] -> parsed_doc, invalid_ids
     | Deleted ids :: diffs ->
-      let invalid_ids = List.fold_left (fun ids id -> Stateid.Set.add id ids) invalid_ids ids in
+      let invalid_ids = List.fold_left (fun ids id -> SentenceIdSet.add id ids) invalid_ids ids in
       let parsed_doc = List.fold_left remove_sentence parsed_doc ids in
       (* FIXME update scheduler state, maybe invalidate after diff zone *)
       remove_old parsed_doc invalid_ids diffs
@@ -629,7 +582,7 @@ let invalidate top_edit top_id parsed_doc new_sentences =
   log (fun () -> Format.sprintf "Top edit: %i, Doc: %s, Doc by id: %s" top_edit sentence_string sentence_string_id);
   let old_sentences = sentences_after parsed_doc top_edit in
   let diff = diff old_sentences new_sentences in
-  let parsed_doc, invalid_ids = remove_old parsed_doc Stateid.Set.empty diff in
+  let parsed_doc, invalid_ids = remove_old parsed_doc SentenceIdSet.empty diff in
   let parsed_doc = add_new_or_patch parsed_doc scheduler_state diff in
   let unchanged_id = unchanged_id top_id diff in
   log (fun () -> "diff:\n" ^ string_of_diff parsed_doc diff);
@@ -719,9 +672,9 @@ module Internal = struct
     sentence.stop
 
   let string_of_error error =
-    let (_, pp) = error.msg in
+    let (_, err_msg) = error.msg in
     Format.sprintf "[parsing error] [%s] (%i -> %i)"
-    (string_of_string pp)
+    err_msg
     error.start
     error.stop
 

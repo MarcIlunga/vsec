@@ -65,7 +65,7 @@ val raw_document : document -> RawDocument.t
 
 val outline : document -> outline
 
-val create_document : Vernacstate.Synterp.t -> string -> document
+val create_document : EcLib.EcScope.scope -> string -> document
 (** [create_document init_synterp_state text] creates a fresh document with content defined by
     [text] under [init_synterp_state]. *)
 
@@ -81,15 +81,14 @@ val handle_event : document -> event -> document * events * parsing_end_info opt
 
 type parsed_ast = {
   ast: string;
-  classification: Vernacextend.vernac_classification;
-  tokens: Tok.t list
+  classification: EasyCryptClassification.classification;
+  tokens: string list (* simplified from Tok.t for EasyCrypt *)
 }
 
 type parsing_error = {
   start: int; 
   stop: int; 
-  msg: string Loc.located;
-
+  msg: string * string; (* simplified from Loc.located for EasyCrypt *)
   str: string;
 }
 
@@ -118,7 +117,7 @@ type sentence = {
   parsing_start : int;
   start : int;
   stop : int;
-  synterp_state : Vernacstate.Synterp.t; (* synterp state after this sentence's synterp phase *)
+  synterp_state : EcLib.EcScope.scope; (* EasyCrypt scope state after this sentence's execution *)
   scheduler_state_before : Scheduler.state;
   scheduler_state_after : Scheduler.state;
   ast : sentence_state;

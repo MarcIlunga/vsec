@@ -12,13 +12,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
-[%%import "vsrocq_config.mlh"]
+(* [%%import "vsrocq_config.mlh"] - commented out for EasyCrypt *)
 
 open Lsp.Types
 open Protocol
 open Protocol.LspWrapper
 open Protocol.ExtProtocol
-open Protocol.Printing
+(* open Protocol.Printing - commented out for EasyCrypt *)
 open Types
 
 let Log log = Log.mk_log "documentManager"
@@ -43,7 +43,7 @@ type document_state =
 type state = {
   uri : DocumentUri.t;
   init_vs : EcLib.EcScope.scope;
-  opts : Coqargs.injection_command list;
+  opts : string list; (* simplified from Coqargs.injection_command for EasyCrypt *)
   document : Document.document;
   execution_state : ExecutionManager.state;
   observe_id : observe_id;
@@ -72,23 +72,23 @@ type handled_event = {
     state : state option;
     events: event Sel.Event.t list;
     update_view: bool;
-    notification: Notification.Server.t option;
+    notification: string option; (* simplified from Notification.Server.t for EasyCrypt *)
 }
 
 let pp_event fmt = function
   | Execute { id; started; _ } ->
       let time = Unix.gettimeofday () -. started in 
-      Stdlib.Format.fprintf fmt "ExecuteToLoc %d (started %2.3f ago)" (sentence_ido_int id) time
+      Stdlib.Format.fprintf fmt "ExecuteToLoc %d (started %2.3f ago)" id time
   | ExecutionManagerEvent _ -> Stdlib.Format.fprintf fmt "ExecutionManagerEvent"
   | ParseBegin ->
     Stdlib.Format.fprintf fmt "ParseBegin"
   | Observe id ->
-    Stdlib.Format.fprintf fmt "Observe %d" (sentence_ido_int id)
+    Stdlib.Format.fprintf fmt "Observe %d" id
   | SendProofView id_opt ->
-    Stdlib.Format.fprintf fmt "SendProofView %s" @@ (Option.cata sentence_ido_string "None" id_opt)
+    Stdlib.Format.fprintf fmt "SendProofView %s" @@ (match id_opt with Some id -> string_of_int id | None -> "None")
   | DocumentEvent event -> Stdlib.Format.fprintf fmt "DocumentEvent event: "; Document.pp_event fmt event
   | SendBlockOnError id ->
-    Stdlib.Format.fprintf fmt "SendBlockOnError %d" @@ (sentence_ido_int id)
+    Stdlib.Format.fprintf fmt "SendBlockOnError %d" id
   | SendMoveCursor range ->
     Stdlib.Format.fprintf fmt "SendBlockOnError %s" @@ (Range.to_string range)
 
@@ -123,9 +123,9 @@ type events = event Sel.Event.t list
 
 let executed_ranges st mode =
   match st.observe_id, mode with
-  | _, Settings.Mode.Continuous -> ExecutionManager.overview st.execution_state
-  | Top, Settings.Mode.Manual -> empty_overview
-  | Id id, Settings.Mode.Manual ->
+  | _, true -> ExecutionManager.overview st.execution_state (* simplified from Settings.Mode.Continuous *)
+  | Top, false -> empty_overview (* simplified from Settings.Mode.Manual *)
+  | Id id, false -> (* simplified from Settings.Mode.Manual *)
       let range = Document.range_of_id st.document id in
       ExecutionManager.overview_until_range st.execution_state range
 
@@ -143,11 +143,9 @@ let observe_id_range st =
 
 let is_parsing st =  st.document_state = Parsing
 
-[%%if lsp < (1,19,0) ]
+(* Simplified version compatibility check *)
 let message_of_string x = x
-[%%else]
-let message_of_string x = `String x
-[%%endif]
+(* End of compatibility check *)
 
 let make_diagnostic doc range oloc message severity code =
   let range =

@@ -24,23 +24,23 @@ let loop () =
     flush_all ();
     let ready, todo = Sel.pop todo in
     let nremaining = Sel.Todo.size todo in
-    log (fun () -> Format.asprintf "Main loop event ready: %a, %d events waiting\n\n" LspManager.pr_event ready nremaining);
+    log (fun () -> Printf.sprintf "Main loop event ready: %s, %d events waiting\n\n" (LspManager.pr_event ready) nremaining);
     log (fun () -> "==========================================================");
-    log (fun () -> Format.asprintf "Todo events: %a" (Sel.Todo.pp LspManager.pr_event) todo );
+    log (fun () -> Printf.sprintf "Todo events: %s" "events"); (* simplified for EasyCrypt *)
     log (fun () -> "==========================================================\n\n");
     let new_events = LspManager.handle_event ready in
     let todo = Sel.Todo.add todo new_events in
     log (fun () -> "==========================================================");
-    log (fun () -> Format.asprintf "New Todo events: %a" (Sel.Todo.pp LspManager.pr_event) todo );
+    log (fun () -> Printf.sprintf "New Todo events: %s" "new events"); (* simplified for EasyCrypt *)
     log (fun () -> "==========================================================\n\n");
     loop todo
   in
   let todo = Sel.Todo.add Sel.Todo.empty events in
   try loop todo
   with exn ->
-    let info = Exninfo.capture exn in
+    let info = (exn, Printexc.get_raw_backtrace ()) in
     log ~force:true (fun () -> "==========================================================");
-    log ~force:true (fun () -> Pp.string_of_ppcmds @@ CErrors.iprint_no_report info);
+    log ~force:true (fun () -> Printf.sprintf "Exception: %s" (Printexc.to_string (fst info)));
     log ~force:true (fun () -> "==========================================================")
 
 let () =

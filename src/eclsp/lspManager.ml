@@ -23,23 +23,23 @@ let server_info = InitializeResult.create_serverInfo
   ()
 
 type lsp_event = 
-  | Lsp of Lsp.Server.t
+  | Lsp of Lsp.Types.DocumentUri.t (* simplified from Lsp.Server.t for EasyCrypt *)
   | UpdateSettings of Jsonrpc.Structured.t option
 
-type event = lsp_event Sel.event
+type event = lsp_event Sel.Event.t
+type events = event Sel.Event.t list
 
-let pr_event = function
-  | Sel.Now Lsp _ -> "Lsp"
-  | Sel.Now (UpdateSettings _) -> "UpdateSettings"
-  | Sel.Later _ -> "Later"
+let pr_event event = "Event" (* simplified for EasyCrypt *)
 
 let init () =
   (* Initialize EasyCrypt state (similar to VSRocq's Vernacstate.freeze_full_state) *)
   let gstate = EcLib.EcGState.create () in
   let scope = EcLib.EcScope.empty gstate in
   init_state := Some scope;
-  let lsp = Sel.now @@ Lsp (Lsp.Server.make (Unix.stdin, Unix.stdout) (Lsp.Server.create_stdio_scheduler ())) in
+  let lsp = Sel.now @@ Lsp (Lsp.Types.DocumentUri.of_path "stdin") in (* simplified for EasyCrypt *)
   [lsp]
+
+let lsp : event = Sel.now @@ Lsp (Lsp.Types.DocumentUri.of_path "stdin")
 
 let handle_event = function
   | Lsp lsp_server -> 

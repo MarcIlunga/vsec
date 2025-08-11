@@ -26,13 +26,13 @@ type execution_status =
   | Error of (EasyCryptLocation.t * string) * EcLib.EcScope.scope option (* State to use for resiliency *)
 
 let success vernac_st = Success (Some vernac_st)
-let error loc qf msg vernac_st = Error ((loc,msg), qf, (Some vernac_st))
+let error loc msg vernac_st = Error ((loc,msg), (Some vernac_st))
 
 type sentence_id = int
 
 type errored_sentence = (sentence_id * EasyCryptLocation.t option) option
 
-module SM = Map.Make (Stateid)
+module SM = Map.Make (Int) (* Using sentence_id as int instead of Stateid *)
 
 type sentence_state =
   | Done of execution_status
@@ -45,19 +45,13 @@ type delegation_mode =
 
 type options = {
   delegation_mode : delegation_mode;
-  completion_options : Settings.Completion.t;
+  (* completion_options : Settings.Completion.t; - commented out for EasyCrypt *)
   enableDiagnostics : bool
 }
 
 let default_options = {
   delegation_mode = CheckProofsInMaster;
-  completion_options = {
-    enable = false;
-    algorithm = StructuredSplitUnification;
-    unificationLimit = 100;
-    atomicFactor = 5.;
-    sizeFactor = 5.
-  };
+  (* completion_options = ... - removed for EasyCrypt *)
   enableDiagnostics = true;
 }
 
@@ -71,14 +65,14 @@ type rocq_feedback_listener = int
 type delegated_task = { 
   terminator_id: sentence_id;
   opener_id: sentence_id;
-  proof_using: Vernacexpr.section_subset_expr;
+  (* proof_using: Vernacexpr.section_subset_expr; - commented out for EasyCrypt *)
   last_step_id: sentence_id option; (* only for setting a proof remotely *)
   tasks: executable_sentence list;
 }
 
 type prepared_task =
   | PSkip of { id: sentence_id; error: string option }
-  | PBlock of { id: sentence_id; synterp : Vernacstate.Synterp.t; error: string Loc.located }
+  | PBlock of { id: sentence_id; synterp : EcLib.EcScope.scope; error: string * string }
   | PExec of executable_sentence
   | PQuery of executable_sentence
   | PDelegate of delegated_task
@@ -164,95 +158,27 @@ let inject_proof_events st l =
 let interp_error_recovery strategy st : EcLib.EcScope.scope =
   match strategy with
   | RSkip -> st
-  | RAdmitted ->
-    let f = Declare.Proof.save_admitted in
-    let open Vernacstate in (* shadows Declare *)
-    let { Interp.lemmas; program; _ } = st.interp in
-    match lemmas with
-    | None -> (* if Lemma failed *)
-        st
-    | Some lemmas ->
-        let proof = Vernacstate.LemmaStack.get_top lemmas in
-        let pm = NeList.head program in
-        let result = 
-          try Ok(f ~pm ~proof)
-          with e -> (* we also catch anomalies *)
-          let e, info = Exninfo.capture e in
-          Error (e, info)
-        in
-        match result with
-        | Ok (pm) ->
-          let lemmas = snd (Vernacstate.LemmaStack.pop lemmas) in
-          let program = NeList.map_head (fun _ -> pm) program in
-          Vernacstate.Declare.set (lemmas,program) [@ocaml.warning "-3"];
-          let interp = Vernacstate.Interp.freeze_interp_state () in
-          { st with interp }
-        | Error (Sys.Break, _ as exn) ->
-          Exninfo.iraise exn
-        | Error(_,_) ->
-          st
+  | RAdmitted -> st (* Return current state unchanged - no error recovery in EasyCrypt yet *)
 
-(* just a wrapper around vernac interp *)
+(* Simplified EasyCrypt AST interpreter stub *)
 let interp_ast ~doc_id ~state_id ~st ~error_recovery ast =
-    Feedback.set_id_for_feedback doc_id state_id;
-    ParTactic.set_id_for_feedback doc_id state_id;
-    Sys.(set_signal sigint (Signal_handle(fun _ -> raise Break)));
-    let result =
-      try Ok(Vernacinterp.interp_entry ~st ast,[])
-      with e -> (* we also catch anomalies *)
-        let e, info = Exninfo.capture e in
-        Error (e, info) in
-    Sys.(set_signal sigint Signal_ignore);
-    match result with
-    | Ok (interp, events) ->
-      (*
-        log fun () -> "Executed: " ^ sentence_ido_string state_id ^ "  " ^ (Fun.id Ppvernac.pr_vernac ast) ^
-          " (" ^ (if Option.is_empty vernac_st.Vernacstate.lemmas then "no proof" else "proof")  ^ ")";
-          *)
-        let st = { st with interp } in
-        st, success st, (*List.map inject_pm_event*) events
-    | Error (Sys.Break, _ as exn) ->
-      (*
-        log (fun () -> "Interrupted executing: " ^ (Fun.id Ppvernac.pr_vernac ast));
-        *)
-        Exninfo.iraise exn
-    | Error (e, info) ->
-      (*
-        log (fun () -> "Failed to execute: " ^ sentence_ido_string state_id ^ "  " ^ (Fun.id Ppvernac.pr_vernac ast));
-        *)
-        let loc = Loc.get_loc info in
-        let qf = Result.value ~default:[] @@ Quickfix.from_exception e in
-        let msg = CErrors.iprint (e, info) in
-        let status = error loc (Some qf) msg st in
-        let st = interp_error_recovery error_recovery st in
-        st, status, []
+  (* TODO: Replace with proper EasyCrypt interpreter *)
+  log (fun () -> Printf.sprintf "EasyCrypt AST stub execution for sentence %d: %s" state_id ast);
+  st, success st, [] (* Return unchanged state and no events *)
 
 (* This adapts the Future API with our event model *)
-[%%if rocq = "8.18"]
+(* [%%if rocq = "8.18"] - commented out for EasyCrypt
 let definition_using e s ~fixnames:_ ~using ~terms =
   Proof_using.definition_using e s ~using ~terms
-[%%elif rocq = "8.19"]
-let definition_using = Proof_using.definition_using
-[%%endif]
+[%%elif rocq = "8.19"] *)
+(* let definition_using = Proof_using.definition_using
+[%%endif] - commented out for EasyCrypt *)
 
 
 let interp_qed_delayed ~proof_using ~state_id ~st =
-  let lemmas = Option.get @@ st.Vernacstate.interp.lemmas in
-  let f proof =
-    let proof = add_using proof proof_using lemmas in
-    let fix_exn = None in (* FIXME *)
-    let f, assign = Future.create_delegate ~blocking:false ~name:"XX" fix_exn in
-    Declare.Proof.close_future_proof ~feedback_id:state_id proof f, assign
-  in
-  let proof, assign = Vernacstate.LemmaStack.with_top lemmas ~f in
-  let control = [] (* FIXME *) in
-  let opaque = Vernacexpr.Opaque in
-  let pending = CAst.make @@ Vernacexpr.Proved (opaque, None) in
-  (*log fun () -> "calling interp_qed_delayed done";*)
-  let interp = Vernacinterp.interp_qed_delayed_proof ~proof ~st ~control pending in
-  (*log fun () -> "interp_qed_delayed done";*)
-  let st = { st with interp } in
-  st, success st, assign
+  (* Simplified stub for EasyCrypt - replaces entire Coq proof delegation system *)
+  log (fun () -> Printf.sprintf "EasyCrypt qed stub for sentence %d" state_id);
+  st, success st, [] (* Return unchanged state and no events *)
 
 let cut_overview task state document =
   let range = match task with
@@ -290,7 +216,7 @@ let update_processed id state document =
     | _ -> assert false (* delegated sentences born as such, cannot become it later *)
     end
   | exception Not_found ->
-    log (fun () -> "Trying to get overview with non-existing state id " ^ sentence_ido_string id);
+    log (fun () -> "Trying to get overview with non-existing state id " ^ string_of_int id);
     state
 
 let id_of_first_task ~default = function
@@ -410,8 +336,8 @@ let local_feedback feedback_queue : event Sel.Event.t =
   Sel.On.queue_all ~name:"feedback" ~priority:PriorityManager.feedback feedback_queue (fun x xs -> LocalFeedback(feedback_queue, x :: xs))
 
 let install_feedback_listener doc_id send =
-  Log.feedback_add_feeder_on_Message (fun route span doc lvl loc qf msg ->
-    if lvl != Feedback.Debug && doc = doc_id then send (route,span,(lvl,loc, qf, msg)))
+  (* Entire feedback system commented out for EasyCrypt *)
+  ()
 
 let init vernac_state =
   let doc_id = fresh_doc_id () in
@@ -424,7 +350,7 @@ let init vernac_state =
     of_sentence = SM.empty;
     todo = [];
     doc_id;
-    rocq_feeder;
+    rocq_feeder = 0; (* rocq_feeder placeholder *)
     sel_feedback_queue;
     sel_cancellation_handle;
     overview = empty_overview;
@@ -434,7 +360,7 @@ let init vernac_state =
 (* called by the forked child. Since the Feedback API is imperative, the
    feedback pipes have to be modified in place *)
 let feedback_cleanup { rocq_feeder; sel_feedback_queue; sel_cancellation_handle } =
-  Feedback.del_feeder rocq_feeder;
+  (* Feedback.del_feeder rocq_feeder; - disabled for EasyCrypt *)
   Queue.clear sel_feedback_queue;
   Sel.Event.cancel sel_cancellation_handle
 
@@ -442,33 +368,33 @@ let handle_feedback state (_,id, fb) =
   match fb with
   | (_, _, _, msg) ->
     begin match SM.find id state.of_sentence with
-    | (s,fl) -> update_all id s (fl @ [fb]) state
+    | (s,fl) -> update_all id s (fl @ [(Types.DiagnosticSeverity.Error, None, "feedback message")]) state
     | exception Not_found -> 
-        log (fun () -> "Received feedback on non-existing state id " ^ sentence_ido_string id ^ ": " ^ string_of_string msg);
+        log (fun () -> "Received feedback on non-existing state id " ^ string_of_int id ^ ": " ^ msg);
         state
     end 
 
 let handle_event event state =
   match event with
   | LocalFeedback (q,l) ->
-      None, Some (List.fold_left handle_feedback state l), [local_feedback q]
+      None, Some (List.fold_left (fun st (_, id, _) -> st) state l), [local_feedback q]
   | ProofWorkerEvent event ->
       let update, events = ProofWorker.handle_event event in
       let state, id =
         match update with
         | None -> None, None
         | Some (ProofJob.AppendFeedback(x,id,fb)) ->
-            Some (handle_feedback state (x,id,fb)), None
+            Some (handle_feedback state (x,id,(Types.DiagnosticSeverity.Error, None, (), "feedback"))), None
         | Some (ProofJob.UpdateExecStatus(id,v)) ->
             match SM.find id state.of_sentence, v with
             | (Delegated (_,completion), fl), _ ->
-                Option.default ignore completion v;
+                (match completion with Some f -> f v | None -> ());
                 Some (update_all id (Done v) fl state), Some id
-            | (Done (Success s), fl), Error (err,qf, _) ->
+            | (Done (Success s), fl), Error (err, _) ->
                 (* This only happens when a Qed closing a delegated proof
                    receives an updated by a worker saying that the proof is
                    not completed *)
-                Some (update_all id (Done (Error (err,qf,s))) fl state), Some id
+                Some (update_all id (Done (Error (err,s))) fl state), Some id
             | (Done _, _), _ -> None, Some id
             | exception Not_found -> None, None (* TODO: is this possible? *)
       in
@@ -486,13 +412,13 @@ let find_fulfilled_opt x m =
 
 let exec_error_of_execution_status id v = match v with
   | Success _ -> None
-  | Error ((loc, _), _, _) -> Some (id, loc)
+  | Error ((loc, _), _) -> Some (id, loc)
 
 let get_vs_and_exec_error st id =
   match fst @@ SM.find id st.of_sentence with
   | Done (Success (Some vs) as es) -> vs, exec_error_of_execution_status id es
-  | Done (Error (_,_,Some vs) as es) -> vs, exec_error_of_execution_status id es
-  | _ -> CErrors.anomaly Pp.(str "get_vs_and_exec_error call should be protected with is_locally_executed")
+  | Done (Error (_,Some vs) as es) -> vs, exec_error_of_execution_status id es
+  | _ -> failwith "get_vs_and_exec_error call should be protected with is_locally_executed"
   | exception Not_found -> assert false
 
 let is_locally_executed st id =

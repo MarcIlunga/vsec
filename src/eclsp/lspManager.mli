@@ -13,11 +13,11 @@
 (**************************************************************************)
 
 type event
-type events = event Sel.event list
+type events = event Sel.Event.t list
 
-val lsp : event Sel.event
+val lsp : event
 
 val handle_event : event -> events
 val pr_event : event -> string
 
-val init : unit -> event Sel.event list
+val init : unit -> event Sel.Event.t list

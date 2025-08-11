@@ -16,7 +16,7 @@ open Types
 
 let Log log = Log.mk_log "scheduler"
 
-module SM = CMap.Make (Stateid)
+module SM = Map.Make (Int) (* Using sentence_id as int instead of Stateid *)
 
 type error_recovery_strategy =
   | RSkip
@@ -25,18 +25,18 @@ type error_recovery_strategy =
 type executable_sentence = {
   id : sentence_id;
   ast : string;
-  classif : Vernacextend.vernac_classification;
-  synterp : Vernacstate.Synterp.t;
+  classif : EasyCryptClassification.classification;
+  synterp : EcLib.EcScope.scope;
   error_recovery : error_recovery_strategy;
 }
 
 type task =
   | Skip of { id: sentence_id; error: string option }
-  | Block of { id: sentence_id; synterp : Vernacstate.Synterp.t; error: string Loc.located }
+  | Block of { id: sentence_id; synterp : EcLib.EcScope.scope; error: (Types.EasyCryptLocation.t option * string) }
   | Exec of executable_sentence
   | OpaqueProof of { terminator: executable_sentence;
                      opener_id: sentence_id;
-                     proof_using: Vernacexpr.section_subset_expr;
+                     proof_using: string; (* simplified proof_using *)
                      tasks : executable_sentence list; (* non empty list *)
                    }
   | Query of executable_sentence
@@ -66,7 +66,7 @@ let initial_state = {
 
 type schedule = {
   tasks : (sentence_id option * task) SM.t;
-  dependencies : Stateid.Set.t SM.t;
+  dependencies : SentenceIdSet.t SM.t;
 }
 
 let initial_schedule = {
@@ -114,10 +114,12 @@ let flatten_proof_block st =
   match st.proof_blocks with
   | [] -> st
   | [block] ->
-    let document_scope = List.uniquize @@ List.map (fun x -> x.id) block.proof_sentences @ st.document_scope in
+    let ids = List.map (fun x -> x.id) block.proof_sentences @ st.document_scope in
+    let document_scope = List.sort_uniq compare ids in (* replace List.uniquize *)
     { st with document_scope; proof_blocks = [] }
   | block1 :: block2 :: tl -> (* Nested proofs. TODO check if we want to extrude one level or directly to document scope *)
-    let proof_sentences = List.uniquize @@ block1.proof_sentences @ block2.proof_sentences in
+    let combined = block1.proof_sentences @ block2.proof_sentences in
+    let proof_sentences = List.sort_uniq (fun a b -> compare a.id b.id) combined in
     let block2 = { block2 with proof_sentences } in
     { st with proof_blocks = block2 :: tl }
 
@@ -145,10 +147,9 @@ let flatten_proof_block st =
 (* FIXME handle commands with side effects followed by `Abort` *)
 
 let find_proof_using (ast : string) =
-  match ast.CAst.v.expr with
-  | VernacSynPure(VernacProof(_,Some e)) -> Some e
-  | _ -> log (fun () -> "no ast for proof using, looking at a default");
-         Proof_using.get_default_proof_using ()
+  (* TODO: Replace with EasyCrypt proof_using analysis *)
+  log (fun () -> "no ast for proof using, using default");
+  "" (* simplified - return empty string instead of complex proof_using *)
 
 (* TODO: There is also a #[using] annotation on the proof opener we should
    take into account (but it is not on a proof sentence, but rather
@@ -157,89 +158,93 @@ let find_proof_using (ast : string) =
 let find_proof_using_annotation { proof_sentences } =
   match List.rev proof_sentences with
   | ex_sentence :: _ -> find_proof_using ex_sentence.ast
-  | _ -> None
+  | _ -> ""
 
 
 
 let is_opaque_flat_proof terminator section_depth block =
-  let open Vernacextend in
+  let open EasyCryptClassification in
   let has_side_effect { classif } = match classif with
-    | VtStartProof _ | VtSideff _ | VtQed _ | VtProofMode _ | VtMeta -> true
-    | VtProofStep _ | VtQuery -> false
+    | EcDefinition | EcModule -> true
+    | EcProofStep | EcQuery -> false
+    | EcOther -> false
   in
   if List.exists has_side_effect block.proof_sentences then None
-  else match terminator with
-  | VtDrop -> Some Vernacexpr.SsEmpty
-  | VtKeep VtKeepDefined -> None
-  | VtKeep (VtKeepAxiom | VtKeepOpaque) ->
-      if section_depth = 0 then Some Vernacexpr.SsEmpty
-      else find_proof_using_annotation block
+  else
+    (* For EasyCrypt, we simplify opaque proof logic *)
+    Some (find_proof_using_annotation block)
 
 let push_state id ast synterp classif st =
-  let open Vernacextend in
+  let open EasyCryptClassification in
   let ex_sentence = { id; ast; classif; synterp; error_recovery = RSkip } in
   match classif with
-  | VtStartProof _ ->
-    base_id st, open_proof_block ex_sentence st, Exec ex_sentence
-  | VtQed terminator_type ->
-    log (fun () -> "scheduling a qed");
+  | EcDefinition ->
+    (* EasyCrypt lemmas/definitions that might start proofs *)
+    if String.contains ast '.' then
+      base_id st, push_ex_sentence ex_sentence st, Exec ex_sentence
+    else
+      base_id st, open_proof_block ex_sentence st, Exec ex_sentence
+  | EcProofStep ->
+    (* This handles qed, tactics, proof steps *)
     begin match st.proof_blocks with
     | [] -> (* can happen on ill-formed documents *)
       base_id st, push_ex_sentence ex_sentence st, Exec ex_sentence
     | block :: pop ->
-      (* TODO do not delegate if command with side effect inside the proof or nested lemmas *)
-      match is_opaque_flat_proof terminator_type st.section_depth block with
-      | Some proof_using ->
-        log (fun () -> "opaque proof");
-        let terminator = { ex_sentence with error_recovery = RAdmitted } in
-        let tasks = List.rev block.proof_sentences in
-        let st = { st with proof_blocks = pop } in
-        base_id st, push_ex_sentence ex_sentence st, OpaqueProof { terminator; opener_id = block.opener_id; tasks; proof_using }
-      | None ->
-        log (fun () -> "not an opaque proof");
-        let st = flatten_proof_block st in
+      (* Check if this is a proof terminator like qed *)
+      let lower_ast = String.lowercase_ascii ast in
+      if String.length lower_ast >= 3 && (String.sub lower_ast 0 3 = "qed" || String.contains lower_ast 'q') then (
+        log (fun () -> "scheduling a qed");
+        match is_opaque_flat_proof "qed" st.section_depth block with
+        | Some proof_using ->
+          log (fun () -> "opaque proof");
+          let terminator = { ex_sentence with error_recovery = RAdmitted } in
+          let tasks = List.rev block.proof_sentences in
+          let st = { st with proof_blocks = pop } in
+          base_id st, push_ex_sentence ex_sentence st, OpaqueProof { terminator; opener_id = block.opener_id; tasks; proof_using }
+        | None ->
+          log (fun () -> "not an opaque proof");
+          let st = flatten_proof_block st in
+          base_id st, push_ex_sentence ex_sentence st, Exec ex_sentence
+      ) else
         base_id st, push_ex_sentence ex_sentence st, Exec ex_sentence
     end
-  | VtQuery -> (* queries have no impact, we don't push them *)
+  | EcQuery -> (* queries have no impact, we don't push them *)
     base_id st, push_ex_sentence ex_sentence st, Query ex_sentence
-  | VtProofStep _ ->
-    base_id st, push_ex_sentence ex_sentence st, Exec ex_sentence
-  | VtSideff _ ->
+  | EcModule ->
     base_id st, extrude_side_effect ex_sentence st, Exec ex_sentence
-  | VtMeta -> base_id st, push_ex_sentence ex_sentence st, Skip { id; error = Some ("Unsupported command") }
-  | VtProofMode _ -> base_id st, push_ex_sentence ex_sentence st, Skip { id; error = Some ("Unsupported command") }
+  | EcOther -> base_id st, push_ex_sentence ex_sentence st, Skip { id; error = Some ("Unsupported command") }
 
 let string_of_task (task_id,(base_id,task)) =
   let s = match task with
-  | Skip { id } -> Format.sprintf "Skip %s" (sentence_ido_string id)
-  | Exec { id } -> Format.sprintf "Exec %s" (sentence_ido_string id)
-  | OpaqueProof { terminator; tasks } -> Format.sprintf "OpaqueProof [%s | %s]" (sentence_ido_string terminator.id) (String.concat "," (List.map (fun task -> sentence_ido_string task.id) tasks))
-  | Query { id } -> Format.sprintf "Query %s" (sentence_ido_string id)
-  | Block { id } -> Format.sprintf "Block %s" (sentence_ido_string id)
+  | Skip { id } -> Format.sprintf "Skip %d" id
+  | Exec { id } -> Format.sprintf "Exec %d" id
+  | OpaqueProof { terminator; tasks } -> Format.sprintf "OpaqueProof [%d | %s]" terminator.id (String.concat "," (List.map (fun task -> string_of_int task.id) tasks))
+  | Query { id } -> Format.sprintf "Query %d" id
+  | Block { id } -> Format.sprintf "Block %d" id
   in
-  Format.sprintf "[%s] : [%s] -> %s" (sentence_ido_string task_id) (Option.cata sentence_ido_string "init" base_id) s
+  Format.sprintf "[%d] : [%s] -> %s" task_id (match base_id with Some id -> string_of_int id | None -> "init") s
 
 let _string_of_state st =
   let scopes = (List.map (fun b -> List.map (fun x -> x.id) b.proof_sentences) st.proof_blocks) @ [st.document_scope] in
-  String.concat "|" (List.map (fun l -> String.concat " " (List.map sentence_ido_string l)) scopes)
+  String.concat "|" (List.map (fun l -> String.concat " " (List.map string_of_int l)) scopes)
 
 let schedule_errored_sentence id error synterp schedule =
   let task = Block {id; synterp; error} in
   let tasks = SM.add id (None, task) schedule.tasks in
-  let dependencies = SM.add id Stateid.Set.empty schedule.dependencies in
+  let dependencies = SM.add id SentenceIdSet.empty schedule.dependencies in
   {tasks; dependencies}
 
 let schedule_sentence (id, (ast, classif, synterp_st)) st schedule =
   let base, st, task = 
-      let open Vernacexpr in
       let (base, st, task) = push_state id ast synterp_st classif st in
-      begin match ast.CAst.v.expr with
-      | VernacSynterp (EVernacBeginSection _) ->
+      (* EasyCrypt section handling - simplified *)
+      let lower_ast = String.lowercase_ascii ast in
+      if String.length lower_ast >= 7 && String.sub lower_ast 0 7 = "section" then
         (base, { st with section_depth = st.section_depth + 1 }, task)
-      | VernacSynterp (EVernacEndSegment _) ->
+      else if String.length lower_ast >= 3 && String.sub lower_ast 0 3 = "end" then
         (base, { st with section_depth = max 0 (st.section_depth - 1) }, task)
-      | _ -> (base, st, task)
-      end
+      else
+        (base, st, task)
   in
 (*
   log (fun () -> "Scheduled " ^ (sentence_ido_string id) ^ " based on " ^ (match base with Some id -> sentence_ido_string id | None -> "no state"));
@@ -248,25 +253,25 @@ let schedule_sentence (id, (ast, classif, synterp_st)) st schedule =
   let tasks = SM.add id (base, task) schedule.tasks in
   let add_dep deps x id =
     let upd = function
-    | Some deps -> Some (Stateid.Set.add id deps)
-    | None -> Some (Stateid.Set.singleton id)
+    | Some deps -> Some (SentenceIdSet.add id deps)
+    | None -> Some (SentenceIdSet.singleton id)
     in
     SM.update x upd deps
   in
-  let dependencies = Option.cata (fun x -> add_dep schedule.dependencies x id) schedule.dependencies base in
+  let dependencies = match base with Some x -> add_dep schedule.dependencies x id | None -> schedule.dependencies in
   (* This new sentence impacts no sentence (yet) *)
-  let dependencies = SM.add id Stateid.Set.empty dependencies in
+  let dependencies = SM.add id SentenceIdSet.empty dependencies in
   st, { tasks; dependencies }
 
 let task_for_sentence schedule id =
   match SM.find_opt id schedule.tasks with
   | Some x -> x
-  | None -> CErrors.anomaly Pp.(str "cannot find schedule for sentence " ++ Stateid.print id)
+  | None -> failwith ("cannot find schedule for sentence " ^ string_of_int id)
 
 let dependents schedule id =
   match SM.find_opt id schedule.dependencies with
   | Some x -> x
-  | None -> CErrors.anomaly Pp.(str "cannot find dependents for sentence " ++ Stateid.print id)
+  | None -> failwith ("cannot find dependents for sentence " ^ string_of_int id)
 
 (** Dependency computation algo *)
 (*
