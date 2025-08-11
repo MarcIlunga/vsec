@@ -25,16 +25,18 @@ let get_init_state () =
   | Some st -> st
   | None -> assert false (* TODO fixme *)
 
-let states : (string, Dm.DocumentManager.state) Hashtbl.t = Hashtbl.create 39
+type tab = { st : Dm.DocumentManager.state; visible : bool }
 
-let check_mode = ref Settings.Mode.Continuous
+let states : (string, tab) Hashtbl.t = Hashtbl.create 39
+
+let check_mode = ref LspData.Settings.Mode.Continuous
 
 let Dm.Types.Log log = Dm.Log.mk_log "lspManager"
 
 let conf_request_id = 3456736879
 
-let server_info = ServerInfo.{
-  name = "easyscrypt-language-server";
+let server_info = LspData.ServerInfo.{
+  name = "easycrypt-language-server";
   version = "1.0.0";
 } 
 
@@ -54,14 +56,24 @@ let lsp : event Sel.event =
   Sel.on_httpcle Unix.stdin (function
     | Ok buff ->
       begin
-        log "UI req ready";
-        try LspManagerEvent (Receive (Some (JsonRpc.t_of_yojson (Yojson.Safe.from_string (Bytes.to_string buff)))))
+        let msg = Bytes.to_string buff in
+        log @@ "=== LSP MESSAGE RECEIVED ===";
+        log @@ "Message length: " ^ (string_of_int (String.length msg));
+        log @@ "Message preview: " ^ (String.sub msg 0 (min 100 (String.length msg)));
+        try 
+          let json = Yojson.Safe.from_string msg in
+          log @@ "=== JSON PARSED SUCCESSFULLY ===";
+          let rpc = JsonRpc.t_of_yojson json in
+          log @@ "=== RPC PARSED SUCCESSFULLY ===";
+          LspManagerEvent (Receive (Some rpc))
         with exn ->
-          log @@ "failed to decode json";
+          log @@ "=== JSON/RPC PARSE ERROR ===";
+          log @@ "Parse error: " ^ (Printexc.to_string exn);
           LspManagerEvent (Receive None)
       end
     | Error exn ->
-        log @@ ("failed to read message: " ^ Printexc.to_string exn);
+        log @@ "=== INPUT READ ERROR ===";
+        log @@ ("Input read error: " ^ Printexc.to_string exn);
         (* do not remove this line otherwise the server stays running in some scenarios *)
         exit 0)
   |> fst
@@ -98,8 +110,7 @@ let inject_debug_events l =
   List.map inject_debug_event l
 
 let do_configuration settings = 
-  let open Settings in
-  let open Dm.ExecutionManager in
+  let open LspData.Settings in
   check_mode := settings.proof.mode
 
 let send_configuration_request () =
@@ -112,9 +123,20 @@ let send_configuration_request () =
   Send (Request req)
 
 let do_initialize ~id params =
+  log "=== INITIALIZE REQUEST RECEIVED ===";
+  flush_all ();
+  
+  (* Handle initialization options like VSRocq *)
   let Request.Client.InitializeParams.{ initializationOptions } = params in
-  do_configuration initializationOptions;
-  let capabilities = ServerCapabilities.{
+  begin match initializationOptions with
+  | None -> log "No initialization options provided"
+  | Some initializationOptions ->
+    log "=== Processing initialization options ===";
+    do_configuration @@ LspData.Settings.t_of_yojson initializationOptions;
+  end;
+  
+  (* Match VSRocq capabilities and enable ALL features we advertise! *)
+  let capabilities = LspData.ServerCapabilities.{
     textDocumentSync = Incremental;
     completionProvider = { 
       resolveProvider = Some false; 
@@ -123,12 +145,26 @@ let do_initialize ~id params =
       completionItem = None 
     };
     hoverProvider = true;
+    definitionProvider = Some true;
+    documentSymbolProvider = Some true;
+    (* Enable semantic tokens like we advertise! *)
+    semanticTokensProvider = Some {
+      legend = {
+        tokenTypes = ["keyword"; "tactic"; "module"; "theory"; "operator"; "predicate"; "goal"; "hypothesis"; "type"; "variable"];
+        tokenModifiers = ["local"; "global"; "imported"; "proof"];
+      };
+      range = Some true;
+      full = Some true;
+    };
   } in
+  
   let initialize_result = Request.Client.InitializeResult.{
     capabilities = capabilities; 
     serverInfo = server_info;
   } in
-  log "---------------- initialized --------------";
+  
+  log "=== INITIALIZATION COMPLETE - SERVER READY ===";
+  flush_all ();
   let debug_events = Dm.Log.lsp_initialization_done () |> inject_debug_events in
   Ok initialize_result, debug_events@[Sel.now @@ LspManagerEvent (send_configuration_request ())]
 
@@ -169,126 +205,128 @@ let update_view uri st =
   send_highlights uri st;
   publish_diagnostics uri st
 
-let textDocumentDidOpen params =
-  let Notification.Client.DidOpenTextDocumentParams.{ textDocument = { uri; text } } = params in
+let open_new_document uri text =
+  log @@ "=== OPENING NEW DOCUMENT: " ^ (Uri.to_string uri) ^ " ===";
   let vst = get_init_state () in
-  let st, events = Dm.DocumentManager.init vst uri ~text in
+  let st, events = try 
+    log @@ "Initializing document manager for: " ^ (Uri.to_string uri);
+    Dm.DocumentManager.init vst uri ~text 
+  with e -> 
+    log @@ "Error initializing document: " ^ (Printexc.to_string e);
+    raise e
+  in
   let st = Dm.DocumentManager.validate_document st in
-  Hashtbl.add states (Uri.path uri) st;
+  Hashtbl.add states (Uri.path uri) { st; visible = true };
+  log @@ "Document successfully added to states, total: " ^ (string_of_int (Hashtbl.length states));
   update_view uri st;
   inject_dm_events (uri, events)
+
+let textDocumentDidOpen params =
+  let Notification.Client.DidOpenTextDocumentParams.{ textDocument = { uri; text } } = params in
+  log @@ "=== textDocument/didOpen REQUEST ===";
+  log @@ "URI: " ^ (Uri.to_string uri);
+  log @@ "Text length: " ^ (string_of_int (String.length text)) ^ " characters";
+  flush_all ();
+  
+  match Hashtbl.find_opt states (Uri.path uri) with
+  | None -> 
+    log @@ "Document not found in states, opening new document";
+    open_new_document uri text
+  | Some { st } ->
+    log @@ "Document already exists in states, updating";
+    (* Document already exists, just update view *)
+    update_view uri st;
+    []
 
 let textDocumentDidChange params =
   let Notification.Client.DidChangeTextDocumentParams.{ textDocument; contentChanges } = params in
   let uri = textDocument.uri in
-  let st = Hashtbl.find states (Uri.path uri) in
+  let { st; visible } = Hashtbl.find states (Uri.path uri) in
   let mk_text_edit TextDocumentContentChangeEvent.{ range; text } =
     Option.get range, text
   in
   let text_edits = List.map mk_text_edit contentChanges in
   let st = Dm.DocumentManager.apply_text_edits st text_edits in
   let st = Dm.DocumentManager.validate_document st in
-  Hashtbl.replace states (Uri.path uri) st;
+  Hashtbl.replace states (Uri.path uri) { st; visible };
   update_view uri st;
   inject_dm_events (uri, [])
 
 let textDocumentDidSave params =
   let Notification.Client.DidChangeTextDocumentParams.{ textDocument } = params in
   let uri = textDocument.uri in
-  let st = Hashtbl.find states (Uri.path uri) in
+  let { st; visible } = Hashtbl.find states (Uri.path uri) in
   let st = Dm.DocumentManager.validate_document st in
-  Hashtbl.replace states (Uri.path uri) st;
+  Hashtbl.replace states (Uri.path uri) { st; visible };
   update_view uri st
 
 let textDocumentDidClose params =
   let Notification.Client.DidCloseTextDocumentParams.{ textDocument } = params in
   let uri = textDocument.uri in
-  Hashtbl.remove states (Uri.path uri);
+  let path = Uri.path uri in
+  begin match Hashtbl.find_opt states path with
+  | None -> log @@ "[textDocumentDidClose] closed document with no state"
+  | Some { st } -> Hashtbl.replace states path { st; visible = false }
+  end;
   []
 
 let textDocumentHover ~id params = 
   let Request.Client.HoverParams.{ textDocument; position } = params in
-  let open Yojson.Safe.Util in
   
-  try
-    let st = Hashtbl.find states (Uri.path textDocument.uri) in 
-    
-    (* First try the existing hover implementation *)
+  log @@ "textDocumentHover request for: " ^ (Uri.to_string textDocument.uri);
+  log @@ "Available documents in states: " ^ (string_of_int (Hashtbl.length states));
+  
+  match Hashtbl.find_opt states (Uri.path textDocument.uri) with
+  | None -> 
+    log @@ "[textDocumentHover] ignoring event on non existing document"; 
+    Ok None
+  | Some { st } ->
+    log @@ "Found document state for hover"; 
     match Dm.DocumentManager.hover st position with
     | Some (Ok contents) -> 
-        (* Enhance the hover content with additional EasyCrypt information *)
-        let enhanced_contents = 
-          contents ^ "\n\n**EasyCrypt Language Server**\n" ^
-          "Position: line " ^ (string_of_int position.line) ^ 
-          ", character " ^ (string_of_int position.character)
-        in
-        Ok (Some (Request.Client.HoverResult.{ contents = enhanced_contents }))
-    | Some (Error _) -> 
-        (* Provide fallback hover information *)
-        let fallback_contents = 
-          "**EasyCrypt Symbol**\n\n" ^
-          "Hover information available.\n" ^
-          "Position: line " ^ (string_of_int position.line) ^ 
-          ", character " ^ (string_of_int position.character)
-        in
-        Ok (Some (Request.Client.HoverResult.{ contents = fallback_contents }))
-    | None -> 
-        (* Try to provide context-aware hover based on position *)
-        let doc = Dm.DocumentManager.Internal.document st in
-        let raw_doc = Dm.Document.raw_document doc in
-        let text_length = Dm.RawDocument.end_loc raw_doc in
-        
-        if text_length > 0 then (
-          let context_info = 
-            "**EasyCrypt Context**\n\n" ^
-            "Document length: " ^ (string_of_int text_length) ^ " characters\n" ^
-            "Position: line " ^ (string_of_int position.line) ^ 
-            ", character " ^ (string_of_int position.character)
-          in
-          Ok (Some (Request.Client.HoverResult.{ contents = context_info }))
-        ) else
-          Ok None
-  with
-  | Not_found -> Ok None
-  | _ -> Ok None
+      (* Use MarkupContent like VSCoq *)
+      let markup_content = Request.Client.MarkupContent.create contents in
+      Ok (Some (Request.Client.HoverResult.{ contents = Request.Client.HoverResult.MarkupContent markup_content }))
+    | Some (Error _) | None -> 
+      Ok None
 
 let progress_hook uri () =
-  let st = Hashtbl.find states (Uri.path uri) in
+  let { st } = Hashtbl.find states (Uri.path uri) in
   update_view uri st
 
 let coqtopInterpretToPoint params =
   let Notification.Client.InterpretToPointParams.{ textDocument; position } = params in
   let uri = textDocument.uri in
-  let st = Hashtbl.find states (Uri.path uri) in
+  let { st; visible } = Hashtbl.find states (Uri.path uri) in
   let (st, events) = Dm.DocumentManager.interpret_to_position st position in
-  Hashtbl.replace states (Uri.path uri) st;
+  Hashtbl.replace states (Uri.path uri) { st; visible };
   update_view uri st;
   inject_dm_events (uri, events)
 
 let coqtopInterpretToEnd params =
   let Notification.Client.InterpretToEndParams.{ textDocument = { uri } } = params in
-  let st = Hashtbl.find states (Uri.path uri) in
+  let { st; visible } = Hashtbl.find states (Uri.path uri) in
   let st = Dm.DocumentManager.validate_document st in
   let (st, events) = Dm.DocumentManager.interpret_to_end st in
-  Hashtbl.replace states (Uri.path uri) st;
+  Hashtbl.replace states (Uri.path uri) { st; visible };
   update_view uri st;
   inject_dm_events (uri,events)
 
 let coqtopStepBackward params =
   let Notification.Client.StepBackwardParams.{ textDocument = { uri } } = params in
-  let st = Hashtbl.find states (Uri.path uri) in
+  let { st; visible } = Hashtbl.find states (Uri.path uri) in
   let st = Dm.DocumentManager.validate_document st in
   let (st, events) = Dm.DocumentManager.interpret_to_previous st in
-  Hashtbl.replace states (Uri.path uri) st;
+  Hashtbl.replace states (Uri.path uri) { st; visible };
   update_view uri st;
   inject_dm_events (uri,events)
 
 let coqtopStepForward params =
   let Notification.Client.StepForwardParams.{ textDocument = { uri } } = params in
-  let st = Hashtbl.find states (Uri.path uri) in
+  let { st; visible } = Hashtbl.find states (Uri.path uri) in
   let st = Dm.DocumentManager.validate_document st in
   let (st, events) = Dm.DocumentManager.interpret_to_next st in
-  Hashtbl.replace states (Uri.path uri) st;
+  Hashtbl.replace states (Uri.path uri) { st; visible };
   update_view uri st;
   inject_dm_events (uri,events)
   
@@ -302,7 +340,7 @@ let coqtopStepForward params =
 let sendDocumentState ~id params = 
   let Request.Client.DocumentStateParams.{ textDocument } = params in
   let uri = textDocument.uri in
-  let st = Hashtbl.find states (Uri.path uri) in
+  let { st } = Hashtbl.find states (Uri.path uri) in
   let document = Dm.DocumentManager.Internal.string_of_state st in
   Ok Request.Client.DocumentStateResult.{ document }, []
 
@@ -346,133 +384,89 @@ let create_completion_item ~label ~detail =
   }
 
 let textDocumentCompletion ~id params =
+  let return_completion ~isIncomplete ~items =
+    Ok Request.Client.CompletionResult.{ isIncomplete; items }
+  in
   let Request.Client.CompletionParams.{ textDocument; position } = params in
   
-  try
-    (* Get document state for context-aware completion *)
-    let st = Hashtbl.find states (Uri.path textDocument.uri) in
-    let doc = Dm.DocumentManager.Internal.document st in
-    
-    (* Get base completions *)
-    let keywords = get_easycrypt_keywords () in
-    let tactics = get_easycrypt_tactics () in
-    
-    let keyword_items = List.map (fun kw -> 
-      create_completion_item ~label:kw ~detail:"EasyCrypt keyword"
-    ) keywords in
-    
-    let tactic_items = List.map (fun tactic -> 
-      create_completion_item ~label:tactic ~detail:"EasyCrypt tactic"
-    ) tactics in
-    
-    (* Try to get additional context-aware completions from the execution state *)
-    let context_items = 
-      try
-        let exec_st = Dm.DocumentManager.Internal.execution_state st in
-        (* Add basic module/theory completions if we can access the scope *)
-        [create_completion_item ~label:"True" ~detail:"Boolean constant";
-         create_completion_item ~label:"False" ~detail:"Boolean constant";
-         create_completion_item ~label:"bool" ~detail:"Boolean type";
-         create_completion_item ~label:"int" ~detail:"Integer type";
-         create_completion_item ~label:"real" ~detail:"Real type"]
-      with
-      | _ -> []
-    in
-    
-    let all_items = keyword_items @ tactic_items @ context_items in
-    
-    Ok Request.Client.CompletionResult.{
-      isIncomplete = false; 
-      items = all_items;
-    }
-  with
-  | Not_found ->
-    (* Fallback: return basic completions if document not found *)
-    let keywords = get_easycrypt_keywords () in
-    let tactics = get_easycrypt_tactics () in
-    
-    let keyword_items = List.map (fun kw -> 
-      create_completion_item ~label:kw ~detail:"EasyCrypt keyword"
-    ) keywords in
-    
-    let tactic_items = List.map (fun tactic -> 
-      create_completion_item ~label:tactic ~detail:"EasyCrypt tactic"
-    ) tactics in
-    
-    Ok Request.Client.CompletionResult.{
-      isIncomplete = false; 
-      items = keyword_items @ tactic_items;
-    }
+  match Hashtbl.find_opt states (Uri.path textDocument.uri) with
+  | None -> 
+    log @@ "[textDocumentCompletion] ignoring event on non existent document"; 
+    return_completion ~isIncomplete:false ~items:[]
+  | Some { st } ->
+    try
+      (* Try to get completions from document manager first *)
+      (* For now, use our static completions until we have proper DM integration *)
+      let keywords = get_easycrypt_keywords () in
+      let tactics = get_easycrypt_tactics () in
+      
+      let keyword_items = List.map (fun kw -> 
+        create_completion_item ~label:kw ~detail:"EasyCrypt keyword"
+      ) keywords in
+      
+      let tactic_items = List.map (fun tactic -> 
+        create_completion_item ~label:tactic ~detail:"EasyCrypt tactic"
+      ) tactics in
+      
+      (* Add basic type completions *)
+      let type_items = [
+        create_completion_item ~label:"bool" ~detail:"Boolean type";
+        create_completion_item ~label:"int" ~detail:"Integer type";
+        create_completion_item ~label:"real" ~detail:"Real type";
+        create_completion_item ~label:"True" ~detail:"Boolean constant";
+        create_completion_item ~label:"False" ~detail:"Boolean constant";
+      ] in
+      
+      let all_items = keyword_items @ tactic_items @ type_items in
+      return_completion ~isIncomplete:false ~items:all_items
+    with
+    | exn ->
+      log @@ "[textDocumentCompletion] error: " ^ (Printexc.to_string exn);
+      return_completion ~isIncomplete:false ~items:[]
 
 let textDocumentDefinition ~id params =
   let Request.Client.DefinitionParams.{ textDocument; position } = params in
   
-  try
-    (* Get document state *)
-    let st = Hashtbl.find states (Uri.path textDocument.uri) in
-    let doc = Dm.DocumentManager.Internal.document st in
-    
-    (* For now, implement a basic definition search by looking at the document content *)
-    (* This is a simplified implementation - in a full implementation we would:
-       1. Parse the AST to find the symbol at the position
-       2. Look up the symbol in the EasyCrypt scope/environment
-       3. Return the actual definition location *)
-    
-    (* Placeholder: return current position as definition location *)
-    let location = Request.Client.Location.{
-      uri = textDocument.uri;
-      range = {
-        start = position;
-        end_ = position;
-      };
-    } in
-    
-    Ok [location]
-    
-  with
-  | Not_found ->
-    (* Document not found - return empty list *)
+  match Hashtbl.find_opt states (Uri.path textDocument.uri) with
+  | None -> 
+    log @@ "[textDocumentDefinition] ignoring event on non existing document"; 
     Ok []
+  | Some { st } ->
+    (* Try to use DocumentManager's jump_to_definition if available *)
+    try
+      (* For now, return empty list since we don't have jump_to_definition implemented in our DM *)
+      (* In the future, this should call: Dm.DocumentManager.jump_to_definition st position *)
+      log @@ "[textDocumentDefinition] could not find symbol location"; 
+      Ok []
+    with
+    | exn ->
+      log @@ "[textDocumentDefinition] error: " ^ (Printexc.to_string exn);
+      Ok []
 
 let textDocumentDocumentSymbol ~id params =
   let Request.Client.DocumentSymbolParams.{ textDocument } = params in
   
-  try
-    (* Get document state *)
-    let st = Hashtbl.find states (Uri.path textDocument.uri) in
-    let doc = Dm.DocumentManager.Internal.document st in
-    
-    (* Extract symbols from document sentences *)
-    let sentences = Dm.Document.sentences doc in
-    
-    let symbols = List.fold_left (fun acc (sentence : Dm.Document.sentence) ->
-      let name = "Sentence at " ^ (string_of_int sentence.start) in
-      let range = {
-        LspData.Range.start = { line = 0; character = sentence.start };
-        end_ = { line = 0; character = sentence.stop };
-      } in
-      let symbol = Request.Client.DocumentSymbol.{
-        name;
-        kind = Request.Client.SymbolKind.function_;
-        range;
-        selectionRange = range;
-      } in
-      symbol :: acc
-    ) [] sentences in
-    
-    Ok (List.rev symbols)
-    
-  with
-  | Not_found ->
-    (* Document not found - return empty list *)
-    Ok []
+  match Hashtbl.find_opt states (Uri.path textDocument.uri) with
+  | None -> 
+    log @@ "[documentSymbol] ignoring event on non existent document"; 
+    Error "Document does not exist"
+  | Some { st } -> 
+    log @@ "[documentSymbol] getting symbols";
+    try
+      (* For now, return empty symbols since we don't have get_document_symbols implemented *)
+      (* In the future, this should call: Dm.DocumentManager.get_document_symbols st *)
+      Ok []
+    with
+    | exn ->
+      log @@ "[documentSymbol] error: " ^ (Printexc.to_string exn);
+      Error "Internal error"
 
 let textDocumentReferences ~id params =
   let Request.Client.ReferenceParams.{ textDocument; position; context } = params in
   
   try
     (* Get document state *)
-    let st = Hashtbl.find states (Uri.path textDocument.uri) in
+    let { st } = Hashtbl.find states (Uri.path textDocument.uri) in
     
     (* Placeholder: return current position as a reference *)
     let location = Request.Client.Location.{
@@ -488,6 +482,114 @@ let textDocumentReferences ~id params =
   with
   | Not_found ->
     Ok []
+
+(* Semantic token types - must match the client configuration *)
+module SemanticTokenTypes = struct
+  let keyword = 0
+  let tactic = 1
+  let module_ = 2
+  let theory = 3
+  let operator = 4
+  let predicate = 5
+  let goal = 6
+  let hypothesis = 7
+  let type_ = 8
+  let variable = 9
+end
+
+module SemanticTokenModifiers = struct
+  let local = 1 lsl 0
+  let global = 1 lsl 1
+  let imported = 1 lsl 2
+  let proof = 1 lsl 3
+end
+
+let get_easycrypt_semantic_tokens text =
+  (* Simple regex-based semantic tokenization for demo *)
+  (* In a full implementation, this would use the parsed AST *)
+  let keywords = [
+    "lemma"; "theorem"; "axiom"; "proof"; "qed"; "by"; "require"; "import"; 
+    "open"; "module"; "type"; "op"; "pred"; "theory"; "end"; "section"
+  ] in
+  let tactics = [
+    "trivial"; "reflexivity"; "symmetry"; "apply"; "rewrite"; "split";
+    "auto"; "smt"; "exact"; "assumption"
+  ] in
+  
+  let tokens = ref [] in
+  let lines = String.split_on_char '\n' text in
+  
+  List.iteri (fun line_idx line ->
+    let words = String.split_on_char ' ' line in
+    let char_pos = ref 0 in
+    
+    List.iter (fun word ->
+      let word = String.trim word in
+      if word <> "" then (
+        let token_type = 
+          if List.mem word keywords then SemanticTokenTypes.keyword
+          else if List.mem word tactics then SemanticTokenTypes.tactic
+          else -1
+        in
+        
+        if token_type >= 0 then (
+          tokens := (line_idx, !char_pos, String.length word, token_type, 0) :: !tokens
+        )
+      );
+      char_pos := !char_pos + String.length word + 1
+    ) words
+  ) lines;
+  
+  List.rev !tokens
+
+let encode_semantic_tokens tokens =
+  (* Encode tokens in LSP format: [deltaLine, deltaStart, length, tokenType, tokenModifiers] *)
+  let prev_line = ref 0 in
+  let prev_char = ref 0 in
+  let encoded = ref [] in
+  
+  List.iter (fun (line, char, length, token_type, modifiers) ->
+    let delta_line = line - !prev_line in
+    let delta_char = if delta_line = 0 then char - !prev_char else char in
+    
+    encoded := delta_line :: delta_char :: length :: token_type :: modifiers :: !encoded;
+    
+    prev_line := line;
+    prev_char := char
+  ) tokens;
+  
+  List.rev !encoded
+
+let textDocumentSemanticTokens ~id params =
+  let Request.Client.SemanticTokensParams.{ textDocument } = params in
+  
+  log @@ "[semanticTokens] Processing: " ^ (Uri.to_string textDocument.uri);
+  
+  match Hashtbl.find_opt states (Uri.path textDocument.uri) with
+  | None ->
+    log @@ "[semanticTokens] Document not found"; 
+    Ok Request.Client.SemanticTokensResult.{ data = [] }
+  | Some { st } ->
+    try
+      let doc = Dm.DocumentManager.Internal.document st in
+      let raw_doc = Dm.Document.raw_document doc in
+      let text = Dm.RawDocument.text raw_doc in
+      
+      log @@ "[semanticTokens] Analyzing text of length: " ^ (string_of_int (String.length text));
+      
+      (* Get semantic tokens *)
+      let tokens = get_easycrypt_semantic_tokens text in
+      let encoded_tokens = encode_semantic_tokens tokens in
+      
+      log @@ "[semanticTokens] Generated " ^ (string_of_int (List.length tokens)) ^ " tokens";
+      log @@ "[semanticTokens] Encoded to " ^ (string_of_int (List.length encoded_tokens)) ^ " values";
+      
+      Ok Request.Client.SemanticTokensResult.{ data = encoded_tokens }
+      
+    with
+    | exn ->
+      log @@ "[semanticTokens] Error: " ^ (Printexc.to_string exn);
+      Ok Request.Client.SemanticTokensResult.{ data = [] }
 
 let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,string) result * events =
   fun ~id req ->
@@ -506,7 +608,12 @@ let dispatch_request : type a. id:int -> a Protocol.Request.Client.params -> (a,
     textDocumentDocumentSymbol ~id params, []
   | References params ->
     textDocumentReferences ~id params, []
-  | UnknownRequest -> log "Received unknown request"; Ok(()), []
+  | SemanticTokens params ->
+    log @@ "[dispatch] SemanticTokens request received";
+    textDocumentSemanticTokens ~id params, []
+  | UnknownRequest -> 
+    log @@ "[dispatch] Unknown request"; 
+    Ok(()), []
 
 let dispatch_ext_request : type a. id:int -> a Request.Client.params -> (a,string) result * events =
   fun ~id req ->
@@ -546,13 +653,17 @@ let dispatch = Request.Client.{ dispatch_std = dispatch_request; dispatch_ext = 
 
 let handle_lsp_event = function
   | Receive None ->
-      []
+      [lsp] (* Re-add lsp event to keep listening *)
   | Receive (Some rpc) ->
+    lsp :: (* Make the event recurrent like VSRocq *)
     begin try
       begin match rpc with
       | Request req ->
-          log @@ "ui request: " ^ req.method_;
+          log @@ "=== UI REQUEST: " ^ req.method_ ^ " ===";
+          flush_all ();
           let resp, events = Request.Client.yojson_of_result req dispatch in
+          log @@ "=== REQUEST PROCESSED ===";
+          flush_all ();
           output_json resp;
           events
       | Notification notif ->
@@ -585,12 +696,12 @@ let handle_event = function
     | None ->
       log @@ "ignoring event on non-existing document";
       []
-    | Some st ->
+    | Some { st; visible } ->
       let (ost, events) = Dm.DocumentManager.handle_event e st in
       begin match ost with
         | None -> ()
         | Some st ->
-          Hashtbl.replace states (Uri.path uri) st;
+          Hashtbl.replace states (Uri.path uri) { st; visible };
           update_view uri st
       end;
       inject_dm_events (uri, events)
@@ -606,6 +717,9 @@ let pr_event = function
   | Notification _ -> "notif"
   | LogEvent _ -> "debug"
 
-let init injections =
-  init_state := Some (EcLib.EcScope.empty @@ EcLib.EcGState.create ());
+let init () =
+  (* Initialize EasyCrypt state (similar to VSRocq's Vernacstate.freeze_full_state) *)
+  let gstate = EcLib.EcGState.create () in
+  let scope = EcLib.EcScope.empty gstate in
+  init_state := Some scope;
   [lsp]

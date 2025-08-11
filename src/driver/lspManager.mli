@@ -20,5 +20,4 @@ val lsp : event Sel.event
 val handle_event : event -> events
 val pr_event : event -> string
 
-val init : 'a list -> event Sel.event list(* 
-val init : Coqargs.injection_command list -> event Sel.event list *)
+val init : unit -> event Sel.event list

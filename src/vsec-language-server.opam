@@ -1,0 +1,41 @@
+opam-version: "2.0"
+name: "vsec-language-server"
+maintainer: "Marc Ilunga <marc.ilunga@example.com>"
+authors: [ "Marc Ilunga" "The EasyCrypt development team" ]
+license: "MIT"
+homepage: "https://github.com/MarcIlunga/vsec"
+bug-reports: "https://github.com/MarcIlunga/vsec/issues"
+dev-repo: "git+https://github.com/MarcIlunga/vsec"
+
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+]
+
+install: [
+  ["dune" "install" "-p" name]
+]
+
+depends: [
+  "ocaml" { >= "4.14" }
+  "dune" { >= "3.5" }
+  "easycrypt"
+  "yojson"
+  "jsonrpc" { >= "1.15"}
+  "ocamlfind"
+  "ppx_inline_test"
+  "ppx_assert"
+  "ppx_sexp_conv"
+  "ppx_deriving"
+  "sexplib"
+  "ppx_yojson_conv"
+  "ppx_import"
+  "ppx_optcomp"
+  "result" { >= "1.5" }
+  "lsp" { >= "1.15"}
+  "sel" {>= "0.6.0"}
+]
+
+synopsis: "VsEc EasyCrypt language server"
+description: """
+LSP based language server for EasyCrypt and its VsEc user interface
+"""

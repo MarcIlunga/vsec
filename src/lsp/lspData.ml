@@ -148,10 +148,24 @@ module ServerCapabilities = struct
     completionItem : completionItem option [@yojson.option];
   } [@@deriving yojson]
 
+  type semanticTokensLegend = {
+    tokenTypes : string list;
+    tokenModifiers : string list;
+  } [@@deriving yojson]
+
+  type semanticTokensOptions = {
+    legend : semanticTokensLegend;
+    range : bool option [@yojson.option];
+    full : bool option [@yojson.option];
+  } [@@deriving yojson]
+
   type t = {
     textDocumentSync : textDocumentSyncKind;
     completionProvider : completionOptions;
     hoverProvider : bool;
+    definitionProvider : bool option [@yojson.option];
+    documentSymbolProvider : bool option [@yojson.option];
+    semanticTokensProvider : semanticTokensOptions option [@yojson.option];
   } [@@deriving yojson]
 
 end

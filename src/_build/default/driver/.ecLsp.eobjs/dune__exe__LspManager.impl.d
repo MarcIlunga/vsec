@@ -1,1 +1,0 @@
-driver/lspManager.ml: Bytes CompletionItem ConfigurationItem Dm EcLib ExtProtocol Format Hashtbl JsonRpc List Lsp LspData Notification Option Position Ppx_yojson_conv_lib__Yojson_conv Printexc Printf Protocol Request Sel ServerCapabilities ServerInfo Settings String TextDocumentContentChangeEvent Unix Uri Yojson

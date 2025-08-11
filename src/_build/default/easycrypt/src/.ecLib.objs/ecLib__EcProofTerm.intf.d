@@ -1,1 +1,0 @@
-easycrypt/src/ecProofTerm.mli: EcCoreGoal EcEnv EcFol EcIdent EcLocation EcMatching EcMemory EcModules EcParsetree EcPath EcSymbols EcTypes EcTyping EcUnify LDecl

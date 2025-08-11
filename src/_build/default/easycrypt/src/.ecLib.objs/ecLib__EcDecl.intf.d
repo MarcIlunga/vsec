@@ -1,1 +1,0 @@
-easycrypt/src/ecDecl.mli: EcBigInt EcCoreFol EcIdent EcPath EcSymbols EcTypes EcUtils Parray Sp Ssym

@@ -137,10 +137,25 @@ module Request = struct
 
     end
 
+    module MarkupContent = struct
+      type markup_kind = Plaintext | Markdown [@@deriving yojson]
+      
+      type t = {
+        kind : markup_kind;
+        value : string;
+      } [@@deriving yojson]
+      
+      let create ?(kind=Markdown) value = { kind; value }
+    end
+
     module HoverResult = struct
+      type contents = 
+        | String of string
+        | MarkupContent of MarkupContent.t
+      [@@deriving yojson]
 
       type t = {
-        contents : string;
+        contents : contents;
       } [@@deriving yojson]
 
     end
@@ -150,8 +165,29 @@ module Request = struct
       type t = {
         processId: int option;
         rootUri: Uri.t option;
-        initializationOptions : Settings.t;
-      } [@@deriving yojson] [@@yojson.allow_extra_fields]
+        initializationOptions : Yojson.Safe.t option;
+      }
+
+      let t_of_yojson json =
+        let open Yojson.Safe.Util in
+        let processId = json |> member "processId" |> to_option to_int in
+        let rootUri = json |> member "rootUri" |> to_option Uri.t_of_yojson in
+        let initializationOptions = json |> member "initializationOptions" |> function
+          | `Null -> None
+          | v -> Some v
+        in
+        { processId; rootUri; initializationOptions }
+
+      let yojson_of_t { processId; rootUri; initializationOptions } =
+        let fields = [
+          ("processId", match processId with None -> `Null | Some i -> `Int i);
+          ("rootUri", match rootUri with None -> `Null | Some uri -> Uri.yojson_of_t uri);
+        ] in
+        let fields = match initializationOptions with
+          | None -> fields
+          | Some opts -> ("initializationOptions", opts) :: fields
+        in
+        `Assoc fields
 
     end
 
@@ -274,6 +310,18 @@ module Request = struct
 
     end
 
+    module SemanticTokensParams = struct
+      type t = {
+        textDocument : TextDocumentIdentifier.t;
+      } [@@deriving yojson] [@@yojson.allow_extra_fields]
+    end
+
+    module SemanticTokensResult = struct
+      type t = {
+        data : int list;
+      } [@@deriving yojson]
+    end
+
     type 'rsp params =
     | Initialize : InitializeParams.t -> InitializeResult.t params
     | Shutdown : unit params
@@ -282,6 +330,7 @@ module Request = struct
     | Definition : DefinitionParams.t -> DefinitionResult.t params
     | DocumentSymbol : DocumentSymbolParams.t -> DocumentSymbolResult.t params
     | References : ReferenceParams.t -> ReferenceResult.t params
+    | SemanticTokens : SemanticTokensParams.t -> SemanticTokensResult.t params
     | UnknownRequest : unit params
 
     type t = Pack : int * _ params -> t
@@ -295,6 +344,7 @@ module Request = struct
       | "textDocument/definition" -> Pack (id, Definition DefinitionParams.(t_of_yojson params))
       | "textDocument/documentSymbol" -> Pack (id, DocumentSymbol DocumentSymbolParams.(t_of_yojson params))
       | "textDocument/references" -> Pack (id, References ReferenceParams.(t_of_yojson params))
+      | "textDocument/semanticTokens/full" -> Pack (id, SemanticTokens SemanticTokensParams.(t_of_yojson params))
       | _ -> Pack (id, UnknownRequest)
 
     let yojson_of_response : type a. a params -> a -> Yojson.Safe.t =
@@ -307,6 +357,7 @@ module Request = struct
         | Definition _ -> DefinitionResult.yojson_of_t resp
         | DocumentSymbol _ -> DocumentSymbolResult.yojson_of_t resp
         | References _ -> ReferenceResult.yojson_of_t resp
+        | SemanticTokens _ -> SemanticTokensResult.yojson_of_t resp
         | UnknownRequest -> yojson_of_unit resp
 
     type 'b dispatch = {

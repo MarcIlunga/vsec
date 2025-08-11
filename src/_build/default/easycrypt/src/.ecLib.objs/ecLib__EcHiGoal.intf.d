@@ -1,1 +1,0 @@
-easycrypt/src/ecHiGoal.mli: EcCoreGoal EcFol EcIdent EcLocation EcLowGoal EcMatching EcParsetree EcPath EcProofTerm EcProvers EcSymbols

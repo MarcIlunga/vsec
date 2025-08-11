@@ -1,8 +1,0 @@
-d_tests.ml
-dm_tests_minimal.ml
-em_tests.ml
-s_tests.ml
-sel_tests.ml
-test_easycrypt_integration.ml
-test_execution_engine.ml
-test_parser_integration.ml

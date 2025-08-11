@@ -1,7 +1,7 @@
 (executable
  (name ecLsp)
- (public_name ecLsp)
+ (public_name vsec-lsp)
  (modules ecLsp lspManager)
  (flags -linkall -rectypes)
- (package ec-language-server)
+ (package vsec-language-server)
  (libraries sel yojson dm lsp))
