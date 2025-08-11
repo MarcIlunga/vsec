@@ -73,6 +73,7 @@ let rec do_initialize id params =
   let textDocumentSync = `TextDocumentSyncKind Lsp.Types.TextDocumentSyncKind.Incremental in
   let completionProvider = Lsp.Types.CompletionOptions.create ~resolveProvider:false () in
   let hoverProvider = `Bool true in
+  (* TODO: Add documentSymbolProvider when LSP endpoint is implemented *)
   let capabilities = Lsp.Types.ServerCapabilities.create
     ~textDocumentSync
     ~completionProvider
@@ -230,6 +231,8 @@ and textDocumentHover id params =
       log (fun () -> "[textDocumentHover] no word found at position");
       Ok None, []
 
+(* TODO: 🎯 Phase 8.3.1: Document Symbols will be implemented when LSP library supports it *)
+
 (* Copy VSRocq dispatch functions exactly, adapted for EasyCrypt *)
 and dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t -> (a, error) result * events =
   fun id req ->
@@ -242,6 +245,7 @@ and dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t -> (a,
     let result, events = textDocumentCompletion id params in result, events
   | TextDocumentHover params ->
     let result, events = textDocumentHover id params in result, events
+  (* TODO: Add DocumentSymbol support when LSP library is updated *)
   | UnknownRequest _ | _  -> Error ({message="Received unknown request"; code=None}), []
 
 and dispatch_request : type a. Jsonrpc.Id.t -> a Request.Client.t -> (a, error) result * events =

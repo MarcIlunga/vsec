@@ -186,17 +186,35 @@ let record_outline document id (ast : string) classif (outline : outline) =
   match classif with
   | EcProofStep -> push_proof_step_in_outline document id outline
   | EcDefinition ->
-    (* Extract name from EasyCrypt AST - placeholder implementation *)
-    let type_ = 
-      if String.contains ast ':' then TheoremKind
-      else if String.contains ast '=' then DefinitionType
-      else TheoremKind
+    (* 🎯 Phase 8.3.1: Enhanced EasyCrypt AST name extraction - ENHANCED! *)
+    let enhanced_name_extraction ast =
+      let trimmed = String.trim ast in
+      let parts = String.split_on_char ' ' trimmed in
+      match parts with
+      | "lemma" :: name :: _ | "theorem" :: name :: _ | "axiom" :: name :: _ -> 
+        String.trim name, TheoremKind
+      | "module" :: name :: _ -> 
+        String.trim name, BeginModule
+      | "theory" :: name :: _ ->
+        String.trim name, BeginModule
+      | "proc" :: name :: _ ->
+        String.trim name, DefinitionType
+      | _ -> 
+        (* Fallback: try to extract first identifier *)
+        let find_first_identifier s =
+          let words = String.split_on_char ' ' s in
+          List.find_opt (fun w -> 
+            String.length w > 0 && 
+            (match w.[0] with 'a'..'z' | 'A'..'Z' | '_' -> true | _ -> false)
+          ) words
+        in
+        let name = match find_first_identifier trimmed with
+          | Some n -> String.trim n
+          | None -> "unnamed"
+        in
+        name, Other
     in
-    let name = 
-      (* Simple name extraction - TODO: improve with proper EasyCrypt parsing *)
-      let parts = String.split_on_char ' ' (String.trim ast) in
-      if List.length parts > 1 then List.nth parts 1 else "unnamed"
-    in
+    let name, type_ = enhanced_name_extraction ast in
     let range = range_of_id document id in
     let statement = string_of_id document id in
     let element = {id; type_; name; statement; range; proof=[]} in
