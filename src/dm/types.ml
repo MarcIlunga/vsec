@@ -137,6 +137,22 @@ module EasyCryptClassification = struct
     | EcModule       (* Module-related declarations *)
     | EcOther        (* Other commands *)
     
-  (* Default classification for unknown commands *)
-  let classify_string _cmd = EcOther
+  (* Enhanced EasyCrypt command classification *)
+  let contains_word text word = 
+    let re = Str.regexp ("\\b" ^ word ^ "\\b") in
+    try ignore (Str.search_forward re text 0); true
+    with Not_found -> false
+  
+  let classify_string cmd =
+    let cmd_lower = String.lowercase_ascii (String.trim cmd) in
+    if String.contains cmd_lower ':' && (contains_word cmd_lower "lemma" || contains_word cmd_lower "theorem" || contains_word cmd_lower "axiom") then
+      EcDefinition
+    else if List.exists (contains_word cmd_lower) ["module"; "theory"; "import"; "require"] then
+      EcModule
+    else if List.exists (contains_word cmd_lower) ["proof"; "qed"; "apply"; "rewrite"; "unfold"; "simplify"; "auto"] then
+      EcProofStep  
+    else if List.exists (contains_word cmd_lower) ["check"; "print"; "search"; "locate"] then
+      EcQuery
+    else
+      EcOther
 end

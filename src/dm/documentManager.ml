@@ -143,6 +143,18 @@ let is_parsing st =  st.document_state = Parsing
 let message_of_string x = x
 (* End of compatibility check *)
 
+(* 🎯 Phase 8.1.3: EasyCrypt Location Conversion *)
+let convert_ec_location_to_range doc (loc : EasyCryptLocation.t) =
+  let start_pos = Position.create 
+    ~line:loc.start_line ~character:loc.start_col in
+  let end_pos = Position.create 
+    ~line:loc.end_line ~character:loc.end_col in
+  Range.create ~start:start_pos ~end_:end_pos
+
+let convert_ec_location_opt doc = function
+  | None -> None
+  | Some loc -> Some (convert_ec_location_to_range doc loc)
+
 let make_diagnostic doc range oloc message severity code =
   let range =
     match oloc with
@@ -199,7 +211,8 @@ let all_diagnostics st =
   let exec_errors = all_exec_errors |> List.filter exists in
   let feedback = all_feedback |> List.filter (fun (id, _) -> Option.is_some (Document.get_sentence st.document id)) |> List.filter not_info in
   List.map (mk_parsing_error_diag st) parse_errors @
-    (* Temporarily comment out to isolate issue *) [] (* List.map (mk_error_diag st) exec_errors *) @
+    (* 🎯 Phase 8.1.3: Enhanced Diagnostics - RESTORED! *)
+    List.map (mk_error_diag st) exec_errors @
     List.map (fun (id, (lvl, oloc, msg)) -> mk_diag st (id, (lvl, oloc, [], msg))) feedback
 
 let id_of_pos st pos =

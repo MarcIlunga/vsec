@@ -50,7 +50,7 @@ val invalidate : Document.document -> Scheduler.schedule -> sentence_id -> state
 
 val error : state -> sentence_id -> (EasyCryptLocation.t option * string) option
 val feedback :  state -> sentence_id -> feedback_message list
-val all_errors : state -> (sentence_id * (EasyCryptLocation.t option * string)) list
+val all_errors : state -> (sentence_id * (EasyCryptLocation.t option * string * 'a option)) list
 val all_feedback : state -> (sentence_id * feedback_message) list
 
 val reset_overview : state -> Document.document -> state
