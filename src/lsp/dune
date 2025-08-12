@@ -1,6 +1,0 @@
-(library
- (name lsp)
- (public_name vsec-language-server.lsp)
- (libraries sexplib yojson uri)
- (preprocess
-   (pps ppx_sexp_conv ppx_yojson_conv)))

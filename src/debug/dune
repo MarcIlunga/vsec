@@ -1,6 +1,0 @@
-(executable
- (public_name debug-ec)
- (name debug_ec)
- (package vsec-language-server)
- (libraries easycrypt.ecLib)
- (flags (:standard -rectypes)))

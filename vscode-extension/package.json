@@ -142,24 +142,72 @@
         "category": "VsEc"
       },
       {
-        "command": "vsec.interpretToPoint",
-        "title": "Interpret to Current Position",
-        "category": "VsEc"
-      },
-      {
-        "command": "vsec.interpretToEnd",
-        "title": "Interpret to End",
-        "category": "VsEc"
-      },
-      {
-        "command": "vsec.stepBackward",
-        "title": "Step Backward",
-        "category": "VsEc"
+        "command": "vsec.showGoalPanel",
+        "title": "Show Goal Panel",
+        "category": "VsEc",
+        "icon": "$(target)"
       },
       {
         "command": "vsec.stepForward",
         "title": "Step Forward",
-        "category": "VsEc"
+        "category": "VsEc",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "vsec.stepBackward", 
+        "title": "Step Backward",
+        "category": "VsEc",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "vsec.interpretToPoint",
+        "title": "Interpret to Current Position",
+        "category": "VsEc",
+        "icon": "$(debug-step-into)"
+      },
+      {
+        "command": "vsec.interpretToEnd",
+        "title": "Interpret to End",
+        "category": "VsEc",
+        "icon": "$(debug-step-out)"
+      },
+      {
+        "command": "vsec.proofSearch",
+        "title": "Proof Search & Discovery",
+        "category": "VsEc",
+        "icon": "$(search-fuzzy)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "vsec.stepForward",
+        "key": "ctrl+right",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.stepBackward", 
+        "key": "ctrl+left",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.interpretToPoint",
+        "key": "ctrl+end",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.interpretToEnd",
+        "key": "ctrl+shift+end",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.showGoalPanel",
+        "key": "ctrl+shift+g",
+        "when": "resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.proofSearch",
+        "key": "ctrl+shift+f",
+        "when": "resourceExtname == .ec"
       }
     ],
     "menus": {
@@ -175,10 +223,12 @@
   "activationEvents": [
     "onLanguage:easycrypt",
     "onCommand:vsec.restart",
+    "onCommand:vsec.showGoalPanel",
     "onCommand:vsec.interpretToPoint",
     "onCommand:vsec.interpretToEnd",
     "onCommand:vsec.stepBackward",
-    "onCommand:vsec.stepForward"
+    "onCommand:vsec.stepForward",
+    "onCommand:vsec.proofSearch"
   ],
   "scripts": {
     "vscode:prepublish-disabled": "npm run package-prep",

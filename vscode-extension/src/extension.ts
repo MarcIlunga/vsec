@@ -13,6 +13,9 @@ import {workspace, window, commands, languages, ExtensionContext, env,
   version
 } from 'vscode';
 
+import { GoalPanel } from './panels/GoalPanel';
+import { ProofSearchProvider } from './commands/ProofSearchCommand';
+
 import {
   LanguageClientOptions,
   RequestType,
@@ -166,6 +169,102 @@ export function activate(context: ExtensionContext) {
             
             // Show success message
             window.showInformationMessage('VsEc EasyCrypt Language Server started successfully!');
+            
+            // 🎯 Register Interactive Proving Commands
+            Client.writeToVsEcChannel("🪄 EXTENSION: Registering interactive proving commands...");
+            
+            // Command: Show Goal Panel
+            const showGoalPanelCommand = commands.registerCommand('vsec.showGoalPanel', () => {
+                Client.writeToVsEcChannel("🎯 Opening EasyCrypt goal panel...");
+                GoalPanel.render(context.extensionUri);
+            });
+            context.subscriptions.push(showGoalPanelCommand);
+            
+            // Command: Step Forward
+            const stepForwardCommand = commands.registerCommand('vsec.stepForward', () => {
+                const activeEditor = window.activeTextEditor;
+                if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
+                    Client.writeToVsEcChannel("▶️ Stepping forward...");
+                    client.sendNotification('prover/stepForward', {
+                        textDocument: { uri: activeEditor.document.uri.toString() }
+                    });
+                } else {
+                    window.showWarningMessage('Step forward is only available for EasyCrypt files');
+                }
+            });
+            context.subscriptions.push(stepForwardCommand);
+            
+            // Command: Step Backward  
+            const stepBackwardCommand = commands.registerCommand('vsec.stepBackward', () => {
+                const activeEditor = window.activeTextEditor;
+                if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
+                    Client.writeToVsEcChannel("◀️ Stepping backward...");
+                    client.sendNotification('prover/stepBackward', {
+                        textDocument: { uri: activeEditor.document.uri.toString() }
+                    });
+                } else {
+                    window.showWarningMessage('Step backward is only available for EasyCrypt files');
+                }
+            });
+            context.subscriptions.push(stepBackwardCommand);
+            
+            // Command: Interpret to Point (cursor position)
+            const interpretToPointCommand = commands.registerCommand('vsec.interpretToPoint', () => {
+                const activeEditor = window.activeTextEditor;
+                if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
+                    Client.writeToVsEcChannel("🎯 Interpreting to cursor position...");
+                    client.sendNotification('prover/interpretToPoint', {
+                        textDocument: { 
+                            uri: activeEditor.document.uri.toString(),
+                            version: activeEditor.document.version 
+                        },
+                        position: {
+                            line: activeEditor.selection.active.line,
+                            character: activeEditor.selection.active.character
+                        }
+                    });
+                } else {
+                    window.showWarningMessage('Interpret to point is only available for EasyCrypt files');
+                }
+            });
+            context.subscriptions.push(interpretToPointCommand);
+            
+            // Command: Interpret to End
+            const interpretToEndCommand = commands.registerCommand('vsec.interpretToEnd', () => {
+                const activeEditor = window.activeTextEditor;
+                if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
+                    Client.writeToVsEcChannel("⏭️ Interpreting to end of document...");
+                    client.sendNotification('prover/interpretToEnd', {
+                        textDocument: { uri: activeEditor.document.uri.toString() }
+                    });
+                } else {
+                    window.showWarningMessage('Interpret to end is only available for EasyCrypt files');
+                }
+            });
+            context.subscriptions.push(interpretToEndCommand);
+            
+            // Command: Proof Search & Discovery
+            const proofSearchCommand = commands.registerCommand('vsec.proofSearch', () => {
+                Client.writeToVsEcChannel("🔍 Opening proof search & discovery panel...");
+                ProofSearchProvider.showProofSearchPanel(context.extensionUri);
+            });
+            context.subscriptions.push(proofSearchCommand);
+            
+            // 🔄 Listen for Proof View Updates from Server
+            client.onNotification('prover/proofView', (params: any) => {
+                Client.writeToVsEcChannel("🎯 Received proof view update from server");
+                console.log('[Extension Host] Proof view update:', params);
+                
+                // Update goal panel if it exists
+                if (GoalPanel.currentPanel) {
+                    GoalPanel.currentPanel.updateProofState(params.proofState, params.textDocument);
+                    Client.writeToVsEcChannel("✅ Goal panel updated with new proof state");
+                } else {
+                    Client.writeToVsEcChannel("ℹ️ Goal panel not open, proof state received but not displayed");
+                }
+            });
+            
+            Client.writeToVsEcChannel("✅ Interactive proving commands registered successfully!");
             
             // Create status bar item
             const statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 100);
