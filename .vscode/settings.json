@@ -1,0 +1,8 @@
+{
+    "terminal.integrated.commandsToSkipShell": ["workbench.action.terminal.sendSequence"],
+    "files.associations": {
+        "*.ec": "easycrypt"
+    },
+    "vsec-language-server.trace.server": "verbose",
+    "vsec.path": ""
+}

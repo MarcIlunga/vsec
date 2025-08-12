@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*                                 VSCoq                                  *)
+(*                                 VSec                                   *)
 (*                                                                        *)
 (*                   Copyright INRIA and contributors                     *)
 (*       (see version control and README file for authors & dates)        *)
@@ -19,7 +19,7 @@ let initialization_feedback_queue = Queue.create ()
 
 let init_log =
   try Some (
-    let oc = open_out @@ Filename.temp_file "vscoq_init_log." ".txt" in
+    let oc = open_out @@ Filename.temp_file "vsec_init_log." ".txt" in
     output_string oc "command line:\n";
     output_string oc (String.concat " " (Sys.argv |> Array.to_list));
     output_string oc "\nstatic initialization:\n";
@@ -35,8 +35,8 @@ let write_to_init_log str =
 
 let rec is_enabled name = function
   | [] -> false
-  | "-vscoq-d" :: "all" :: _ -> true
-  | "-vscoq-d" :: v :: rest ->
+  | "-vsec-d" :: "all" :: _ -> true
+  | "-vsec-d" :: v :: rest ->
     List.mem name (String.split_on_char ',' v) || is_enabled name rest
   | _ :: rest -> is_enabled name rest
 
@@ -48,9 +48,18 @@ let mk_log name =
   logs := name :: !logs;
   let flag = is_enabled name (Array.to_list Sys.argv) in
   let flag_init = is_enabled "init" (Array.to_list Sys.argv) in
-  write_to_init_log ("log " ^ name ^ " is " ^ if flag then "on" else "off");
-  Log (fun msg ->
-    let should_print_log = flag || (flag_init && not !lsp_initialization_done) in
+  write_to_init_log ("log fun () -> " ^ name ^ " is " ^ if flag then "on" else "off");
+  Log (fun ?(force=false) msg ->
+    let msg =
+      try msg ()
+      with
+      | Sys.Break as e ->
+        (* we let this escape since one may want to interrupt the printer *)
+        raise e
+      | e ->
+        let message = Printexc.to_string e in
+        Format.asprintf "Error while printing: %s" message in
+    let should_print_log = force || flag || (flag_init && not !lsp_initialization_done) in
     if should_print_log then begin
       let txt = Format.asprintf "[%-20s, %d, %f] %s" name (Unix.getpid ()) (Unix.gettimeofday ()) msg in
       if not !lsp_initialization_done then begin
@@ -64,22 +73,14 @@ let mk_log name =
 let logs () = List.sort String.compare !logs
 
 type event = string
-type events = event Sel.event list
+type events = event Sel.Event.t list
 
-let install_debug_feedback f = ()
+(* EasyCrypt doesn't have the same feedback system as Coq, so we simplify this *)
+let easycrypt_debug_feedback_queue = Queue.create ()
 
-(* We go through a queue in case we receive a debug feedback from Coq before we
-   replied to Initialize *)
-let coq_debug_feedback_queue = Queue.create ()
-let main_debug_feeder = install_debug_feedback (fun txt -> Queue.push txt coq_debug_feedback_queue)
-   
-let (debug, cancel_debug_event) : event Sel.event * Sel.cancellation_handle =
-  Sel.on_queue coq_debug_feedback_queue (fun x -> x) |>
-  fun (e, cancellation) ->
-    (e |> Sel.name "debug"
-       |> Sel.make_recurring
-       |> Sel.set_priority PriorityManager.feedback),
-    cancellation
+let debug : event Sel.Event.t =
+  Sel.On.queue ~name:"debug" ~priority:PriorityManager.feedback easycrypt_debug_feedback_queue (fun x -> x)
+let cancel_debug_event = Sel.Event.get_cancellation_handle debug
 
 let lsp_initialization_done () =
   lsp_initialization_done := true;
@@ -89,14 +90,9 @@ let lsp_initialization_done () =
   [debug]
 
 let worker_initialization_begins () =
-  Sel.cancel cancel_debug_event;
-  (* Feedback.del_feeder main_debug_feeder; *)
-    (* We do not want to inherit master's Feedback reader (feeder), otherwise we
-    would output on the worker's stderr.
-    Debug feedback from worker is forwarded to master via a specific handler
-    (see [worker_initialization_done]) *)
-  Queue.clear coq_debug_feedback_queue
+  Sel.Event.cancel cancel_debug_event;
+  Queue.clear easycrypt_debug_feedback_queue
 
 let worker_initialization_done ~fwd_event =
-  let _ = install_debug_feedback fwd_event in
+  (* EasyCrypt worker setup - simplified compared to Coq *)
   ()

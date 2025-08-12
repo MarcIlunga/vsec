@@ -1,0 +1,9 @@
+{
+    "Open EasyCrypt in Terminal Tab": {
+        "prefix": "ecprove",
+        "body": [
+            "${CLIPBOARD:/home/marcilunga/.local/bin/easycrypt-emacs '${TM_FILEPATH}'}$0"
+        ],
+        "description": "Launch EasyCrypt Proof General"
+    }
+}

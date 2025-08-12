@@ -16,17 +16,12 @@ open Dm
 open Base
 open Types
 
-let injections =
-  Coqinit.init_ocaml ();
-  let opts, _ = Coqargs.parse_args
-    ~usage:(Boot.Usage.{executable_name = ""; extra_args = ""; extra_options = ""})
-    ~init:Coqargs.default [] in
-  Coqinit.init_runtime opts
-
-let init_state = Vernacstate.freeze_full_state ()
+let init_state = 
+  let gstate = EcLib.EcGState.create () in
+  EcLib.EcScope.empty gstate
 
 let openDoc uri ~text =
-  DocumentManager.init init_state ~opts:injections uri ~text
+  DocumentManager.init init_state uri ~text
 
 let run r =
   [%test_pred: (_,string) Result.t ] (function Error _ -> false | _ -> true) r;
@@ -60,7 +55,7 @@ let rec parse : type a. int -> int -> Document.sentence list -> Document.parsing
     | O, (_ :: _ as l), _ -> Error ("more sentences than expected, extra " ^ Int.to_string (List.length l))
     | O, _, (_ :: _ as l) -> Error ("more errors than expected, extra " ^ Int.to_string (List.length l))
     | P _, [], errors ->
-      let errors = String.concat ~sep:"\n" @@ List.map ~f:(fun err -> snd err.Document.msg) errors in
+      let errors = String.concat ~sep:"\n" @@ List.map ~f:(fun err -> EcLib.EcLocation.unloc err.Document.msg) errors in
       Error ("fewer sentences than expected, only " ^ Int.to_string m ^ " list of errors:\n" ^ errors)
     | E _, _, [] -> Error ("fewer errors than expected, only " ^ Int.to_string n)
 
@@ -75,7 +70,7 @@ let dm_parse st spec =
   let doc = DocumentManager.Internal.document st in
   st, d_sentences doc spec
 
-let sentence_id_of_sexp s = Stateid.of_int (Sexplib.Std.int_of_sexp s)
+let sentence_id_of_sexp s = (Sexplib.Std.int_of_sexp s : Stateid.t)
 let sexp_of_sentence_id i = Sexplib.Std.sexp_of_int (Stateid.to_int i)
 
 let compare_sentence_id = Stateid.compare
@@ -124,11 +119,11 @@ let task st id spec =
 
 
 let rec handle_events n (events : DocumentManager.event Sel.todo) st =
-  if n <= 0 then (Stdlib.Format.eprintf "handle_events run out of steps\n"; Caml.exit 1)
+  if n <= 0 then (Stdlib.Format.eprintf "handle_events run out of steps\n"; Stdlib.exit 1)
   else if Sel.only_recurring_events events then st
   else begin
     (*Stdlib.Format.eprintf "waiting %a\n%!" Sel.(pp_todo DocumentManager.pp_event) events;*)
-    Caml.flush_all ();
+    Stdlib.flush_all ();
     let (ready, remaining) = Sel.pop_timeout ~stop_after_being_idle_for:1.0 events in
     let st, new_events =
       match ready with
@@ -159,7 +154,7 @@ let check_diag st specl =
     { range; message; severity } in
   let match_diagnostic r s rex { range; message; severity } =
     Lsp.LspData.Range.included ~in_:r range &&
-    Caml.(=) severity s &&
+    Stdlib.(=) severity s &&
     Str.string_match (Str.regexp rex) message 0
   in
   let diagnostics = List.map ~f:fix_diagnostic (DocumentManager.diagnostics st) in

@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*                                 VSCoq                                  *)
+(*                                 VSRocq                                 *)
 (*                                                                        *)
 (*                   Copyright INRIA and contributors                     *)
 (*       (see version control and README file for authors & dates)        *)
@@ -17,23 +17,6 @@ open Types
 (** The scheduler is the component in charge of planning the execution of
     sentences. It also defines the task delegation strategy, and computes
     dependencies between tasks. Scheduling can be done incrementally. *)
-type vernac_keep_as = VtKeepAxiom | VtKeepDefined | VtKeepOpaque
-
-type vernac_qed_type = VtKeep of vernac_keep_as | VtDrop
-
-type vernac_classification =
-  (* Start of a proof *)
-  | VtStartProof 
-  (* Command altering the global state, bad for parallel
-     processing. *)
-  | VtSideff 
-  (* End of a proof *)
-  | VtQed of vernac_qed_type
-  (* A proof step *)
-  | VtProofStep 
-  (* Queries are commands assumed to be "pure", that is to say, they
-     don't modify the interpretation state. *)
-  | VtQuery
 
 type state
 (** State for incremental schedule construction *)
@@ -46,16 +29,19 @@ type error_recovery_strategy =
 
 type executable_sentence = {
   id : sentence_id;
-  ast : EcLib.EcParsetree.global;
-  synterp : EcLib.EcScope.scope;
+  ast : string;
+  classif : EasyCryptClassification.classification;
+  synterp : EcLib.EcScope.scope; (* EasyCrypt state instead of Coq synterp *)
   error_recovery : error_recovery_strategy;
 }
 
 type task =
-  | Skip of sentence_id
+  | Skip of { id: sentence_id; error: string option }
+  | Block of { id: sentence_id; synterp : EcLib.EcScope.scope; error: (EasyCryptLocation.t option * string) }
   | Exec of executable_sentence
   | OpaqueProof of { terminator: executable_sentence;
                      opener_id: sentence_id;
+                     proof_using: string; (* simplified proof_using *)
                      tasks : executable_sentence list; (* non empty list *)
                    }
   | Query of executable_sentence
@@ -66,7 +52,9 @@ type schedule
 
 val initial_schedule : schedule
 
-val schedule_sentence : sentence_id * (EcLib.EcParsetree.global * vernac_classification * EcLib.EcScope.scope) -> state -> schedule -> state * schedule
+val schedule_errored_sentence : sentence_id -> (EasyCryptLocation.t option * string) -> EcLib.EcScope.scope -> schedule -> schedule
+
+val schedule_sentence : sentence_id * (string * EasyCryptClassification.classification * EcLib.EcScope.scope) -> state -> schedule -> state * schedule
 (** Identifies the structure of the document and dependencies between sentences
     in order to easily compute the tasks to interpret the a sentence.
     Input sentence is None on parsing error. *)
@@ -75,8 +63,6 @@ val task_for_sentence : schedule -> sentence_id -> sentence_id option * task
 (** Finds the task to be performed and the state on which the task should run *)
 
 val dependents : schedule -> sentence_id -> sentence_id_set
-(** Computes what should be invalidated *) 
+(** Computes what should be invalidated *)
 
-(*
 val string_of_schedule : schedule -> string
-*)

@@ -1,5 +1,6 @@
 (library
  (name dm)
- (flags -rectypes)
- (public_name ec-language-server.dm)
- (libraries base sel lsp easycrypt.ecLib))
+ (public_name vsec-language-server.dm)
+ (modules :standard \ vsrocqtop_proof_worker vsrocqtop_tactic_worker)
+ (libraries base easycrypt.ecLib lsp sel protocol)
+ (flags -rectypes))
