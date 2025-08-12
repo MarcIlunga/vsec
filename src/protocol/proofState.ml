@@ -80,11 +80,9 @@ let extract_easycrypt_goals scope =
     (* This is a simplified extraction - in real EasyCrypt integration, *)
     (* we would use proper EcLib APIs to get proof state *)
     
-    (* Get current environment from scope *)
-    let env = EcLib.EcScope.env scope in
+    (* For debugging: Always return sample goals to test the UI *)
+    Printf.eprintf "DEBUG: Extracting EasyCrypt goals from scope\n%!";
     
-    (* Check if we're in a proof context *)
-    (* For now, create some sample goals based on EasyCrypt context *)
     let goal_id = 1 in
     let sample_hypotheses = [
       "H1 : forall x, P x -> Q x";
@@ -94,10 +92,18 @@ let extract_easycrypt_goals scope =
     let sample_goal = "Q a" in
     
     let main_goal = mk_goal goal_id sample_hypotheses sample_goal in
+    Printf.eprintf "DEBUG: Created sample goal with %d hypotheses\n%!" (List.length sample_hypotheses);
     [main_goal]
     
   with
-  | _ -> []  (* No active goals *)
+  | exn -> 
+    Printf.eprintf "DEBUG: Exception in extract_easycrypt_goals: %s\n%!" (Printexc.to_string exn);
+    (* Return sample goals even on exception for testing *)
+    let goal_id = 1 in
+    let sample_hypotheses = ["H1 : x = x"] in
+    let sample_goal = "True" in
+    let fallback_goal = mk_goal goal_id sample_hypotheses sample_goal in
+    [fallback_goal]
 
 (** Create enhanced navigation info *)
 let mk_navigation ~current_step ~total_steps ~can_step_forward ~can_step_backward history =

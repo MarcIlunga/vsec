@@ -33,8 +33,8 @@ export class GoalPanel {
           enableScripts: true,
           retainContextWhenHidden: true,
           localResourceRoots: [
-            vscode.Uri.joinPath(extensionUri, 'media'),
-            vscode.Uri.joinPath(extensionUri, 'goal-view-ui', 'dist')
+            vscode.Uri.joinPath(extensionUri, "out"), 
+            vscode.Uri.joinPath(extensionUri, "goal-view-ui", "build")
           ]
         }
       );
@@ -45,11 +45,13 @@ export class GoalPanel {
   }
 
   public updateProofState(proofState: any, textDocument: any) {
-    // Send proof state update to the webview
+    // Debug: Log the proof state being sent
+    console.log('GoalPanel: Sending proof state to webview:', JSON.stringify(proofState, null, 2));
+    
+    // Send proof state update to the webview (VSCoq protocol style)
     this._panel.webview.postMessage({
-      type: 'proofView',
-      textDocument: textDocument,
-      proofState: proofState
+      "command": "renderProofView", 
+      "proofView": proofState
     });
   }
 
@@ -68,8 +70,10 @@ export class GoalPanel {
   }
 
   private _getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
-    const stylesUri = getUri(webview, extensionUri, ['goal-view-ui', 'dist', 'goal-view.css']);
-    const scriptUri = getUri(webview, extensionUri, ['goal-view-ui', 'dist', 'goal-view.js']);
+    // The CSS file from the React build output (VSCoq style)
+    const stylesUri = getUri(webview, extensionUri, ["goal-view-ui", "build", "assets", "index.css"]);
+    // The JS file from the React build output (VSCoq style)
+    const scriptUri = getUri(webview, extensionUri, ["goal-view-ui", "build", "assets", "index.js"]);
     const nonce = getNonce();
 
     return `
@@ -78,8 +82,8 @@ export class GoalPanel {
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-          <link rel="stylesheet" type="text/css" href="${stylesUri}">
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+          <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${stylesUri}">
           <title>EasyCrypt Goal View</title>
         </head>
         <body>

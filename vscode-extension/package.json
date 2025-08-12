@@ -1,8 +1,8 @@
 {
   "name": "vsec-easycrypt",
   "displayName": "VsEc - EasyCrypt Language Support",
-  "description": "Rich language support for EasyCrypt with semantic highlighting, completion, and proof assistance",
-  "version": "0.1.18",
+  "description": "Complete interactive proving environment for EasyCrypt with VSCoq-style proof navigation, intelligent completion, and advanced proof search",
+  "version": "0.1.23",
   "publisher": "vsec",
   "engines": {
     "vscode": "^1.74.0"

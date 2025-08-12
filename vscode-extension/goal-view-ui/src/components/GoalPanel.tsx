@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EasyCryptProofState, ProofViewMessage } from '../types';
+import { EasyCryptProofState } from '../types';
 import Goal from './Goal';
 import NavigationControls from './NavigationControls';
 import ProofProgress from './ProofProgress';
@@ -114,11 +114,18 @@ const GoalPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent<ProofViewMessage>) => {
+    const handleMessage = (event: MessageEvent) => {
       const { data } = event;
-      if (data.type === 'proofView') {
-        setProofState(data.proofState);
-        console.log('EasyCrypt proof state updated:', data.proofState);
+      // VSCoq-style message handling
+      switch (data.command) {
+        case 'renderProofView':
+          const proofData = data.proofView;
+          setProofState(proofData);
+          console.log('EasyCrypt proof state updated:', proofData);
+          break;
+        case 'reset':
+          setProofState(null);
+          break;
       }
     };
 
