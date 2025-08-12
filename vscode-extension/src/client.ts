@@ -6,10 +6,27 @@ import {
   ServerOptions,
 } from 'vscode-languageclient/node';
 
+// Custom semantic highlighting types
+interface SemanticToken {
+  line: number;
+  startChar: number;
+  length: number;
+  tokenType: string;
+  classification: string;
+}
+
+interface SemanticHighlightingParams {
+  uri: string;
+  tokens: SemanticToken[];
+}
+
 export default class Client extends LanguageClient {
 
     private static _channel: any = vscode.window.createOutputChannel('VsEc EasyCrypt');
     private static _easycryptLog: any = vscode.window.createOutputChannel('EasyCrypt Log');
+    
+    // Decoration types for semantic highlighting
+    private static decorationTypes = new Map<string, vscode.TextEditorDecorationType>();
 
     constructor(
         serverOptions: ServerOptions,
@@ -21,7 +38,7 @@ export default class Client extends LanguageClient {
             serverOptions,
             clientOptions
         );
-        Client._channel.appendLine("VsEc EasyCrypt initialized");
+        Client._channel.appendLine("VsEc EasyCrypt v0.1.18 - RED KEYWORDS + VARIED COLORS!");
     }
 
     public static writeToVsEcChannel(message: string) {
@@ -35,4 +52,5 @@ export default class Client extends LanguageClient {
     public static showLog() {
         Client._channel.show(true);
     }
+
 }

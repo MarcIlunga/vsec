@@ -20,7 +20,7 @@ let Dm.Types.Log log = Dm.Log.mk_log "lspManager"
 
 let server_info = InitializeResult.create_serverInfo
   ~name:"vsec-language-server"
-  ~version:"0.1.0"
+  ~version:"0.1.6"
   ()
 
 type lsp_event = 
@@ -73,7 +73,7 @@ let rec do_initialize id params =
   let textDocumentSync = `TextDocumentSyncKind Lsp.Types.TextDocumentSyncKind.Incremental in
   let completionProvider = Lsp.Types.CompletionOptions.create ~resolveProvider:false () in
   let hoverProvider = `Bool true in
-  (* TODO: Add documentSymbolProvider when LSP endpoint is implemented *)
+  (* TODO: Add semantic tokens when LSP library supports it *)
   let capabilities = Lsp.Types.ServerCapabilities.create
     ~textDocumentSync
     ~completionProvider
@@ -231,10 +231,106 @@ and textDocumentHover id params =
       log (fun () -> "[textDocumentHover] no word found at position");
       Ok None, []
 
+
+type syntax_stats = {
+  keywords: int;
+  tactics: int; 
+  definitions: int;
+  modules: int;
+}
+
+(* Custom semantic highlighting types *)
+type semantic_token = {
+  line: int;
+  start_char: int;
+  length: int;
+  token_type: string;
+  classification: string;
+}
+
+type semantic_highlighting_params = {
+  uri: string;
+  tokens: semantic_token list;
+}
+
+(* 🎯 Enhanced EasyCrypt Semantic Analysis with Token Generation *)
+let analyze_easycrypt_document_syntax uri text =
+  log (fun () -> "Starting EasyCrypt semantic analysis with token generation");
+  
+  (* Parse document into sentences and classify each *)
+  let lines = String.split_on_char '\n' text in
+  let sentence_stats = ref {keywords=0; tactics=0; definitions=0; modules=0} in
+  let semantic_tokens = ref [] in
+  
+  List.iteri (fun line_idx line ->
+    let line_trimmed = String.trim line in
+    if String.length line_trimmed > 0 && not (String.starts_with ~prefix:"(*" line_trimmed) then (
+      (* Classify using EasyCrypt classifier *)
+      let classification = Dm.Types.EasyCryptClassification.classify_string line_trimmed in
+      let open Dm.Types.EasyCryptClassification in
+      
+      (* Extract tokens from the line *)
+      let extract_semantic_tokens line classification line_idx =
+        let words = Str.split (Str.regexp "[ \t().,;:]+") line in
+        let char_pos = ref 0 in
+        List.fold_left (fun acc word ->
+          try
+            let word_start = String.index_from line !char_pos (String.get word 0) in
+            let token_type, classif_str = match classification with
+              | EcDefinition -> 
+                if List.mem (String.lowercase_ascii word) ["lemma"; "theorem"; "axiom"] then ("keyword", "definition")
+                else if String.contains word ':' then ("type", "type_annotation")
+                else ("identifier", "definition_name")
+              | EcProofStep -> 
+                if List.mem (String.lowercase_ascii word) ["proof"; "qed"; "apply"; "rewrite"; "unfold"; "simplify"; "auto"; "by"] then ("keyword", "tactic")
+                else ("identifier", "proof_identifier")
+              | EcModule ->
+                if List.mem (String.lowercase_ascii word) ["module"; "theory"; "require"; "import"] then ("keyword", "module")
+                else ("identifier", "module_name")
+              | EcQuery ->
+                if List.mem (String.lowercase_ascii word) ["check"; "print"; "search"] then ("keyword", "query")
+                else ("identifier", "query_target")
+              | EcOther -> ("identifier", "other")
+            in
+            char_pos := word_start + String.length word;
+            {line = line_idx; start_char = word_start; length = String.length word; token_type; classification = classif_str} :: acc
+          with Not_found -> 
+            char_pos := !char_pos + 1;
+            acc
+        ) [] words |> List.rev
+      in
+      
+      let tokens = extract_semantic_tokens line_trimmed classification line_idx in
+      semantic_tokens := tokens @ !semantic_tokens;
+      
+      match classification with
+      | EcDefinition -> 
+        log (fun () -> Printf.sprintf "Line %d: EasyCrypt definition - %s (%d tokens)" line_idx line_trimmed (List.length tokens));
+        sentence_stats := {!sentence_stats with definitions = !sentence_stats.definitions + 1}
+      | EcProofStep ->
+        log (fun () -> Printf.sprintf "Line %d: EasyCrypt proof step - %s (%d tokens)" line_idx line_trimmed (List.length tokens));
+        sentence_stats := {!sentence_stats with tactics = !sentence_stats.tactics + 1}
+      | EcModule ->
+        log (fun () -> Printf.sprintf "Line %d: EasyCrypt module - %s (%d tokens)" line_idx line_trimmed (List.length tokens));
+        sentence_stats := {!sentence_stats with modules = !sentence_stats.modules + 1}
+      | EcQuery ->
+        log (fun () -> Printf.sprintf "Line %d: EasyCrypt query - %s (%d tokens)" line_idx line_trimmed (List.length tokens));
+      | EcOther ->
+        log (fun () -> Printf.sprintf "Line %d: EasyCrypt other - %s (%d tokens)" line_idx line_trimmed (List.length tokens));
+    )
+  ) lines;
+  
+  let total_tokens = List.length !semantic_tokens in
+  log (fun () -> Printf.sprintf "EasyCrypt analysis complete: %d definitions, %d tactics, %d modules, %d semantic tokens"
+    !sentence_stats.definitions !sentence_stats.tactics !sentence_stats.modules total_tokens);
+  
+  (* Return semantic tokens for notification *)
+  !semantic_tokens
+
 (* TODO: 🎯 Phase 8.3.1: Document Symbols will be implemented when LSP library supports it *)
 
 (* Copy VSRocq dispatch functions exactly, adapted for EasyCrypt *)
-and dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t -> (a, error) result * events =
+let rec dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t -> (a, error) result * events =
   fun id req ->
   match req with
   | Initialize params ->
@@ -245,7 +341,7 @@ and dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t -> (a,
     let result, events = textDocumentCompletion id params in result, events
   | TextDocumentHover params ->
     let result, events = textDocumentHover id params in result, events
-  (* TODO: Add DocumentSymbol support when LSP library is updated *)
+  (* TODO: Add DocumentSymbol and SemanticTokens support when LSP library is updated *)
   | UnknownRequest _ | _  -> Error ({message="Received unknown request"; code=None}), []
 
 and dispatch_request : type a. Jsonrpc.Id.t -> a Request.Client.t -> (a, error) result * events =
@@ -284,6 +380,58 @@ let output_json obj =
   flush stdout;
   log (fun () -> "stdout flushed")
 
+(* Custom semantic highlighting notification sender *)
+let send_semantic_highlighting_notification uri tokens =
+  log (fun () -> Printf.sprintf "Sending semantic highlighting notification for %s with %d tokens" uri (List.length tokens));
+  
+  (* Send debug message to client first *)
+  let debug_msg = Printf.sprintf "Server: About to send %d semantic tokens via vsec/semanticHighlighting" (List.length tokens) in
+  let debug_notification = `Assoc [
+    ("jsonrpc", `String "2.0");
+    ("method", `String "window/logMessage");
+    ("params", `Assoc [
+      ("type", `Int 3);
+      ("message", `String debug_msg);
+    ]);
+  ] in
+  output_json debug_notification;
+  
+  (* Convert tokens to JSON-serializable format *)
+  let tokens_json = List.map (fun token ->
+    `Assoc [
+      ("line", `Int token.line);
+      ("startChar", `Int token.start_char);
+      ("length", `Int token.length);
+      ("tokenType", `String token.token_type);
+      ("classification", `String token.classification);
+    ]
+  ) tokens in
+  
+  let notification_params = `Assoc [
+    ("uri", `String uri);
+    ("tokens", `List tokens_json);
+  ] in
+  
+  let notification = `Assoc [
+    ("jsonrpc", `String "2.0");
+    ("method", `String "vsec/semanticHighlighting");
+    ("params", notification_params);
+  ] in
+  
+  output_json notification;
+  
+  (* Send confirmation message *)
+  let confirm_msg = "Server: vsec/semanticHighlighting notification sent" in
+  let confirm_notification = `Assoc [
+    ("jsonrpc", `String "2.0");
+    ("method", `String "window/logMessage");
+    ("params", `Assoc [
+      ("type", `Int 3);
+      ("message", `String confirm_msg);
+    ]);
+  ] in
+  output_json confirm_notification
+
 (* Copy VSRocq document functions, adapted for EasyCrypt *)
 let open_new_document uri text =
   log (fun () -> ("Opening new document: " ^ (Lsp.Types.DocumentUri.to_path uri)));
@@ -303,9 +451,63 @@ let open_new_document uri text =
 let textDocumentDidOpen params =
   let Lsp.Types.DidOpenTextDocumentParams.{ textDocument = { uri; text } } = params in
   log (fun () -> ("textDocument/didOpen: " ^ (Lsp.Types.DocumentUri.to_path uri)));
+  
+  (* Send debug log to client *)
+  let debug_msg = Printf.sprintf "Server: Processing textDocument/didOpen for %s" (Lsp.Types.DocumentUri.to_path uri) in
+  let debug_notification = `Assoc [
+    ("jsonrpc", `String "2.0");
+    ("method", `String "window/logMessage");
+    ("params", `Assoc [
+      ("type", `Int 3); (* Info level *)
+      ("message", `String debug_msg);
+    ]);
+  ] in
+  output_json debug_notification;
+  
   match Hashtbl.find_opt states (Lsp.Types.DocumentUri.to_path uri) with
   | None -> 
     log (fun () -> "Document not found, opening new");
+    (* 🎯 Enhanced EasyCrypt Semantic Analysis *)
+    log (fun () -> "Analyzing EasyCrypt syntax for enhanced highlighting");
+    
+    (* Send analysis log to client *)
+    let analysis_msg = "Server: Starting EasyCrypt semantic analysis" in
+    let analysis_notification = `Assoc [
+      ("jsonrpc", `String "2.0");
+      ("method", `String "window/logMessage");
+      ("params", `Assoc [
+        ("type", `Int 3); (* Info level *)
+        ("message", `String analysis_msg);
+      ]);
+    ] in
+    output_json analysis_notification;
+    
+    let semantic_tokens = analyze_easycrypt_document_syntax (Lsp.Types.DocumentUri.to_string uri) text in
+    (* Send semantic highlighting notification *)
+    if List.length semantic_tokens > 0 then (
+      let token_msg = Printf.sprintf "Server: Generated %d semantic tokens, sending to client" (List.length semantic_tokens) in
+      let token_notification = `Assoc [
+        ("jsonrpc", `String "2.0");
+        ("method", `String "window/logMessage");
+        ("params", `Assoc [
+          ("type", `Int 3); (* Info level *)
+          ("message", `String token_msg);
+        ]);
+      ] in
+      output_json token_notification;
+      send_semantic_highlighting_notification (Lsp.Types.DocumentUri.to_string uri) semantic_tokens
+    ) else (
+      let no_token_msg = "Server: No semantic tokens generated" in
+      let no_token_notification = `Assoc [
+        ("jsonrpc", `String "2.0");
+        ("method", `String "window/logMessage");
+        ("params", `Assoc [
+          ("type", `Int 2); (* Warning level *)
+          ("message", `String no_token_msg);
+        ]);
+      ] in
+      output_json no_token_notification
+    );
     open_new_document uri text
   | Some { st } ->
     log (fun () -> "Document already exists");
@@ -365,6 +567,8 @@ let handle_lsp_event = function
           log (fun () -> "ui request: " ^ req.method_);
           log (fun () -> "Request ID present");
           log (fun () -> "About to call Request.Client.t_of_jsonrpc");
+          (* DEBUG: Add more logging *)
+          log (fun () -> "DEBUG: Starting request decode");
           let decode_result = try
             Request.Client.t_of_jsonrpc req
           with 
@@ -398,7 +602,9 @@ let handle_lsp_event = function
       | Notification notif ->
           log (fun () -> "ui notification");
           begin match Lsp.Client_notification.of_jsonrpc notif with
-          | Ok (TextDocumentDidOpen params) -> textDocumentDidOpen params
+          | Ok (TextDocumentDidOpen params) -> 
+            log (fun () -> "Processing TextDocumentDidOpen notification");
+            textDocumentDidOpen params
           | Ok (TextDocumentDidChange params) -> textDocumentDidChange params
           | Ok (TextDocumentDidClose params) -> textDocumentDidClose params
           | Ok (Initialized) -> 
