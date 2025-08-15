@@ -1,0 +1,336 @@
+{
+  "name": "vsec-easycrypt",
+  "displayName": "VsEc - EasyCrypt Language Support",
+  "description": "Complete interactive proving environment for EasyCrypt with VSCoq-style proof navigation, intelligent completion, and advanced proof search",
+  "version": "0.1.0",
+  "publisher": "vsec",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "easycrypt",
+    "cryptography",
+    "proof assistant",
+    "formal verification",
+    "semantic highlighting"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "easycrypt",
+        "aliases": [
+          "EasyCrypt",
+          "easycrypt"
+        ],
+        "extensions": [
+          ".ec",
+          ".eca"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "easycrypt",
+        "scopeName": "source.easycrypt",
+        "path": "./syntaxes/easycrypt.tmLanguage.json"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "EasyCrypt configuration",
+        "type": "object",
+        "properties": {
+          "vsec-language-server.trace.server": {
+            "scope": "window",
+            "type": "string",
+            "enum": [
+              "off",
+              "messages",
+              "compact",
+              "verbose"
+            ],
+            "default": "off",
+            "description": "Traces the communication between VS Code and the language server."
+          },
+          "vsec.path": {
+            "type": "string",
+            "default": "",
+            "description": "Path to vsec-lsp."
+          },
+          "vsec.args": {
+            "type": "array",
+            "default": [],
+            "description": "vsec-lsp arguments"
+          },
+          "vsec.proof.lastExecutedHighlight": {
+            "type": "boolean",
+            "default": true,
+            "description": "Highlight the last executed proof range in the editor"
+          }
+        }
+      },
+      {
+        "title": "Semantic Highlighting",
+        "type": "object",
+        "properties": {
+          "vsec.enableSemanticHighlighting": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable semantic highlighting (requires language server)"
+          },
+          "vsec.throttle.proofViewMs": {
+            "type": "number",
+            "default": 50,
+            "minimum": 0,
+            "description": "Minimum delay in milliseconds between proof view updates in the goal panel"
+          }
+        }
+      }
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "keyword",
+        "description": "EasyCrypt keywords (lemma, theorem, proof, etc.)"
+      },
+      {
+        "id": "tactic",
+        "description": "EasyCrypt tactics (trivial, apply, rewrite, etc.)"
+      },
+      {
+        "id": "module",
+        "description": "Module names and references"
+      },
+      {
+        "id": "theory",
+        "description": "Theory names and references"
+      },
+      {
+        "id": "operator",
+        "description": "User-defined operators"
+      },
+      {
+        "id": "predicate",
+        "description": "User-defined predicates"
+      },
+      {
+        "id": "goal",
+        "description": "Current proof goal"
+      },
+      {
+        "id": "hypothesis",
+        "description": "Proof hypothesis"
+      }
+    ],
+    "semanticTokenModifiers": [
+      {
+        "id": "local",
+        "description": "Local scope identifier"
+      },
+      {
+        "id": "global",
+        "description": "Global scope identifier"
+      },
+      {
+        "id": "imported",
+        "description": "Imported from another module"
+      },
+      {
+        "id": "proof",
+        "description": "In proof context"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vsec.restart",
+        "title": "Restart Language Server",
+        "category": "VsEc"
+      },
+      {
+        "command": "vsec.showGoalPanel",
+        "title": "Show Goal Panel",
+        "category": "VsEc",
+        "icon": "$(target)"
+      },
+      {
+        "command": "vsec.stepForward",
+        "title": "Step Forward",
+        "category": "VsEc",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "vsec.stepBackward",
+        "title": "Step Backward",
+        "category": "VsEc",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "vsec.interpretToPoint",
+        "title": "Interpret to Current Position",
+        "category": "VsEc",
+        "icon": "$(debug-step-into)"
+      },
+      {
+        "command": "vsec.interpretToEnd",
+        "title": "Interpret to End",
+        "category": "VsEc",
+        "icon": "$(debug-step-out)"
+      },
+      {
+        "command": "vsec.proofSearch",
+        "title": "Proof Search & Discovery",
+        "category": "VsEc",
+        "icon": "$(search-fuzzy)"
+      },
+      {
+        "command": "vsec.checkProof",
+        "title": "Check Proof",
+        "category": "VsEc",
+        "icon": "$(check)"
+      },
+      {
+        "command": "vsec.killEasyCrypt",
+        "title": "Kill EasyCrypt Process",
+        "category": "VsEc",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vsec.revertToPrevious",
+        "title": "Revert to Previous Successful Step",
+        "category": "VsEc",
+        "icon": "$(history)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "vsec.stepForward",
+        "key": "ctrl+right",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.stepBackward",
+        "key": "ctrl+left",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.interpretToPoint",
+        "key": "ctrl+end",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.interpretToEnd",
+        "key": "ctrl+shift+end",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.showGoalPanel",
+        "key": "ctrl+shift+g",
+        "when": "resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.proofSearch",
+        "key": "ctrl+shift+f",
+        "when": "resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.killEasyCrypt",
+        "key": "ctrl+shift+k",
+        "when": "resourceExtname == .ec"
+      },
+      {
+        "command": "vsec.revertToPrevious",
+        "key": "ctrl+alt+left",
+        "when": "editorTextFocus && resourceExtname == .ec"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceExtname == .ec",
+          "command": "vsec.interpretToPoint",
+          "group": "1_modification"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vsec",
+          "title": "VsEc",
+          "icon": "$(beaker)"
+        }
+      ]
+    },
+    "views": {
+      "vsec": [
+        {
+          "id": "vsec.proofControls",
+          "name": "Proof Controls"
+        },
+        {
+          "id": "vsec.tools",
+          "name": "Tools"
+        },
+        {
+          "id": "vsec.actions",
+          "name": "Actions"
+        }
+      ]
+    }
+  },
+  "activationEvents": [
+    "onLanguage:easycrypt",
+    "onCommand:vsec.restart",
+    "onCommand:vsec.showGoalPanel",
+    "onCommand:vsec.interpretToPoint",
+    "onCommand:vsec.interpretToEnd",
+    "onCommand:vsec.stepBackward",
+    "onCommand:vsec.stepForward",
+    "onCommand:vsec.proofSearch",
+    "onCommand:vsec.checkProof",
+    "onCommand:vsec.killEasyCrypt",
+    "onCommand:vsec.revertToPrevious",
+    "onView:vsec.proofControls",
+    "onView:vsec.tools",
+    "onCommand:vsec.sanityCheck",
+    "onView:vsec.actions"
+  ],
+  "scripts": {
+    "vscode:prepublish-disabled": "npm run package-prep",
+    "compile": "webpack",
+    "compile-tsc": "tsc -p ./",
+    "watch": "webpack --watch",
+    "watch-tsc": "tsc -watch -p ./",
+    "build-binaries": "node scripts/build-binaries.js",
+    "build-all-platforms": "node scripts/build-all-platforms.js",
+    "package-prep": "npm run build-binaries && npm run compile",
+    "pretest": "npm run compile-tsc",
+    "test": "node ./dist/tests/runTests.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.126",
+    "@types/vscode": "^1.74.0",
+    "@types/which": "^3.0.4",
+    "@types/glob": "^8.1.0",
+    "@vscode/vsce": "^2.32.0",
+    "@types/mocha": "^10.0.6",
+    "@vscode/test-electron": "^2.4.0",
+    "mocha": "^10.7.3",
+    "glob": "^10.3.12",
+    "ts-loader": "^9.5.2",
+    "typescript": "^4.9.4",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0",
+    "which": "^5.0.0"
+  }
+}

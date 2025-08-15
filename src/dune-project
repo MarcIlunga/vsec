@@ -1,0 +1,5 @@
+(lang dune 3.5)
+(name vsec-language-server)
+(license MIT)
+(authors "The EasyCrypt development team")
+(source (github MarcIlunga/vsec))

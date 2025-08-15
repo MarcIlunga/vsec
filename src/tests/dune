@@ -1,0 +1,8 @@
+(library
+  (name tests)
+  (modules test_adapter test_menhir_incremental test_ec_prog test_outline_from_ast test_pg_compat)
+  (libraries base dm lsp easycrypt.ecLib)
+  (flags -rectypes)
+  (preprocess
+    (pps ppx_sexp_conv ppx_inline_test ppx_assert))
+  (inline_tests))

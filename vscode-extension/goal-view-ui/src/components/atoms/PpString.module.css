@@ -1,0 +1,104 @@
+.Message {
+    margin-top: 12px;
+    width: 100%;
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
+}
+
+.Error {
+    color: var(--vscode-errorForeground);
+}
+
+.Warning {
+    color: var(--vscode-editorWarning-foreground);
+}
+
+.Info {
+    color: var(--vscode-editorInfo-foreground);
+}
+
+.Hint {
+    color: var(--vscode-editorInlayHint-foreground);
+}
+
+.Goal {
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
+    color: var(--vscode-editor-foreground);
+    white-space: pre-wrap;
+    width: 100%;
+    margin-top: 6px;
+}
+  
+.Hypothesis {
+    list-style: none;
+    font-family: var(--vscode-editor-font-family);
+    font-weight: var(--vscode-editor-font-weight);
+    font-size: var(--vscode-editor-font-size);
+    display: flex;
+    white-space: pre-wrap;
+}
+
+.IdentifierBlock {
+    width: max-content;
+    display: flex;
+}
+
+.Identifier {
+    color: var(--vscode-symbolIcon-variableForeground);
+}
+
+.Separator {
+    color: var(--vscode-symbolIcon-operatorForeground);
+    margin-right: 1ex;
+    margin-left: 3pt;
+}
+
+.Content {
+    color: var(--vscode-editor-foreground);
+}
+
+/* EasyCrypt syntax highlighting */
+.constr-notation {
+  color: var(--vscode-symbolIcon-operatorForeground);
+}
+.constr-keyword {
+  color: var(--vscode-symbolIcon-keywordForeground);
+}
+.constr-variable {
+  color: var(--vscode-symbolIcon-variableForeground);
+}
+.constr-type {
+  color: var(--vscode-symbolIcon-typeForeground);
+}
+.constr-reference {
+  color: var(--vscode-symbolIcon-referenceForeground);
+}
+.message-debug {
+  color: var(--vscode-debugConsole-infoForeground);
+}
+.message-error {
+  color: var(--vscode-errorForeground);
+  text-decoration: underline;
+}
+.message-warning {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.diff-added {
+  background-color: var(--vscode-diffEditor-insertedTextBackground);
+  text-decoration: underline;
+}
+
+.diff-added-bg {
+  background-color: var(--vscode-diffEditor-insertedLineBackground);
+}
+
+.diff-removed {
+  background-color: var(--vscode-diffEditor-removedTextBackground);
+  text-decoration: line-through;
+}
+
+.diff-removed-bg {
+  background-color: var(--vscode-diffEditor-removedLineBackground);
+}

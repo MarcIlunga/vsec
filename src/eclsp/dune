@@ -1,0 +1,8 @@
+(executable
+ (name ecLsp)
+ (public_name vsec-lsp)
+ (modules ecLsp lspManager)
+ (flags -linkall -rectypes)
+ (package vsec-language-server)
+ (libraries sel yojson lsp jsonrpc protocol dm easycrypt.ecLib)
+)

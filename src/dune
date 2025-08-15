@@ -1,0 +1,6 @@
+(alias
+   (name default)
+    (deps vsec-language-server.install))
+(env
+ (dev     (flags :standard -w -9 -w -27 -w -32 -w -37))
+ (release     (flags :standard -w -9 -w -27 -w -32 -w -37)))

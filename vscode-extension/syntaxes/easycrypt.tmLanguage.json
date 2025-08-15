@@ -1,0 +1,141 @@
+{
+  "name": "EasyCrypt",
+  "scopeName": "source.easycrypt",
+  "fileTypes": ["ec", "eca"],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#tactics"
+    },
+    {
+      "include": "#numbers"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.easycrypt",
+          "begin": "\\(\\*",
+          "end": "\\*\\)",
+          "patterns": [
+            {
+              "include": "#comments"
+            }
+          ]
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.easycrypt",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.easycrypt",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(lemma|theorem|axiom)\\s+((\\p{L}|[_])(\\p{L}|[0-9_'])*)",
+          "comment": "Theorem/Lemma declarations with names",
+          "captures": {
+            "1": {
+              "name": "keyword.source.easycrypt"
+            },
+            "2": {
+              "name": "entity.name.function.theorem.easycrypt"
+            }
+          }
+        },
+        {
+          "name": "keyword.source.easycrypt",
+          "match": "\\b(proof|qed|by)\\b"
+        },
+        {
+          "name": "keyword.control.import.easycrypt",
+          "match": "\\b(require|import|open|export|clone)\\b"
+        },
+        {
+          "name": "keyword.control.module.easycrypt",
+          "match": "\\b(module|theory|section|end)\\b"
+        },
+        {
+          "name": "keyword.declaration.easycrypt",
+          "match": "\\b(type|op|pred|declare|var|proc|fun)\\b"
+        },
+        {
+          "name": "keyword.control.easycrypt",
+          "match": "\\b(while|if|then|else|return|let|in|match|case|def|as|with|remove|rename|local)\\b"
+        },
+        {
+          "name": "keyword.logic.easycrypt",
+          "match": "\\b(equiv|hoare|phoare|lossless|islossless|eager)\\b"
+        }
+      ]
+    },
+    "tactics": {
+      "patterns": [
+        {
+          "name": "support.function.tactic.basic.easycrypt",
+          "match": "\\b(trivial|reflexivity|symmetry|transitivity|assumption|exact)\\b"
+        },
+        {
+          "name": "support.function.tactic.application.easycrypt",
+          "match": "\\b(apply|rewrite|unfold|fold)\\b"
+        },
+        {
+          "name": "support.function.tactic.structural.easycrypt", 
+          "match": "\\b(split|left|right|exists|case|elim|induction|destruct)\\b"
+        },
+        {
+          "name": "support.function.tactic.introduction.easycrypt",
+          "match": "\\b(intro|intros|generalize|clear|move)\\b"
+        },
+        {
+          "name": "support.function.tactic.computation.easycrypt",
+          "match": "\\b(simpl|compute|change|replace)\\b"
+        },
+        {
+          "name": "support.function.tactic.assertion.easycrypt",
+          "match": "\\b(assert|cut|have|suffices|wlog)\\b"
+        },
+        {
+          "name": "support.function.tactic.control.easycrypt",
+          "match": "\\b(progress|first|last|seq)\\b"
+        },
+        {
+          "name": "support.function.tactic.program.easycrypt",
+          "match": "\\b(wp|sp|skip|rnd|swap|cfold|rcondt|rcondf|inline|outline|sim)\\b"
+        },
+        {
+          "name": "support.function.tactic.automation.easycrypt",
+          "match": "\\b(auto|smt)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.easycrypt",
+          "match": "\\b\\d+(\\.\\d*)?([eE][+-]?\\d+)?\\b"
+        }
+      ]
+    }
+  }
+}

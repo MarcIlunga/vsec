@@ -1,0 +1,69 @@
+# Build artifacts
+_build/
+*.install
+*.log
+*.exe
+
+# OCaml/Dune artifacts  
+**/_build/
+**/.merlin-conf/
+*.cmi
+*.cmo
+*.cmx
+*.cmt
+*.cmti
+*.o
+*.a
+*.cma
+*.cmxa
+*.cmxs
+
+# EasyCrypt artifacts
+*.eco
+*.ec#
+*.ec~
+
+# Editor/IDE files
+.vscode/
+.idea/
+*~
+.#*
+\#*#
+.DS_Store
+
+# OPAM/OCaml local installs
+_opam/
+*.opam.locked
+
+# Logs
+*.log
+log.ec
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# VSCode Extension artifacts
+vscode-extension/node_modules/
+vscode-extension/out/
+vscode-extension/dist/
+vscode-extension/*.vsix
+
+# Testing artifacts
+**/test-results/
+**/coverage/
+
+# Nix artifacts (in case we re-add later)
+result
+result-*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# VSec: ignore logs and binaries
+log.out
+vsec-lsp
+goal-view-ui/build/
