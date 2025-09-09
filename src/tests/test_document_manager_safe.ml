@@ -37,6 +37,13 @@ let test_document_manager_access () =
   print_endline ("✓ " ^ module_name ^ " module accessible");
   true
 
+(** Step 4: Test diagnostic creation *)
+let test_diagnostic_creation () =
+  let range = Range.create ~start:(Position.create ~line:0 ~character:0) ~end_:(Position.create ~line:0 ~character:5) in
+  let _diagnostic = Diagnostic.create ~range ~message:(`String "test error") () in
+  print_endline "✓ Diagnostic creation works";
+  true
+
 (* TODO: Add more tests incrementally after this builds *)
 
 (** Run all tests *)
@@ -45,6 +52,7 @@ let run_tests () =
     ("basic_access", test_basic_access);
     ("lsp_types", test_lsp_types);
     ("document_manager_access", test_document_manager_access);
+    ("diagnostic_creation", test_diagnostic_creation);
   ] in
   
   print_endline "🧪 Running DocumentManager tests...";

@@ -17,6 +17,13 @@ let%test_unit "document_manager_init" =
   let _state, _events = Dm.DocumentManager.init scope uri ~text:"" in
   print_endline "✓ DocumentManager.init works"
 
+let%test_unit "execution_manager_init" =
+  (* Test ExecutionManager.init API *)
+  let gstate = EcLib.EcGState.create () in
+  let scope = EcLib.EcScope.empty gstate in
+  let _exec_state, _events = Dm.ExecutionManager.init scope in
+  print_endline "✓ ExecutionManager.init works"
+
 (* TODO: Add more tests step by step:
    - Test sentence creation when ID generation API is clarified
    - Test execution when ExecutionManager.init API is stable  
