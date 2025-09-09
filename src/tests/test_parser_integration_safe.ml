@@ -1,13 +1,14 @@
 (* Safe EasyCrypt parser integration tests *)
 open Base
 open Stdio
+open Dm
 
 (* TODO: Add parser integration tests incrementally as APIs stabilize *)
 
 let%test_unit "basic_document_access" =
-  (* Just test that we can access basic document modules *)
+  (* Test that we can access basic document modules *)
   let text = "" in
-  (* let _raw_doc = RawDocument.create text in -- TODO: Fix when RawDocument API is available *)
+  let _raw_doc = RawDocument.create text in
   print_endline "✓ Parser integration module access works"
 
 (* TODO: Add more tests step by step:

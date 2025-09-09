@@ -9,6 +9,14 @@ let%test_unit "basic_module_access" =
   let _gstate = EcLib.EcGState.create () in
   print_endline "✓ ExecutionEngine module access works"
 
+let%test_unit "document_manager_init" =
+  (* Test DocumentManager.init API *)
+  let gstate = EcLib.EcGState.create () in
+  let scope = EcLib.EcScope.empty gstate in
+  let uri = Lsp.Types.DocumentUri.of_string "file:///test.ec" in
+  let _state, _events = Dm.DocumentManager.init scope uri ~text:"" in
+  print_endline "✓ DocumentManager.init works"
+
 (* TODO: Add more tests step by step:
    - Test sentence creation when ID generation API is clarified
    - Test execution when ExecutionManager.init API is stable  
