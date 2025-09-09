@@ -20,7 +20,7 @@ install-lsp: build
 	@echo "✅ LSP binary installed"
 
 # Run all tests
-test: test-unit test-integration test-e2e
+test: test-unit test-fine-grained test-integration test-e2e
 	@echo "🎉 All tests completed"
 
 # Run OCaml unit tests
@@ -28,6 +28,31 @@ test-unit:
 	@echo "🧪 Running unit tests..."
 	cd src && dune test
 	@echo "✅ Unit tests passed"
+
+# Run specific test modules
+test-document-manager:
+	@echo "📄 Testing DocumentManager..."
+	cd src && dune exec -- tests/test_document_manager.exe
+	@echo "✅ DocumentManager tests passed"
+
+test-execution-manager:
+	@echo "⚙️ Testing ExecutionManager..."
+	cd src && dune exec -- tests/test_execution_manager.exe
+	@echo "✅ ExecutionManager tests passed"
+
+test-lsp-protocol:
+	@echo "🔗 Testing LSP Protocol..."
+	cd src && dune exec -- tests/test_lsp_protocol.exe
+	@echo "✅ LSP Protocol tests passed"
+
+test-proof-state:
+	@echo "🎯 Testing ProofState..."
+	cd src && dune exec -- tests/test_proof_state.exe
+	@echo "✅ ProofState tests passed"
+
+# Run all fine-grained tests
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state
+	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests
 test-integration: build

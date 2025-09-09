@@ -1,7 +1,32 @@
 (library
   (name tests)
-  (libraries base dm lsp easycrypt.ecLib)
+  (libraries base dm lsp easycrypt.ecLib protocol)
   (flags -rectypes)
   (preprocess
     (pps ppx_sexp_conv ppx_inline_test ppx_assert))
   (inline_tests))
+
+; Individual test modules for fine-grained testing
+(executable
+  (public_name run_document_manager_tests)
+  (name test_document_manager)
+  (libraries base dm lsp easycrypt.ecLib)
+  (flags -rectypes))
+
+(executable
+  (public_name run_execution_manager_tests)
+  (name test_execution_manager)
+  (libraries base dm lsp easycrypt.ecLib)
+  (flags -rectypes))
+
+(executable
+  (public_name run_lsp_protocol_tests)
+  (name test_lsp_protocol)
+  (libraries base protocol lsp)
+  (flags -rectypes))
+
+(executable
+  (public_name run_proof_state_tests)
+  (name test_proof_state)
+  (libraries base protocol easycrypt.ecLib)
+  (flags -rectypes))
