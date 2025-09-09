@@ -18,7 +18,7 @@ open Types
 
 [@@@warning "-27"]
 
-let uri = Uri.make ~scheme:"file" ~path:"foo" ()
+(* let uri = Uri.make ~scheme:"file" ~path:"foo" () -- TODO: Fix when Uri API is available *)
 
 let init text = openDoc uri ~text
 

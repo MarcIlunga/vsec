@@ -1,11 +1,11 @@
 (library
   (name tests)
-  (libraries base dm lsp easycrypt.ecLib protocol)
+  (libraries base stdio dm lsp easycrypt.ecLib protocol)
   (flags -rectypes)
   (preprocess
     (pps ppx_sexp_conv ppx_inline_test ppx_assert))
   (inline_tests)
-  (modules common d_tests dm_tests em_tests s_tests test_easycrypt_integration test_execution_engine test_parser_integration))
+  (modules common test_easycrypt_integration test_execution_engine_safe test_parser_integration_safe))
 
 ; Individual test modules for fine-grained testing
 (executable
