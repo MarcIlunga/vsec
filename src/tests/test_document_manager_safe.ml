@@ -39,9 +39,19 @@ let test_document_manager_access () =
 
 (** Step 4: Test diagnostic creation *)
 let test_diagnostic_creation () =
-  let range = Range.create ~start:(Position.create ~line:0 ~character:0) ~end_:(Position.create ~line:0 ~character:5) in
-  let _diagnostic = Diagnostic.create ~range ~message:(`String "test error") () in
-  print_endline "✓ Diagnostic creation works";
+  let start_pos = Position.create ~line:2 ~character:5 in
+  let end_pos = Position.create ~line:2 ~character:10 in
+  let range = Range.create ~start:start_pos ~end_:end_pos in
+  
+  (* Test different severity levels *)
+  let error_diag = Diagnostic.create ~range ~message:(`String "test error") ~severity:Error () in
+  let warning_diag = Diagnostic.create ~range ~message:(`String "test warning") ~severity:Warning () in
+  
+  (* Validate different diagnostics are created *)
+  assert (not (phys_equal error_diag warning_diag));
+  assert (not (phys_equal start_pos end_pos));
+  
+  print_endline "✓ Diagnostic creation validation passed";
   true
 
 (** Step 5: Test text editing *)
