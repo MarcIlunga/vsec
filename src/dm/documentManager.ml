@@ -176,7 +176,7 @@ let mk_diag st (id,(lvl,oloc,qf,msg)) =
     | _qf -> None (* Simplified for EasyCrypt - no quickfix support *)
     in
     let lvl = DiagnosticSeverity.of_feedback_level lvl in
-    make_diagnostic st.document (Document.range_of_id st.document id) oloc msg (DiagnosticSeverity.to_lsp lvl) code
+    make_diagnostic st.document (Document.range_of_id st.document id) oloc (`String msg) (DiagnosticSeverity.to_lsp lvl) code
 
 let mk_error_diag st (id,(oloc,msg,qf)) = (* mk_diag st (id,(Feedback.Error,oloc, msg)) *)
   let code = 
@@ -186,7 +186,7 @@ let mk_error_diag st (id,(oloc,msg,qf)) = (* mk_diag st (id,(Feedback.Error,oloc
     | Some _qf -> None (* Simplified for EasyCrypt - no quickfix support *)
   in
   let lvl = DiagnosticSeverity.of_feedback_level () in (* Simplified for EasyCrypt *)
-  make_diagnostic st.document (Document.range_of_id st.document id) oloc msg (DiagnosticSeverity.to_lsp lvl) code
+  make_diagnostic st.document (Document.range_of_id st.document id) oloc (`String msg) (DiagnosticSeverity.to_lsp lvl) code
 
 
 let mk_parsing_error_diag st Document.{ msg = (oloc,msg); start; stop; str } =
@@ -196,7 +196,7 @@ let mk_parsing_error_diag st Document.{ msg = (oloc,msg); start; stop; str } =
   let end_ = RawDocument.position_of_loc doc stop in
   let range = Range.{ start; end_ } in
   let code = None in (* EasyCrypt doesn't use quickfix *)
-  make_diagnostic st.document range None msg (DiagnosticSeverity.to_lsp severity) code
+  make_diagnostic st.document range None (`String msg) (DiagnosticSeverity.to_lsp severity) code
 
 let all_diagnostics st =
   let parse_errors = Document.parse_errors st.document in

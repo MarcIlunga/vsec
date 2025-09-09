@@ -29,25 +29,25 @@ test-unit:
 	cd src && dune test
 	@echo "✅ Unit tests passed"
 
-# Run specific test modules
+# Run specific test modules (safe versions that build correctly)
 test-document-manager:
 	@echo "📄 Testing DocumentManager..."
-	cd src && dune exec -- tests/test_document_manager.exe
+	cd src && dune exec -- tests/test_document_manager_safe.exe
 	@echo "✅ DocumentManager tests passed"
 
 test-execution-manager:
 	@echo "⚙️ Testing ExecutionManager..."
-	cd src && dune exec -- tests/test_execution_manager.exe
+	cd src && dune exec -- tests/test_execution_manager_safe.exe
 	@echo "✅ ExecutionManager tests passed"
 
 test-lsp-protocol:
 	@echo "🔗 Testing LSP Protocol..."
-	cd src && dune exec -- tests/test_lsp_protocol.exe
+	cd src && dune exec -- tests/test_lsp_protocol_safe.exe
 	@echo "✅ LSP Protocol tests passed"
 
 test-proof-state:
 	@echo "🎯 Testing ProofState..."
-	cd src && dune exec -- tests/test_proof_state.exe
+	cd src && dune exec -- tests/test_proof_state_safe.exe
 	@echo "✅ ProofState tests passed"
 
 # Run all fine-grained tests

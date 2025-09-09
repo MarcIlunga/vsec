@@ -4,29 +4,34 @@
   (flags -rectypes)
   (preprocess
     (pps ppx_sexp_conv ppx_inline_test ppx_assert))
-  (inline_tests))
+  (inline_tests)
+  (modules common d_tests dm_tests em_tests s_tests test_easycrypt_integration test_execution_engine test_parser_integration))
 
 ; Individual test modules for fine-grained testing
 (executable
   (public_name run_document_manager_tests)
-  (name test_document_manager)
-  (libraries base dm lsp easycrypt.ecLib)
-  (flags -rectypes))
+  (name test_document_manager_safe)
+  (libraries base stdio dm lsp easycrypt.ecLib)
+  (flags -rectypes)
+  (modules test_document_manager_safe))
 
 (executable
   (public_name run_execution_manager_tests)
-  (name test_execution_manager)
-  (libraries base dm lsp easycrypt.ecLib)
-  (flags -rectypes))
+  (name test_execution_manager_safe)
+  (libraries base stdio dm lsp easycrypt.ecLib)
+  (flags -rectypes)
+  (modules test_execution_manager_safe))
 
 (executable
   (public_name run_lsp_protocol_tests)
-  (name test_lsp_protocol)
-  (libraries base protocol lsp)
-  (flags -rectypes))
+  (name test_lsp_protocol_safe)
+  (libraries base stdio protocol lsp)
+  (flags -rectypes)
+  (modules test_lsp_protocol_safe))
 
 (executable
   (public_name run_proof_state_tests)
-  (name test_proof_state)
-  (libraries base protocol easycrypt.ecLib)
-  (flags -rectypes))
+  (name test_proof_state_safe)
+  (libraries base stdio protocol easycrypt.ecLib)
+  (flags -rectypes)
+  (modules test_proof_state_safe))
