@@ -15,11 +15,13 @@ let trdeps doc s1 =
   trclose (Scheduler.dependents (Document.schedule doc)) (StateidSet.singleton s1.id)
 *)
 
-(* let uri = Uri.make ~scheme:"file" ~path:"foo" () -- TODO: Fix when Uri API is available *)
+let uri = Lsp.Types.DocumentUri.of_string "file:///foo.ec"
 
-(* TODO: Fix when Uri and openDoc APIs are available
+(* TODO: Fix test macros and StateidSet->SentenceIdSet conversion 
 let %test_unit "document: invalidate top" =
-  let dm, _ = openDoc uri ~text:"Definition x := 3. Lemma foo : x = 3. Proof. reflexivity. Qed." in
+  let gstate = EcLib.EcGState.create () in
+  let scope = EcLib.EcScope.empty gstate in
+  let dm, _ = DocumentManager.init scope uri ~text:"Definition x := 3. Lemma foo : x = 3. Proof. reflexivity. Qed." in
   let doc = DocumentManager.Internal.document dm in
   let invalid, doc = Document.validate_document doc in
   [%test_eq: sentence_id list] [] (StateidSet.elements invalid);
@@ -41,7 +43,9 @@ let %test_unit "document: invalidate top" =
 *)
 
 let %test_unit "document: invalidate proof" =
-  let dm, _ = openDoc uri ~text:"Definition x := 3. Lemma foo : x = 3. Proof. reflexivity. Qed." in
+  let gstate = EcLib.EcGState.create () in
+  let scope = EcLib.EcScope.empty gstate in
+  let dm, _ =  DocumentManager.init scope uri ~text:"Definition x := 3. Lemma foo : x = 3. Proof. reflexivity. Qed." in
   let doc = DocumentManager.Internal.document dm in
   let invalid, doc = Document.validate_document doc in
   [%test_eq: sentence_id list] [] (StateidSet.elements invalid);
