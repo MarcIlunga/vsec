@@ -25,16 +25,56 @@ let test_basic_access () =
 
 (** Step 2: Test basic LSP types *)
 let test_lsp_types () =
-  let _position = Position.create ~line:0 ~character:0 in
-  let _uri = DocumentUri.of_string "file:///test.ec" in
-  print_endline "✓ LSP types work";
+  let position1 = Position.create ~line:5 ~character:10 in
+  let position2 = Position.create ~line:5 ~character:15 in
+  let uri = DocumentUri.of_string "file:///test.ec" in
+  let range = Range.create ~start:position1 ~end_:position2 in
+  
+  (* Validate URI conversion works *)
+  let path = DocumentUri.to_path uri in
+  assert (String.is_suffix path ~suffix:"test.ec");
+  
+  (* Test that we can create different positions *)
+  assert (not (phys_equal position1 position2));
+  
+  (* Test that range is a different type/object *)
+  let range2 = Range.create ~start:position2 ~end_:position1 in
+  assert (not (phys_equal range range2));
+  
+  (* Test URI string conversion *)
+  let uri_string = DocumentUri.to_string uri in
+  assert (String.is_prefix uri_string ~prefix:"file:///");
+  
+  print_endline "✓ LSP types validation passed";
   true
 
 (** Step 3: Test completion items creation *)
 let test_completion_items () =
-  let item = CompletionItem.create ~label:"test_completion" () in
-  let _items = [item] in
-  print_endline "✓ Completion items creation works";
+  let item1 = CompletionItem.create ~label:"test_completion" () in
+  let item2 = CompletionItem.create ~label:"another_completion" () in
+  let items = [item1; item2] in
+  
+  (* Validate CompletionItem list operations *)
+  assert (List.length items = 2);
+  assert (not (List.is_empty items));
+  assert (not (phys_equal item1 item2));
+  
+  print_endline "✓ Completion items validation passed";
+  true
+
+(** Step 4: Test hover creation *)
+let test_hover_creation () =
+  let content = MarkupContent.create ~kind:PlainText ~value:"test hover" in
+  let _hover = Hover.create ~contents:(`MarkupContent content) () in
+  print_endline "✓ Hover creation works";
+  true
+
+(** Step 5: Test location for goto definition *)
+let test_location_creation () =
+  let uri = DocumentUri.of_string "file:///test.ec" in
+  let range = Range.create ~start:(Position.create ~line:0 ~character:0) ~end_:(Position.create ~line:0 ~character:5) in
+  let _location = Location.create ~uri ~range in
+  print_endline "✓ Location creation works";
   true
 
 (* TODO: Add Protocol module access step by step *)
