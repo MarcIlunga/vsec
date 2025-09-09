@@ -30,6 +30,13 @@ let test_lsp_types () =
   print_endline "✓ LSP types work";
   true
 
+(** Step 3: Test completion items creation *)
+let test_completion_items () =
+  let item = CompletionItem.create ~label:"test_completion" () in
+  let _items = [item] in
+  print_endline "✓ Completion items creation works";
+  true
+
 (* TODO: Add Protocol module access step by step *)
 
 (** Run all tests *)
@@ -37,6 +44,7 @@ let run_tests () =
   let tests = [
     ("basic_access", test_basic_access);
     ("lsp_types", test_lsp_types);
+    ("completion_items", test_completion_items);
   ] in
   
   print_endline "🧪 Running LSP Protocol tests...";

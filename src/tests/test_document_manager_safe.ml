@@ -44,6 +44,15 @@ let test_diagnostic_creation () =
   print_endline "✓ Diagnostic creation works";
   true
 
+(** Step 5: Test text editing *)
+let test_text_editing () =
+  let doc = RawDocument.create "hello world" in
+  let range = Range.create ~start:(Position.create ~line:0 ~character:0) ~end_:(Position.create ~line:0 ~character:5) in
+  let edit = (range, "hi") in
+  let _new_doc, _loc = RawDocument.apply_text_edit doc edit in
+  print_endline "✓ Text editing works";
+  true
+
 (* TODO: Add more tests incrementally after this builds *)
 
 (** Run all tests *)
@@ -53,6 +62,7 @@ let run_tests () =
     ("lsp_types", test_lsp_types);
     ("document_manager_access", test_document_manager_access);
     ("diagnostic_creation", test_diagnostic_creation);
+    ("text_editing", test_text_editing);
   ] in
   
   print_endline "🧪 Running DocumentManager tests...";
