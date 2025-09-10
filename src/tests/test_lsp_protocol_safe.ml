@@ -34,6 +34,20 @@ let test_lsp_types () =
   let path = DocumentUri.to_path uri in
   assert (String.is_suffix path ~suffix:"test.ec");
   
+  (* Enhanced URI validation *)
+  let uri_string = DocumentUri.to_string uri in
+  assert (String.is_prefix uri_string ~prefix:"file:///");
+  assert (String.is_substring uri_string ~substring:"test.ec");
+  
+  (* Test different URI formats *)
+  let windows_uri = DocumentUri.of_string "file:///C:/Users/test/file.ec" in
+  let windows_path = DocumentUri.to_path windows_uri in
+  assert (String.is_suffix windows_path ~suffix:"file.ec");
+  
+  let relative_uri = DocumentUri.of_string "file:///home/user/project/main.ec" in
+  let relative_path = DocumentUri.to_path relative_uri in
+  assert (String.is_substring relative_path ~substring:"main.ec");
+  
   (* Test that we can create different positions *)
   assert (not (phys_equal position1 position2));
   

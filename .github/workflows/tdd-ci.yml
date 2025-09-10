@@ -1,0 +1,79 @@
+name: TDD Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: 4.14.x
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+        
+    - name: Install OCaml dependencies
+      run: |
+        opam install --deps-only src/vsec-language-server.opam
+        
+    - name: Build LSP server
+      run: make build
+      
+    - name: Run unit tests
+      run: make test-unit
+      
+    - name: Run fine-grained tests
+      run: make test-fine-grained
+      
+    - name: Run integration tests
+      run: make test-integration
+      
+    - name: Run end-to-end tests
+      run: make test-e2e
+      
+    - name: Run smoke test
+      run: make smoke-test
+      
+    - name: Generate coverage report
+      run: make coverage
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./src/_build/coverage
+        
+  performance:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: 4.14.x
+        
+    - name: Install dependencies and build
+      run: |
+        opam install --deps-only src/vsec-language-server.opam
+        make build
+        
+    - name: Run performance tests
+      run: make test-performance
+      
+    - name: Performance regression check
+      run: |
+        echo "Performance regression checking not yet implemented"
+        # Will compare with baseline metrics
