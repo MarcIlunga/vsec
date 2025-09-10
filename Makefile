@@ -93,7 +93,12 @@ test-integration: build
 test-lsp-framing: build
 	@echo "🔍 Running LSP framing vulnerability tests..."
 	cd tests/integration && python3 test_lsp_framing_vulnerabilities.py
-	@echo "✅ Integration tests passed"
+
+# Run JSON-RPC validation tests
+test-jsonrpc-validation: build
+	@echo "🔍 Running JSON-RPC validation tests..."
+	cd tests/integration && python3 test_jsonrpc_validation.py
+	@echo "✅ JSON-RPC validation tests passed"
 
 # Run end-to-end tests with EasyCrypt files
 test-e2e: build
