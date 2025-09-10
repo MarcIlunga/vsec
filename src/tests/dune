@@ -35,3 +35,10 @@
   (libraries base stdio protocol easycrypt.ecLib)
   (flags -rectypes)
   (modules test_proof_state_safe))
+
+(executable
+  (public_name run_scheduler_tests)
+  (name test_scheduler_safe)
+  (libraries base stdio dm easycrypt.ecLib)
+  (flags -rectypes)
+  (modules test_scheduler_safe))

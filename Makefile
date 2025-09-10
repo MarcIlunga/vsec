@@ -50,8 +50,13 @@ test-proof-state:
 	cd src && dune exec -- tests/test_proof_state_safe.exe
 	@echo "✅ ProofState tests passed"
 
+test-scheduler:
+	@echo "⏰ Testing Scheduler..."
+	cd src && dune exec -- tests/test_scheduler_safe.exe
+	@echo "✅ Scheduler tests passed"
+
 # Run all fine-grained tests
-test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler
 	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests
