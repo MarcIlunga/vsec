@@ -70,8 +70,13 @@ test-multi-document:
 	cd src && dune exec -- tests/test_multi_document_safe.exe
 	@echo "✅ Multi-Document tests passed"
 
+test-lsp-text-changes:
+	@echo "🔍 Testing LSP Text Changes Vulnerabilities..."
+	cd src && dune exec -- tests/test_lsp_text_changes_safe.exe
+	@echo "✅ LSP Text Changes tests passed"
+
 # Run all fine-grained tests
-test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes
 	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests
