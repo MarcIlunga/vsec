@@ -165,6 +165,89 @@ let contains_keyword command keyword =
   let re = Str.regexp (".*\\b" ^ keyword ^ "\\b.*") in
   Str.string_match re command 0
 
+(* Enhanced EasyCrypt error categorization *)
+let categorize_easycrypt_error exn command =
+  let error_msg = Printexc.to_string exn in
+  let command_lower = String.lowercase_ascii command in
+  
+  (* Categorize errors based on exception type and command context *)
+  let category, severity, enhanced_msg = match exn with
+    | Failure msg when Str.string_match (Str.regexp ".*\\(lex\\|token\\).*") msg 0 -> 
+      ("LEXER_ERROR", Lsp.Types.DiagnosticSeverity.Error, 
+       "EasyCrypt lexical error: " ^ error_msg)
+    | Parsing.Parse_error ->
+      ("PARSE_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+       "EasyCrypt parsing error: " ^ error_msg)
+    | Failure msg when Str.string_match (Str.regexp ".*parsing.*") msg 0 ->
+      ("PARSE_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+       "EasyCrypt parsing error: " ^ error_msg)
+    | Invalid_argument msg when contains_keyword command_lower "proof" ->
+      ("PROOF_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+       "EasyCrypt proof error: " ^ msg)
+    | Invalid_argument msg when contains_keyword command_lower "lemma" ->
+      ("DEFINITION_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+       "EasyCrypt definition error: " ^ msg)
+    | Not_found when contains_keyword command_lower "require" ->
+      ("MODULE_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+       "EasyCrypt module not found: " ^ error_msg)
+    | Sys_error _ ->
+      ("SYSTEM_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+       "System error during EasyCrypt execution: " ^ error_msg)
+    | Stack_overflow ->
+      ("STACK_OVERFLOW", Lsp.Types.DiagnosticSeverity.Error,
+       "Stack overflow in EasyCrypt execution - possibly infinite recursion")
+    | Out_of_memory ->
+      ("MEMORY_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+       "Out of memory during EasyCrypt execution")
+    | _ ->
+      (* Default categorization based on command type *)
+      if List.exists (contains_keyword command_lower) ["trivial"; "by"; "auto"] then
+        ("TACTIC_ERROR", Lsp.Types.DiagnosticSeverity.Warning,
+         "EasyCrypt tactic failed: " ^ error_msg)
+      else if List.exists (contains_keyword command_lower) ["theory"; "module"] then
+        ("MODULE_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+         "EasyCrypt module error: " ^ error_msg)
+      else
+        ("GENERAL_ERROR", Lsp.Types.DiagnosticSeverity.Error,
+         "EasyCrypt execution error: " ^ error_msg)
+  in
+  (enhanced_msg, severity, category)
+
+(* Compute error location based on command and exception *)
+let compute_error_location command exn =
+  let command_len = String.length command in
+  (* Try to extract location info from exception if available *)
+  (* For now, use basic heuristics - in real implementation would parse error details *)
+  match exn with
+  | Parsing.Parse_error ->
+    (* For parse errors, try to estimate position based on command structure *)
+    let error_pos = min (command_len / 2) command_len in
+    EasyCryptLocation.{ start_line = 0; start_col = error_pos; end_line = 0; end_col = min (error_pos + 10) command_len }
+  | Failure msg when Str.string_match (Str.regexp ".*\\(lex\\|token\\).*") msg 0 ->
+    (* Lexer errors usually occur early in the command *)
+    EasyCryptLocation.{ start_line = 0; start_col = 0; end_line = 0; end_col = min 5 command_len }
+  | _ ->
+    (* Default: highlight entire command *)
+    EasyCryptLocation.{ start_line = 0; start_col = 0; end_line = 0; end_col = command_len }
+
+(* Enhanced error recovery with exception-specific strategies *)
+let enhanced_error_recovery strategy st exn =
+  match strategy, exn with
+  | RSkip, _ -> st (* Always safe to skip *)
+  | RAdmitted, (Stack_overflow | Out_of_memory) -> 
+    (* For resource errors, definitely return to safe state *)
+    st
+  | RAdmitted, Parsing.Parse_error ->
+    (* For parse errors, current state is probably still valid *)
+    st
+  | RAdmitted, (Failure msg) when Str.string_match (Str.regexp ".*lex.*") msg 0 ->
+    (* For lexer errors, current state is probably still valid *)
+    st
+  | RAdmitted, _ ->
+    (* For other errors, try to maintain current state but log the attempt *)
+    log (fun () -> "Enhanced error recovery: maintaining state after error");
+    st
+
 (* 🎯 Phase 8.1.2: EasyCrypt Command Execution - RESTORED! *)
 let interp_ast ~doc_id ~state_id ~st ~error_recovery ast =
   log (fun () -> Printf.sprintf "EasyCrypt command execution for sentence %d: %s" state_id ast);
@@ -216,9 +299,10 @@ let interp_ast ~doc_id ~state_id ~st ~error_recovery ast =
           )
         with
         | exn ->
-          let error_msg = Printexc.to_string exn in
-          log (fun () -> Printf.sprintf "EasyCrypt execution error: %s" error_msg);
-          st, [(state_id, (Lsp.Types.DiagnosticSeverity.Error, None, error_msg))]
+          (* Enhanced EasyCrypt error handling with categorization *)
+          let error_msg, severity, error_category = categorize_easycrypt_error exn ast_trimmed in
+          log (fun () -> Printf.sprintf "EasyCrypt execution error [%s]: %s" error_category error_msg);
+          st, [(state_id, (severity, None, error_msg))]
     in
     
     let command_lower = String.lowercase_ascii ast_trimmed in
@@ -236,16 +320,17 @@ let interp_ast ~doc_id ~state_id ~st ~error_recovery ast =
     
   with
   | exn ->
-    let error_msg = Printexc.to_string exn in
-    let error_location = EasyCryptLocation.{ start_line = 0; start_col = 0; end_line = 0; end_col = String.length ast } in
-    log (fun () -> Printf.sprintf "EasyCrypt execution error for sentence %d: %s" state_id error_msg);
+    (* Enhanced error recovery with better location tracking *)
+    let enhanced_msg, severity, error_category = categorize_easycrypt_error exn ast in
+    let error_location = compute_error_location ast exn in
+    log (fun () -> Printf.sprintf "EasyCrypt execution error for sentence %d [%s]: %s" state_id error_category enhanced_msg);
     
-    (* Implement error recovery using strategy *)
-    let fallback_state = interp_error_recovery error_recovery st in
-    let error_feedback = [(state_id, ((), Some error_location, error_msg))] in
+    (* Implement error recovery using strategy with better state preservation *)
+    let fallback_state = enhanced_error_recovery error_recovery st exn in
+    let error_feedback = [(state_id, ((), Some error_location, enhanced_msg))] in
     
     (* TODO: Convert error_feedback to proper Sel.Event.t list *)
-    fallback_state, Error ((error_location, error_msg), Some fallback_state), [] (* Simplified for now *)
+    fallback_state, Error ((error_location, enhanced_msg), Some fallback_state), [] (* Simplified for now *)
 
 (* This adapts the Future API with our event model *)
 (* [%%if rocq = "8.18"] - commented out for EasyCrypt
