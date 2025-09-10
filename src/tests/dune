@@ -84,3 +84,10 @@
   (libraries base stdio lsp)
   (flags -rectypes)
   (modules test_unicode_handling_safe))
+
+(executable
+  (public_name run_overlapping_edits_tests)
+  (name test_overlapping_edits_safe)
+  (libraries base stdio lsp)
+  (flags -rectypes)
+  (modules test_overlapping_edits_safe))

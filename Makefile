@@ -9,7 +9,7 @@ all: build test
 # Build the LSP server
 build:
 	@echo "🔧 Building LSP server..."
-	cd src && dune build @install
+	cd src && dune build eclsp/ecLsp.exe
 	@echo "✅ Build complete"
 
 # Copy LSP binary to extension directory
@@ -85,8 +85,13 @@ test-unicode-handling:
 	cd src && dune exec -- tests/test_unicode_handling_safe.exe
 	@echo "✅ Unicode Handling tests passed"
 
+test-overlapping-edits:
+	@echo "🔄 Testing Overlapping Edits Vulnerabilities..."
+	cd src && dune exec -- tests/test_overlapping_edits_safe.exe
+	@echo "✅ Overlapping Edits tests passed"
+
 # Run all fine-grained tests
-test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes test-bounds-checking test-unicode-handling
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes test-bounds-checking test-unicode-handling test-overlapping-edits
 	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests
