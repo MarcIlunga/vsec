@@ -408,7 +408,7 @@ let rec dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t ->
     | Some { st } ->
       let ranges = Dm.DocumentManager.references st position in
       let locs = List.map (fun range -> Lsp.Types.Location.create ~uri:textDocument.uri ~range) ranges in
-      Ok (Some (`Location locs)), []
+      Ok (Some locs), []
     end
   (* TODO: Add DocumentSymbol and SemanticTokens support when LSP library is updated *)
   | UnknownRequest _ | _  -> Error ({message="Received unknown request"; code=None}), []
