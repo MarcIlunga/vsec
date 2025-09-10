@@ -80,8 +80,13 @@ test-bounds-checking:
 	cd src && dune exec -- tests/test_bounds_checking_safe.exe
 	@echo "✅ Bounds Checking tests passed"
 
+test-unicode-handling:
+	@echo "🌍 Testing Unicode Handling Vulnerabilities..."
+	cd src && dune exec -- tests/test_unicode_handling_safe.exe
+	@echo "✅ Unicode Handling tests passed"
+
 # Run all fine-grained tests
-test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes test-bounds-checking
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes test-bounds-checking test-unicode-handling
 	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests

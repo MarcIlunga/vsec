@@ -77,3 +77,10 @@
   (libraries base stdio dm lsp)
   (flags -rectypes)
   (modules test_bounds_checking_safe))
+
+(executable
+  (public_name run_unicode_handling_tests)
+  (name test_unicode_handling_safe)
+  (libraries base stdio lsp)
+  (flags -rectypes)
+  (modules test_unicode_handling_safe))
