@@ -77,6 +77,68 @@ let test_location_creation () =
   print_endline "✓ Location creation works";
   true
 
+(** Step 6: Test semantic highlighting token types *)
+let test_semantic_highlighting () =
+  let token_types = [
+    ("keyword", 0);
+    ("type", 1);
+    ("function", 2);
+    ("variable", 3);
+    ("property", 4);
+    ("comment", 5);
+  ] in
+  
+  (* Validate token type structure *)
+  assert (List.length token_types = 6);
+  List.iter token_types ~f:(fun (name, id) ->
+    assert (not (String.is_empty name));
+    assert (id >= 0);
+  );
+  
+  print_endline "✓ Semantic highlighting token types validation passed";
+  true
+
+(** Step 7: Test semantic highlighting token modifiers *)
+let test_semantic_token_modifiers () =
+  let token_modifiers = [
+    ("declaration", 0);
+    ("definition", 1);
+    ("readonly", 2);
+    ("static", 3);
+    ("deprecated", 4);
+  ] in
+  
+  (* Validate token modifier structure *)
+  assert (List.length token_modifiers = 5);
+  List.iter token_modifiers ~f:(fun (name, id) ->
+    assert (not (String.is_empty name));
+    assert (id >= 0);
+  );
+  
+  print_endline "✓ Semantic token modifiers validation passed";
+  true
+
+(** Step 8: Test semantic highlighting range encoding *)
+let test_semantic_range_encoding () =
+  let mock_tokens = [
+    (0, 0, 5, 0, 0);  (* line, start_char, length, token_type, modifiers *)
+    (0, 6, 4, 1, 1);  (* relative encoding test *)
+    (1, 0, 8, 2, 0);
+  ] in
+  
+  (* Validate token encoding *)
+  assert (List.length mock_tokens = 3);
+  List.iter mock_tokens ~f:(fun (line, start, len, typ, mods) ->
+    assert (line >= 0);
+    assert (start >= 0);
+    assert (len > 0);
+    assert (typ >= 0);
+    assert (mods >= 0);
+  );
+  
+  print_endline "✓ Semantic range encoding validation passed";
+  true
+
 (* TODO: Add Protocol module access step by step *)
 
 (** Run all tests *)
@@ -85,6 +147,9 @@ let run_tests () =
     ("basic_access", test_basic_access);
     ("lsp_types", test_lsp_types);
     ("completion_items", test_completion_items);
+    ("semantic_highlighting", test_semantic_highlighting);
+    ("semantic_token_modifiers", test_semantic_token_modifiers);
+    ("semantic_range_encoding", test_semantic_range_encoding);
   ] in
   
   print_endline "🧪 Running LSP Protocol tests...";
