@@ -129,6 +129,12 @@ test-subprocess-isolation: build
 	python3 tests/integration/test_subprocess_isolation.py
 	@echo "✅ Subprocess isolation tests passed"
 
+# Run input size limits tests
+test-input-size-limits: build
+	@echo "🔍 Running input size limits tests..."
+	python3 tests/integration/test_input_size_limits.py
+	@echo "✅ Input size limits tests passed"
+
 # Run end-to-end tests with EasyCrypt files
 test-e2e: build
 	@echo "🎭 Running end-to-end tests..."
