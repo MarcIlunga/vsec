@@ -83,6 +83,11 @@ test-fine-grained: test-document-manager test-execution-manager test-lsp-protoco
 test-integration: build
 	@echo "🔗 Running integration tests..."
 	cd tests/integration && python3 test_interactive_proving.py
+
+# Run LSP framing vulnerability tests  
+test-lsp-framing: build
+	@echo "🔍 Running LSP framing vulnerability tests..."
+	cd tests/integration && python3 test_lsp_framing_vulnerabilities.py
 	@echo "✅ Integration tests passed"
 
 # Run end-to-end tests with EasyCrypt files
