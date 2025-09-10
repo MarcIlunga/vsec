@@ -49,3 +49,17 @@
   (libraries base stdio unix)
   (flags -rectypes)
   (modules test_performance_safe))
+
+(executable
+  (public_name run_error_resilience_tests)
+  (name test_error_resilience_safe)
+  (libraries base stdio lsp yojson)
+  (flags -rectypes)
+  (modules test_error_resilience_safe))
+
+(executable
+  (public_name run_multi_document_tests)
+  (name test_multi_document_safe)
+  (libraries base stdio lsp)
+  (flags -rectypes)
+  (modules test_multi_document_safe))

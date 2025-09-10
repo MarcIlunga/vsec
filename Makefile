@@ -60,8 +60,18 @@ test-performance:
 	cd src && dune exec -- tests/test_performance_safe.exe
 	@echo "✅ Performance tests passed"
 
+test-error-resilience:
+	@echo "🛡️ Testing Error Resilience..."
+	cd src && dune exec -- tests/test_error_resilience_safe.exe
+	@echo "✅ Error Resilience tests passed"
+
+test-multi-document:
+	@echo "📚 Testing Multi-Document..."
+	cd src && dune exec -- tests/test_multi_document_safe.exe
+	@echo "✅ Multi-Document tests passed"
+
 # Run all fine-grained tests
-test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document
 	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests
