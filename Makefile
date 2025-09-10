@@ -113,6 +113,12 @@ test-jsonrpc-validation: build
 	python3 tests/integration/test_jsonrpc_validation.py
 	@echo "✅ JSON-RPC validation tests passed"
 
+# Run subprocess isolation tests
+test-subprocess-isolation: build
+	@echo "🔍 Running subprocess isolation tests..."
+	python3 tests/integration/test_subprocess_isolation.py
+	@echo "✅ Subprocess isolation tests passed"
+
 # Run end-to-end tests with EasyCrypt files
 test-e2e: build
 	@echo "🎭 Running end-to-end tests..."
