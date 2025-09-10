@@ -188,17 +188,26 @@ let record_outline document id (ast : string) classif (outline : outline) =
   | EcDefinition ->
     (* 🎯 Phase 8.3.1: Enhanced EasyCrypt AST name extraction - ENHANCED! *)
     let enhanced_name_extraction ast =
+      let strip_trailing_punct s =
+        let rec loop s =
+          if String.length s = 0 then s else
+          match s.[String.length s - 1] with
+          | ':' | '.' | ';' -> loop (String.sub s 0 (String.length s - 1))
+          | _ -> s
+        in
+        loop s
+      in
       let trimmed = String.trim ast in
       let parts = String.split_on_char ' ' trimmed in
       match parts with
       | "lemma" :: name :: _ | "theorem" :: name :: _ | "axiom" :: name :: _ -> 
-        String.trim name, TheoremKind
+        strip_trailing_punct (String.trim name), TheoremKind
       | "module" :: name :: _ -> 
-        String.trim name, BeginModule
+        strip_trailing_punct (String.trim name), BeginModule
       | "theory" :: name :: _ ->
-        String.trim name, BeginModule
+        strip_trailing_punct (String.trim name), BeginModule
       | "proc" :: name :: _ ->
-        String.trim name, DefinitionType
+        strip_trailing_punct (String.trim name), DefinitionType
       | _ -> 
         (* Fallback: try to extract first identifier *)
         let find_first_identifier s =
@@ -209,7 +218,7 @@ let record_outline document id (ast : string) classif (outline : outline) =
           ) words
         in
         let name = match find_first_identifier trimmed with
-          | Some n -> String.trim n
+          | Some n -> strip_trailing_punct (String.trim n)
           | None -> "unnamed"
         in
         name, Other
@@ -248,6 +257,29 @@ let raw_document doc = doc.raw_doc
 let outline doc = doc.outline
 let parse_errors parsed =
   List.map snd (LM.bindings parsed.parsing_errors_by_end)
+
+let imports doc =
+  let raw = doc.raw_doc in
+  let text = RawDocument.text raw in
+  let lines = String.split_on_char '\n' text in
+  let collect acc line =
+    let s = String.trim line in
+    let lower = String.lowercase_ascii s in
+    let push name = if name = "" then acc else if List.mem name acc then acc else name :: acc in
+    if String.length lower >= 7 && String.sub lower 0 7 = "require" then (
+      (* naive: require import X.Y *)
+      let parts = String.split_on_char ' ' s |> List.filter (fun x -> x <> "") in
+      match parts with
+      | _kw :: _imp :: name :: _ -> push name
+      | _ -> acc
+    ) else if String.length lower >= 6 && String.sub lower 0 6 = "import" then (
+      let parts = String.split_on_char ' ' s |> List.filter (fun x -> x <> "") in
+      match parts with
+      | _imp :: name :: _ -> push name
+      | _ -> acc
+    ) else acc
+  in
+  List.rev (List.fold_left collect [] lines)
 
 let add_sentence parsed parsing_start start stop (ast: sentence_state) synterp_state scheduler_state_before =
   let id = Random.int 100000 in (* Generate fresh sentence id *)
@@ -486,8 +518,12 @@ exception E of string
 
 let handle_parse_error start parsing_start msg ({errors; parsed;} as parse_state) synterp_state =
   log (fun () -> "handling parse error at " ^ string_of_int start);
-  let stop = start + 10 in (* placeholder - simplified for EasyCrypt *)
-  let str = String.sub (RawDocument.text parse_state.raw) parsing_start (stop - parsing_start) in
+  let text = RawDocument.text parse_state.raw in
+  let text_len = String.length text in
+  let stop = min text_len (max start (start + 10)) in (* clamp stop within bounds *)
+  let first = max 0 (min parsing_start text_len) in
+  let len = max 0 (min (stop - first) (text_len - first)) in
+  let str = if len > 0 then String.sub text first len else "" in
   let parsing_error = { msg; start; stop; str} in
   let sentence = { parsing_start; ast = Error parsing_error; start; stop; synterp_state } in
   let parsed = sentence :: parsed in
@@ -500,7 +536,10 @@ let handle_parse_error start parsing_start msg ({errors; parsed;} as parse_state
 let handle_parse_more ({loc; synterp_state; raw; parsed; parsed_comments; stop; started; previous_document} as parse_state) =
   log (fun () -> "handle_parse_more: EasyCrypt parser integration");
   let text = RawDocument.text raw in
-  let remaining_text = String.sub text stop (String.length text - stop) in
+  let remaining_text =
+    let tl = String.length text in
+    if stop < 0 || stop >= tl then "" else String.sub text stop (tl - stop)
+  in
   
   if String.length remaining_text = 0 then (
     log (fun () -> "No more text to parse - finishing");

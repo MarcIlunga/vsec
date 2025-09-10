@@ -30,6 +30,41 @@
   (modules test_lsp_protocol_safe))
 
 (executable
+  (public_name run_lsp_semantic_tokens_tests)
+  (name test_lsp_semantic_tokens)
+  (libraries base stdio)
+  (flags -rectypes)
+  (modules test_lsp_semantic_tokens))
+
+(executable
+  (public_name run_lsp_syntax_highlighting_tests)
+  (name test_lsp_syntax_highlighting)
+  (libraries base stdio dm)
+  (flags -rectypes)
+  (modules test_lsp_syntax_highlighting))
+
+(executable
+  (public_name run_lsp_definition_tests)
+  (name test_lsp_definition)
+  (libraries base stdio dm lsp)
+  (flags -rectypes)
+  (modules test_lsp_definition))
+
+(executable
+  (public_name run_lsp_references_tests)
+  (name test_lsp_references)
+  (libraries base stdio)
+  (flags -rectypes)
+  (modules test_lsp_references))
+
+(executable
+  (public_name run_retract_integration_tests)
+  (name test_retract_integration)
+  (libraries base stdio dm lsp)
+  (flags -rectypes)
+  (modules test_retract_integration))
+
+(executable
   (public_name run_proof_state_tests)
   (name test_proof_state_safe)
   (libraries base stdio protocol easycrypt.ecLib)
@@ -63,6 +98,13 @@
   (libraries base stdio lsp)
   (flags -rectypes)
   (modules test_multi_document_safe))
+
+(executable
+  (public_name run_multi_document_imports_tests)
+  (name test_multi_document_imports)
+  (libraries base stdio dm)
+  (flags -rectypes)
+  (modules test_multi_document_imports))
 
 (executable
   (public_name run_lsp_text_changes_tests)

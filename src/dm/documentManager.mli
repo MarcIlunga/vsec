@@ -102,10 +102,10 @@ val executed_ranges : state -> exec_overview
 val observe_id_range : state -> Range.t option
 (** returns the range of the sentence referenced by observe_id **)
 
-val get_messages : state -> sentence_id -> (DiagnosticSeverity.t * string) list
+val get_messages : state -> sentence_id -> (Lsp.Types.DiagnosticSeverity.t * string) list
 (** returns the messages associated to a given position *)
 
-val get_info_messages : state -> Position.t option -> (DiagnosticSeverity.t * string) list
+val get_info_messages : state -> Position.t option -> (Lsp.Types.DiagnosticSeverity.t * string) list
 (** returns the Feedback.Info level messages associated to a given position *)
 
 val get_document_symbols : state -> DocumentSymbol.t list
@@ -116,7 +116,7 @@ val all_diagnostics : state -> Diagnostic.t list
 (** all_diagnostics [doc] returns the diagnostics corresponding to the sentences
     that have been executed in [doc]. *)
 
-val get_proof : state -> sentence_id option -> string option (* simplified for EasyCrypt *)
+val get_proof : state -> sentence_id option -> Protocol.ProofState.t option
 
 val get_completions : state -> Position.t -> completion_item list 
 
@@ -135,6 +135,8 @@ val hover : state -> Position.t -> MarkupContent.t option
     if Some, an Ok/Error result is returned. *)
 
 val jump_to_definition : state -> Position.t -> (Range.t * string) option
+
+val references : state -> Position.t -> Range.t list
 
 val check : state -> Position.t -> pattern:string -> (string,error) Result.t
 

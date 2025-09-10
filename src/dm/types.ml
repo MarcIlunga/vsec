@@ -25,8 +25,8 @@ module DiagnosticSeverity = struct
     | Information 
     | Hint
     
-  (* Simplified feedback level conversion for EasyCrypt *)
-  let of_feedback_level _lvl = Error (* Simplified - treat all as errors for now *)
+  (* For EasyCrypt, feedback already uses this type; identity mapping *)
+  let of_feedback_level (lvl : t) = lvl
   
   (* Convert to LSP DiagnosticSeverity *)
   let to_lsp = function

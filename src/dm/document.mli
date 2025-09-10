@@ -65,6 +65,9 @@ val raw_document : document -> RawDocument.t
 
 val outline : document -> outline
 
+(** Extract imported module/theory names from raw text *)
+val imports : document -> string list
+
 val create_document : EcLib.EcScope.scope -> string -> document
 (** [create_document init_synterp_state text] creates a fresh document with content defined by
     [text] under [init_synterp_state]. *)

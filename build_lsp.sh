@@ -46,8 +46,10 @@ install_lsp() {
     opam exec -- dune install --prefix="$HOME/.local"
     
     if command -v vsec-lsp &> /dev/null; then
-        echo "✅ LSP server installed: $(which vsec-lsp)"
-        vsec-lsp --help | head -3
+        BIN_PATH="$(which vsec-lsp)"
+        echo "✅ LSP server installed: $BIN_PATH"
+        # Do not execute the server here to avoid starting the event loop
+        ls -lh "$BIN_PATH" || true
     else
         echo "❌ LSP server installation failed"
         exit 1
@@ -84,6 +86,8 @@ package_extension() {
     echo "🔧 Compiling TypeScript with webpack..."
     nix-shell "$PROJECT_ROOT/shell.nix" --command "npm run compile"
     echo "📦 Creating VSIX package..."
+    # Remove old vsix to avoid picking the wrong artifact
+    rm -f "$EXTENSION_DIR"/vsec-easycrypt-*.vsix || true
     nix-shell "$PROJECT_ROOT/shell.nix" --command "npm run package"
     
     if ls "$EXTENSION_DIR"/vsec-easycrypt-*.vsix 1> /dev/null 2>&1; then
@@ -92,6 +96,29 @@ package_extension() {
     else
         echo "❌ Extension packaging failed"
         exit 1
+    fi
+}
+
+# Function to install the freshly built VSIX using code CLI
+install_vsix() {
+    echo "🧩 Installing VSIX into VS Code..."
+    package_extension
+    cd "$EXTENSION_DIR"
+    # Pick the newest VSIX to avoid installing a stale one
+    VSIX_FILE=$(ls -t vsec-easycrypt-*.vsix | head -n1)
+    if [ -z "$VSIX_FILE" ]; then
+        echo "❌ No VSIX found to install"
+        exit 1
+    fi
+    echo "Installing: $VSIX_FILE"
+    if command -v code &> /dev/null; then
+        code --install-extension "$VSIX_FILE" --force
+        echo "✅ Installed VSIX via 'code' CLI"
+    elif command -v codium &> /dev/null; then
+        codium --install-extension "$VSIX_FILE" --force
+        echo "✅ Installed VSIX via 'codium' CLI"
+    else
+        echo "⚠️ Neither 'code' nor 'codium' found. Please install manually: $EXTENSION_DIR/$VSIX_FILE"
     fi
 }
 
@@ -111,6 +138,10 @@ case "${1:-build}" in
     "package")
         build_lsp
         package_extension
+        ;;
+    "install-vsix")
+        build_lsp
+        install_vsix
         ;;
     "build"|"")
         build_lsp

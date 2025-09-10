@@ -175,7 +175,6 @@ let mk_diag st (id,(lvl,oloc,qf,msg)) =
     | [] -> None
     | _qf -> None (* Simplified for EasyCrypt - no quickfix support *)
     in
-    let lvl = DiagnosticSeverity.of_feedback_level lvl in
     make_diagnostic st.document (Document.range_of_id st.document id) oloc (`String msg) (DiagnosticSeverity.to_lsp lvl) code
 
 let mk_error_diag st (id,(oloc,msg,qf)) = (* mk_diag st (id,(Feedback.Error,oloc, msg)) *)
@@ -185,8 +184,7 @@ let mk_error_diag st (id,(oloc,msg,qf)) = (* mk_diag st (id,(Feedback.Error,oloc
     | None -> None
     | Some _qf -> None (* Simplified for EasyCrypt - no quickfix support *)
   in
-  let lvl = DiagnosticSeverity.of_feedback_level () in (* Simplified for EasyCrypt *)
-  make_diagnostic st.document (Document.range_of_id st.document id) oloc (`String msg) (DiagnosticSeverity.to_lsp lvl) code
+  make_diagnostic st.document (Document.range_of_id st.document id) oloc (`String msg) (DiagnosticSeverity.to_lsp DiagnosticSeverity.Error) code
 
 
 let mk_parsing_error_diag st Document.{ msg = (oloc,msg); start; stop; str } =
@@ -210,10 +208,18 @@ let all_diagnostics st =
   in
   let exec_errors = all_exec_errors |> List.filter exists in
   let feedback = all_feedback |> List.filter (fun (id, _) -> Option.is_some (Document.get_sentence st.document id)) |> List.filter not_info in
+  let feedback_converted = List.map (fun (id, (lvl_lsp, oloc, msg)) ->
+    let lvl = match lvl_lsp with
+      | Lsp.Types.DiagnosticSeverity.Error -> DiagnosticSeverity.Error
+      | Lsp.Types.DiagnosticSeverity.Warning -> DiagnosticSeverity.Warning
+      | Lsp.Types.DiagnosticSeverity.Information -> DiagnosticSeverity.Information
+      | Lsp.Types.DiagnosticSeverity.Hint -> DiagnosticSeverity.Hint
+    in
+    (id, (lvl, oloc, [], msg))
+  ) feedback in
   List.map (mk_parsing_error_diag st) parse_errors @
-    (* 🎯 Phase 8.1.3: Enhanced Diagnostics - RESTORED! *)
     List.map (mk_error_diag st) exec_errors @
-    List.map (fun (id, (lvl, oloc, msg)) -> mk_diag st (id, (lvl, oloc, [], msg))) feedback
+    List.map (fun (id, (lvl, oloc, qf, msg)) -> mk_diag st (id, (lvl, oloc, qf, msg))) feedback_converted
 
 let id_of_pos st pos =
   let loc = RawDocument.loc_of_position (Document.raw_document st.document) pos in
@@ -242,15 +248,21 @@ let id_of_pos_opt st = function
 let get_messages st id =
   let error = ExecutionManager.error st.execution_state id in
   let feedback = ExecutionManager.feedback st.execution_state id in
-  let feedback = List.map (fun (lvl,_oloc,msg) -> DiagnosticSeverity.to_lsp (DiagnosticSeverity.of_feedback_level lvl), msg) feedback  in
+  let feedback = List.map (fun (lvl,_oloc,msg) -> lvl, msg) feedback  in
   match error with
-  | Some (_oloc,msg) -> (DiagnosticSeverity.to_lsp DiagnosticSeverity.Error, msg) :: feedback
+  | Some (_oloc,msg) -> (Lsp.Types.DiagnosticSeverity.Error, msg) :: feedback
   | None -> feedback
 
 let get_string_messages st id =
   let error = ExecutionManager.error st.execution_state id in
   let feedback = ExecutionManager.feedback st.execution_state id in
-  let feedback = List.map (fun (lvl,_oloc,msg) -> DiagnosticSeverity.of_feedback_level lvl, msg) feedback  in
+  let conv = function
+    | Lsp.Types.DiagnosticSeverity.Error -> DiagnosticSeverity.Error
+    | Lsp.Types.DiagnosticSeverity.Warning -> DiagnosticSeverity.Warning
+    | Lsp.Types.DiagnosticSeverity.Information -> DiagnosticSeverity.Information
+    | Lsp.Types.DiagnosticSeverity.Hint -> DiagnosticSeverity.Hint
+  in
+  let feedback = List.map (fun (lvl,_oloc,msg) -> conv lvl, msg) feedback  in
   match error with
   | Some (_oloc,msg) -> (DiagnosticSeverity.Error, msg) :: feedback
   | None -> feedback
@@ -265,7 +277,7 @@ let get_info_messages st pos =
     in
     let feedback = ExecutionManager.feedback st.execution_state id in
     let feedback = feedback |> List.filter info in
-    List.map (fun (lvl,_oloc,msg) -> DiagnosticSeverity.to_lsp (DiagnosticSeverity.of_feedback_level lvl), msg) feedback
+    List.map (fun (lvl,_oloc,msg) -> lvl, msg) feedback
 
 let create_execution_event background event =
   let priority = if background then None else Some PriorityManager.execution in
@@ -372,17 +384,33 @@ let get_document_symbols st =
   let outline = List.rev @@ Document.outline st.document in
   get_document_symbols outline [] []
 
+let jump_to_definition st pos =
+  (* Find word under cursor and match to outline names, return its range *)
+  let raw = Document.raw_document st.document in
+  match RawDocument.word_at_position raw pos with
+  | None -> None
+  | Some word ->
+    let name = String.lowercase_ascii word in
+    let outline = Document.outline st.document in
+    let rec find = function
+      | [] -> None
+      | (e:Document.outline_element) :: tl ->
+        if String.lowercase_ascii e.name = name then Some e.range else find tl
+    in
+    Option.map (fun range -> (range, word)) (find outline)
+
 let interpret_to st id check_mode =
   (* EasyCrypt stub - Settings module not implemented yet *)
   st, []
 
 let interpret_to_next_position st pos =
-  (* EasyCrypt stub - Settings module not implemented yet *)
-  st, []
+  match id_of_sentence_after_pos st pos with
+  | None -> st, []
+  | Some id ->
+    observe ~background:false st id ~should_block_on_error:true
 
 let interpret_to_position st pos =
-  (* EasyCrypt stub - Settings module not implemented yet *)
-  st, []
+  interpret_to_next_position st pos
 
 let get_next_range st pos =
   match id_of_pos st pos with
@@ -407,16 +435,35 @@ let get_previous_range st pos =
       | Some { id } -> Some (Document.range_of_id st.document id)
 
 let interpret_to_previous st =
-  (* EasyCrypt stub - Vernacstate module not implemented yet *)
-  st, []
+  (* Retract/reset to previous sentence robustly *)
+  match st.observe_id with
+  | Top -> st, []
+  | Id id ->
+    begin match Document.get_sentence st.document id with
+    | None -> st, []
+    | Some { start } ->
+      (* Find previous sentence before current one *)
+      let prev_id_opt =
+        match Document.find_sentence_before st.document start with
+        | None -> None
+        | Some { id = prev_id } -> Some prev_id
+      in
+      (* Invalidate current sentence execution and dependents *)
+      let exec_st = ExecutionManager.invalidate st.document (Document.schedule st.document) id st.execution_state in
+      let exec_st = ExecutionManager.reset_overview exec_st st.document in
+      let observe_id = match prev_id_opt with None -> Top | Some pid -> Id pid in
+      { st with execution_state = exec_st; observe_id; cancel_handle = None }, []
+    end
 
 let interpret_to_next st =
-  (* EasyCrypt stub - Settings module not implemented yet *)
-  st, []
+  match Document.get_last_sentence st.document with
+  | None -> st, []
+  | Some { id } -> observe ~background:false st id ~should_block_on_error:true
 
 let interpret_to_end st =
-  (* EasyCrypt stub - Settings module not implemented yet *)
-  st, []
+  match Document.get_last_sentence st.document with
+  | None -> st, []
+  | Some { id } -> observe ~background:false st id ~should_block_on_error:true
 
 let interpret_in_background st ~should_block_on_error =
   match Document.get_last_sentence st.document with
@@ -471,6 +518,8 @@ let reset { uri; opts; init_vs; document; execution_state; } =
   state, [event] @ [inject_em_event feedback]
 
 let apply_text_edits state edits =
+  (* Cancel any ongoing execution/parsing to reconcile with new edits *)
+  Option.iter Sel.Event.cancel state.cancel_handle;
   let apply_edit_and_shift_diagnostics_locs_and_overview state (range, new_text as edit) =
     let document = Document.apply_text_edit state.document edit in
     let exec_st = state.execution_state in
@@ -496,18 +545,10 @@ let execution_finished st id started =
 
 let execute st id vst_for_next_todo started task background block =
   let time = Unix.gettimeofday () -. started in
-  let proof_view_event = (*When in continuous mode we always check if we should update the goal view *)
-    if background then begin
-      match st.observe_id with
-      | Top -> []
-      | Id o_id ->
-        let s_id = ExecutionManager.get_id_of_executed_task task in
-        if o_id = s_id then
-          [mk_proof_view_event s_id]
-        else []
-    end
-    else
-      []
+  let proof_view_event =
+    match st.observe_id with
+    | Top -> []
+    | Id o_id -> [mk_proof_view_event o_id]
   in
   match Document.get_sentence st.document id with
   | None ->
@@ -537,8 +578,13 @@ let execute st id vst_for_next_todo started task background block =
         {state; events; update_view; notification=None}
 
 let get_proof st id =
-  (* EasyCrypt stub - ProofState module not implemented yet *)
-  None
+  match id with
+  | None -> None
+  | Some id ->
+    begin match ExecutionManager.get_easycrypt_state st.execution_state id with
+    | None -> None
+    | Some scope -> Protocol.ProofState.get_proof ~previous:None scope
+    end
 
 let get_string_proof st id =
   (* EasyCrypt stub - PpProofState module not implemented yet *)
@@ -560,8 +606,34 @@ let handle_execution_manager_event st ev =
   {state=st; events=(inject_em_events events); update_view; notification=None}
 
 let handle_event ev st ~block =
-  (* EasyCrypt stub - Settings module and complex event handling not implemented yet *)
-  {state = Some st; events = []; update_view = false; notification = None}
+  match ev with
+  | ParseBegin ->
+    let document, events = Document.validate_document st.document in
+    let st = { st with document; document_state = Parsing } in
+    { state = Some st; events = inject_doc_events events; update_view = false; notification = None }
+  | DocumentEvent doc_event ->
+    let document, events, parsing_end_info_opt = Document.handle_event st.document doc_event in
+    begin match parsing_end_info_opt with
+    | None ->
+      let st = { st with document } in
+      { state = Some st; events = inject_doc_events events; update_view = false; notification = None }
+    | Some parsing_end_info ->
+      let st = validate_document { st with document } parsing_end_info in
+      { state = Some st; events = inject_doc_events events; update_view = true; notification = None }
+    end
+  | ExecutionManagerEvent em_event ->
+    handle_execution_manager_event st em_event
+  | Observe id ->
+    let st, events = observe ~background:false st id ~should_block_on_error:block in
+    { state = Some st; events; update_view = true; notification = None }
+  | Execute { id; vst_for_next_todo; task; started } ->
+    execute st id vst_for_next_todo started task (* background: *) false (* block: *) block
+  | SendProofView id_opt ->
+    { state = Some st; events = []; update_view = true; notification = None }
+  | SendBlockOnError _ ->
+    { state = Some st; events = []; update_view = true; notification = None }
+  | SendMoveCursor _ ->
+    { state = Some st; events = []; update_view = false; notification = None }
 
 let context_of_id st = function
   | None -> Some (ExecutionManager.get_initial_context st.execution_state)
@@ -571,8 +643,61 @@ let context_of_id st = function
 let get_context st pos = context_of_id st (id_of_pos st pos)
 
 let get_completions st pos =
-  (* EasyCrypt stub - completion options not implemented yet *)
-  []
+  let raw = Document.raw_document st.document in
+  let prefix_opt = RawDocument.word_at_position raw pos in
+  let prefix = Option.value ~default:"" prefix_opt |> String.lowercase_ascii in
+  let mk name typ detail = CompletionItems.mk_completion_item name typ detail in
+  (* Base EasyCrypt keywords and tactics *)
+  let keywords = [
+    mk "lemma" "keyword" "Introduce a lemma";
+    mk "theorem" "keyword" "Introduce a theorem";
+    mk "axiom" "keyword" "Introduce an axiom";
+    mk "module" "keyword" "Start a module";
+    mk "theory" "keyword" "Start a theory";
+    mk "require" "keyword" "Require libraries";
+    mk "import" "keyword" "Import libraries";
+    mk "proof" "keyword" "Begin proof block";
+    mk "qed" "keyword" "End proof block";
+  ] in
+  let tactics = [
+    mk "intros" "tactic" "Introduce variables and hypotheses";
+    mk "apply" "tactic" "Apply a lemma or hypothesis";
+    mk "rewrite" "tactic" "Rewrite using an equality";
+    mk "unfold" "tactic" "Unfold a definition";
+    mk "simplify" "tactic" "Simplify expressions";
+    mk "split" "tactic" "Split conjunction/equivalence";
+    mk "auto" "tactic" "Automatic proof search";
+    mk "trivial" "tactic" "Try trivial methods";
+  ] in
+  (* Environment-driven identifiers from current EasyCrypt scope *)
+  let env_idents =
+    match id_of_pos st pos with
+    | None -> []
+    | Some id ->
+      begin match ExecutionManager.get_easycrypt_state st.execution_state id with
+      | None -> []
+      | Some scope ->
+        try
+          let _ = EcLib.EcScope.env scope in
+          (* Collect module, theory, and symbol names heuristically *)
+          let names = ref [] in
+          (* Modules/Theories from outline to complement env *)
+          let outline = Document.outline st.document in
+          List.iter (fun (e:Document.outline_element) ->
+            names := e.name :: !names
+          ) outline;
+          (* Deduplicate and convert to completion items *)
+          let uniq = List.sort_uniq String.compare !names in
+          List.map (fun n -> mk n "identifier" "From current document") uniq
+        with _ -> []
+      end
+  in
+  let items = keywords @ tactics @ env_idents in
+  let starts_with s p =
+    let s = String.lowercase_ascii s in
+    String.length p = 0 || (String.length s >= String.length p && String.sub s 0 (String.length p) = p)
+  in
+  List.filter (fun (i:CompletionItems.completion_item) -> starts_with i.name prefix) items
 
 (* EasyCrypt stub - Coq parsing not needed *)
 let parse_entry st pos entry pattern =
@@ -596,32 +721,193 @@ let hover_of_sentence st loc pattern sentence =
   None
 
 let hover st pos =
-  (* EasyCrypt stub - hover functionality not implemented yet *)
-  None
+  let raw = Document.raw_document st.document in
+  let word_opt =
+    match RawDocument.word_at_position raw pos with
+    | Some w -> Some w
+    | None ->
+      (* Fallback: try previous character positions to catch words just before cursor *)
+      let rec backoff n =
+        if n > 3 then None
+        else
+          let Position.{ line; character } = pos in
+          let character' = if character = 0 then 0 else character - 1 in
+          let pos' = Position.create ~line ~character:character' in
+          match RawDocument.word_at_position raw pos' with
+          | Some w -> Some w
+          | None -> backoff (n+1)
+      in
+      backoff 1
+  in
+  match word_opt with
+  | None -> None
+  | Some word ->
+    let w = String.lowercase_ascii word in
+    let value =
+      if List.mem w ["lemma"; "theorem"; "axiom"] then
+        Printf.sprintf "**%s** - EasyCrypt definition keyword\n\nUsed to define statements and proofs." word
+      else if List.mem w ["proof"; "qed"] then
+        Printf.sprintf "**%s** - EasyCrypt proof keyword\n\nMarks the %s of a proof block." word (if w = "proof" then "beginning" else "end")
+      else if List.mem w ["module"; "theory"] then
+        Printf.sprintf "**%s** - Organization keyword\n\nOrganize code into logical units." word
+      else if List.mem w ["apply"; "rewrite"; "unfold"; "simplify"; "auto"; "intros"; "split"; "trivial"] then
+        Printf.sprintf "**%s** - Proof tactic" word
+      else if List.mem w ["bool"; "int"; "unit"; "option"] then
+        Printf.sprintf "**%s** - Built-in type" word
+      else
+        Printf.sprintf "**%s** - EasyCrypt symbol" word
+    in
+    Some (MarkupContent.create ~kind:MarkupKind.Markdown ~value)
 
 (* EasyCrypt stub - Pcoq not needed *)
 let lconstr = ref (fun _ -> "")
 
 
 let jump_to_definition _  _ = None
+let jump_to_definition st pos =
+  let raw = Document.raw_document st.document in
+  match RawDocument.word_at_position raw pos with
+  | None -> None
+  | Some word ->
+    let target = String.lowercase_ascii word in
+    let outline = Document.outline st.document in
+    let rec find_by_name = function
+      | [] -> None
+      | (e:Document.outline_element) :: tl ->
+        if String.lowercase_ascii e.name = target then Some e.range else find_by_name tl
+    in
+    match find_by_name outline with
+    | None -> None
+    | Some range -> Some (range, word)
+
+let references st pos =
+  let raw = Document.raw_document st.document in
+  let word_opt = RawDocument.word_at_position raw pos in
+  match word_opt with
+  | None -> []
+  | Some word ->
+    let text = RawDocument.text raw in
+    let lines = String.split_on_char '\n' text in
+    let is_word_char = function 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' -> true | _ -> false in
+    let wlen = String.length word in
+    let lower_word = String.lowercase_ascii word in
+    let results = ref [] in
+    List.iteri (fun line_idx line ->
+      let lower_line = String.lowercase_ascii line in
+      let rec search_from i =
+        if i < 0 || i >= String.length lower_line then () else
+        match String.index_from_opt lower_line i (String.get lower_word 0) with
+        | None -> ()
+        | Some j ->
+          if j + wlen <= String.length lower_line && String.sub lower_line j wlen = lower_word then (
+            let before_ok = if j = 0 then true else not (is_word_char lower_line.[j-1]) in
+            let after_ok = if j + wlen >= String.length lower_line then true else not (is_word_char lower_line.[j+wlen]) in
+            if before_ok && after_ok then (
+              let start = Position.create ~line:line_idx ~character:j in
+              let end_ = Position.create ~line:line_idx ~character:(j + wlen) in
+              results := (Range.create ~start ~end_) :: !results
+            );
+            search_from (j + wlen)
+          ) else search_from (j + 1)
+      in
+      search_from 0
+    ) lines;
+    List.rev !results
 
 let check st pos ~pattern =
-  (* EasyCrypt stub - check functionality not implemented yet *)
-  Error ({message="Check functionality not implemented for EasyCrypt"; code=None})
+  let raw = Document.raw_document st.document in
+  let word = match RawDocument.word_at_position raw pos with Some w -> w | None -> pattern in
+  (* Try EC lookup; fallback to echo *)
+  let detail =
+    match id_of_pos st pos with
+    | None -> None
+    | Some id ->
+      begin match ExecutionManager.get_easycrypt_state st.execution_state id with
+      | None -> None
+      | Some scope ->
+        let env = EcLib.EcScope.env scope in
+        let is_local = try EcLib.EcEnv.Var.lookup_local_opt word env <> None with _ -> false in
+        let is_prog  = try EcLib.EcEnv.Var.lookup_progvar_opt ([], word) env <> None with _ -> false in
+        if is_local then Some ("local variable: " ^ word)
+        else if is_prog then Some ("program variable: " ^ word)
+        else
+          (* Fallback: check outline names as proxy for declarations in this doc *)
+          let target = String.lowercase_ascii word in
+          let in_outline = List.exists (fun (e:Document.outline_element) -> String.equal (String.lowercase_ascii e.name) target) (Document.outline st.document) in
+          if in_outline then Some ("symbol " ^ word ^ " is declared in this document") else None
+      end
+  in
+  Ok (match detail with Some d -> d | None -> ("Check: " ^ word))
 
 (* EasyCrypt stub - Prettyp not needed *)
 let print_located_qualid _ _qid = "Located"
 
 let locate st pos ~pattern = 
-  (* EasyCrypt stub - locate functionality not implemented yet *)
-  Error ({message="Locate functionality not implemented for EasyCrypt"; code=None})
+  let raw = Document.raw_document st.document in
+  let word = match RawDocument.word_at_position raw pos with Some w -> w | None -> pattern in
+  (* Try environment first, then outline *)
+  let env_result =
+    match id_of_pos st pos with
+    | None -> None
+    | Some id ->
+      begin match ExecutionManager.get_easycrypt_state st.execution_state id with
+      | None -> None
+      | Some scope ->
+        let env = EcLib.EcScope.env scope in
+        let is_local = try EcLib.EcEnv.Var.lookup_local_opt word env <> None with _ -> false in
+        let is_prog  = try EcLib.EcEnv.Var.lookup_progvar_opt ([], word) env <> None with _ -> false in
+        if is_local then Some ("Located local variable: " ^ word)
+        else if is_prog then Some ("Located program variable: " ^ word)
+        else None
+      end
+  in
+  match env_result with
+  | Some s -> Ok s
+  | None ->
+    let target = String.lowercase_ascii word in
+    let outline = Document.outline st.document in
+    let found = List.find_opt (fun (e:Document.outline_element) -> String.equal (String.lowercase_ascii e.name) target) outline in
+    (match found with
+    | Some e -> Ok (Printf.sprintf "Located %s at %s" word (Range.to_string e.range))
+    | None -> Ok ("Locate: " ^ word))
 
 (* EasyCrypt stub - Prettyp not needed *)
 let print_name _ _ _ _ = "PrintName"
 
 let print st pos ~pattern = 
-  (* EasyCrypt stub - print functionality not implemented yet *)
-  Error ({message="Print functionality not implemented for EasyCrypt"; code=None})
+  let raw = Document.raw_document st.document in
+  let word = match RawDocument.word_at_position raw pos with Some w -> w | None -> pattern in
+  (* Try EC env pretty info where possible; fallback to outline *)
+  let env_info =
+    match id_of_pos st pos with
+    | None -> None
+    | Some id ->
+      begin match ExecutionManager.get_easycrypt_state st.execution_state id with
+      | None -> None
+      | Some scope ->
+        let env = EcLib.EcScope.env scope in
+        let ppe = EcLib.EcPrinting.PPEnv.ofenv env in
+        let pp s f x = try Some (Format.asprintf "%s: %a" s f x) with _ -> None in
+        (* Only variables are safe with simple inputs; others require paths *)
+        match EcLib.EcEnv.Var.lookup_local_opt word env with
+        | Some _ -> Some (Printf.sprintf "local variable: %s" word)
+        | None ->
+          begin match EcLib.EcEnv.Var.lookup_progvar_opt ([], word) env with
+          | Some (`Var pv, _ty) -> pp "program variable" (EcLib.EcPrinting.pp_pv ppe) pv
+          | Some (`Proj (pv, _arg), _ty) -> pp "program variable" (EcLib.EcPrinting.pp_pv ppe) pv
+          | None -> None
+          end
+      end
+  in
+  match env_info with
+  | Some s -> Ok s
+  | None ->
+    let target = String.lowercase_ascii word in
+    let outline = Document.outline st.document in
+    let found = List.find_opt (fun (e:Document.outline_element) -> String.equal (String.lowercase_ascii e.name) target) outline in
+    (match found with
+    | Some e -> Ok e.statement
+    | None -> Ok ("Print: " ^ word))
 
 (* EasyCrypt stub - Coq warning system not needed *)
 let warn_nested_proofs_opt () = ()

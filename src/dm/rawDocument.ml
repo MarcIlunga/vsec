@@ -82,25 +82,31 @@ let end_loc raw =
 
 let range_of_loc raw loc =
   let open Range in
-  { start = position_of_loc raw loc.Types.EasyCryptLocation.start_line; (* TODO: adapt to EasyCryptLocation structure *)
-    end_ = position_of_loc raw loc.Types.EasyCryptLocation.end_line;
-  }
+  let start = Position.create ~line:loc.Types.EasyCryptLocation.start_line ~character:loc.Types.EasyCryptLocation.start_col in
+  let end_ = Position.create ~line:loc.Types.EasyCryptLocation.end_line ~character:loc.Types.EasyCryptLocation.end_col in
+  { start; end_ }
 
 let word_at_position raw pos : string option =
   try
     let back_reg = Str.regexp {|[^a-zA-Z_0-9.']|} in
     let start_ind = loc_of_position raw pos in
+    let start_ind = max 0 (min start_ind (String.length raw.text - 1)) in
     (* Search backwards until we find a character that cannot be part of a word *)
-    let first_non_word_ind = Str.search_backward back_reg raw.text start_ind in
+    let first_non_word_ind =
+      try Str.search_backward back_reg raw.text start_ind
+      with Not_found -> -1
+    in
     let first_word_ind = first_non_word_ind + 1 in
     let forward_reg = Str.regexp {|[^a-zA-Z_0-9']|} in
     (* Search forwards ensuring that all characters are part of a well defined word. (Cannot start with [0-9'.] and cannot end with .)*)
-    let last_word_ind = Str.search_forward forward_reg raw.text start_ind in
-    (* we get the substring from the first word index to the last index for the word *)
-    let word = String.sub raw.text first_word_ind (last_word_ind - first_word_ind) in
-    Some word
-  with _ ->
-    None
+    let last_word_ind =
+      try Str.search_forward forward_reg raw.text start_ind
+      with Not_found -> String.length raw.text
+    in
+    if first_word_ind >= 0 && last_word_ind > first_word_ind then
+      Some (String.sub raw.text first_word_ind (last_word_ind - first_word_ind))
+    else None
+  with _ -> None
 
 let string_in_range raw start end_ =
   try
