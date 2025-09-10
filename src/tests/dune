@@ -98,3 +98,10 @@
   (libraries base stdio lsp)
   (flags -rectypes)
   (modules test_document_lifecycle_safe))
+
+(executable
+  (public_name run_uri_security_tests)
+  (name test_uri_security_safe)
+  (libraries base stdio lsp)
+  (flags -rectypes)
+  (modules test_uri_security_safe))

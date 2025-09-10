@@ -93,8 +93,18 @@ test-overlapping-edits:
 	cd src && dune exec -- tests/test_overlapping_edits_safe.exe
 	@echo "✅ Overlapping Edits tests passed"
 
+test-document-lifecycle:
+	@echo "📋 Testing Document Lifecycle Vulnerabilities..."
+	cd src && dune exec -- tests/test_document_lifecycle_safe.exe
+	@echo "✅ Document Lifecycle tests passed"
+
+test-uri-security:
+	@echo "🔒 Testing URI Security Vulnerabilities..."
+	cd src && dune exec -- tests/test_uri_security_safe.exe
+	@echo "✅ URI Security tests passed"
+
 # Run all fine-grained tests
-test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes test-bounds-checking test-unicode-handling test-overlapping-edits
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes test-bounds-checking test-unicode-handling test-overlapping-edits test-document-lifecycle test-uri-security
 	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests
