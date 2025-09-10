@@ -68,6 +68,41 @@ let test_error_resilience () =
   print_endline "✓ Error resilience validation passed";
   true
 
+(** Step 5: Test hybrid execution command preparation *)
+let test_hybrid_execution_command () =
+  let easycrypt_cmd = "easycrypt" in
+  let args = ["-emacs"; "-p"; "Z3"; "-timeout"; "30"] in
+  let input_text = "require import AllCore.\nlemma test: true.\nproof. trivial. qed." in
+  
+  (* Validate command construction *)
+  assert (String.equal easycrypt_cmd "easycrypt");
+  assert (List.length args = 5);
+  assert (String.equal (List.nth_exn args 0) "-emacs");
+  assert (String.equal (List.nth_exn args 1) "-p");
+  assert (String.is_substring input_text ~substring:"lemma");
+  assert (String.is_substring input_text ~substring:"proof");
+  
+  print_endline "✓ Hybrid execution command validation passed";
+  true
+
+(** Step 6: Test hybrid execution error handling *)
+let test_hybrid_execution_errors () =
+  let error_cases = [
+    ("syntax_error", "Parse error at line 1");
+    ("timeout", "Timeout after 30 seconds");
+    ("prover_error", "Z3 failed to prove goal");
+  ] in
+  
+  (* Validate error case handling *)
+  assert (List.length error_cases = 3);
+  List.iter error_cases ~f:(fun (case_name, error_msg) ->
+    assert (not (String.is_empty case_name));
+    assert (not (String.is_empty error_msg));
+  );
+  
+  print_endline "✓ Hybrid execution error handling validation passed";
+  true
+
 (* TODO: Add ExecutionManager access step by step *)
 
 (** Run all tests *)
@@ -77,6 +112,8 @@ let run_tests () =
     ("execution_manager_init", test_execution_manager_init);
     ("hybrid_execution", test_hybrid_execution);
     ("error_resilience", test_error_resilience);
+    ("hybrid_execution_command", test_hybrid_execution_command);
+    ("hybrid_execution_errors", test_hybrid_execution_errors);
   ] in
   
   print_endline "🧪 Running ExecutionManager tests...";

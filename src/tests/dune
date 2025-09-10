@@ -42,3 +42,10 @@
   (libraries base stdio dm easycrypt.ecLib)
   (flags -rectypes)
   (modules test_scheduler_safe))
+
+(executable
+  (public_name run_performance_tests)
+  (name test_performance_safe)
+  (libraries base stdio unix)
+  (flags -rectypes)
+  (modules test_performance_safe))

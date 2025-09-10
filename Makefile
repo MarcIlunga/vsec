@@ -9,7 +9,7 @@ all: build test
 # Build the LSP server
 build:
 	@echo "🔧 Building LSP server..."
-	cd src && dune build
+	cd src && dune build @install
 	@echo "✅ Build complete"
 
 # Copy LSP binary to extension directory
@@ -55,8 +55,13 @@ test-scheduler:
 	cd src && dune exec -- tests/test_scheduler_safe.exe
 	@echo "✅ Scheduler tests passed"
 
+test-performance:
+	@echo "⚡ Testing Performance..."
+	cd src && dune exec -- tests/test_performance_safe.exe
+	@echo "✅ Performance tests passed"
+
 # Run all fine-grained tests
-test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance
 	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests
@@ -74,10 +79,8 @@ test-e2e: build
 	done
 	@echo "✅ End-to-end tests passed"
 
-# Run performance tests
-test-performance: build
-	@echo "⚡ Running performance tests..."
-	@echo "Performance tests not yet implemented"
+# Run performance tests (updated to use actual implementation)
+# test-performance target is defined above with the other fine-grained tests
 
 # Clean build artifacts
 clean:
