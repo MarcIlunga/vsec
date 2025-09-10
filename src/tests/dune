@@ -70,3 +70,10 @@
   (libraries base stdio lsp)
   (flags -rectypes)
   (modules test_lsp_text_changes_safe))
+
+(executable
+  (public_name run_bounds_checking_tests)
+  (name test_bounds_checking_safe)
+  (libraries base stdio dm lsp)
+  (flags -rectypes)
+  (modules test_bounds_checking_safe))

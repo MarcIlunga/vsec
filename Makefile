@@ -75,8 +75,13 @@ test-lsp-text-changes:
 	cd src && dune exec -- tests/test_lsp_text_changes_safe.exe
 	@echo "✅ LSP Text Changes tests passed"
 
+test-bounds-checking:
+	@echo "🎯 Testing Bounds Checking Vulnerabilities..."
+	cd src && dune exec -- tests/test_bounds_checking_safe.exe
+	@echo "✅ Bounds Checking tests passed"
+
 # Run all fine-grained tests
-test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes
+test-fine-grained: test-document-manager test-execution-manager test-lsp-protocol test-proof-state test-scheduler test-performance test-error-resilience test-multi-document test-lsp-text-changes test-bounds-checking
 	@echo "🎉 All fine-grained tests passed"
 
 # Run Python integration tests
