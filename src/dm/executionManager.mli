@@ -88,3 +88,8 @@ val prepare_overview : state -> LspWrapper.Range.t list -> state
 val overview : state -> exec_overview
 val overview_until_range : state -> LspWrapper.Range.t -> exec_overview
 val print_exec_overview_of_state : state -> unit
+(** Get current EasyCrypt scope for completion and analysis *)
+val get_current_scope : state -> EcLib.EcScope.scope
+
+(** Get EasyCrypt state at a specific sentence ID *)
+val get_easycrypt_state : state -> sentence_id -> EcLib.EcScope.scope option

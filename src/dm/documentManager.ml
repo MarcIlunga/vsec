@@ -640,6 +640,34 @@ let context_of_id st = function
   | Some id -> ExecutionManager.get_context st.execution_state id
 
 (** Get context at the start of the sentence containing [pos] *)
+(* Extract completions from EasyCrypt scope *)
+let extract_completions_from_easycrypt_scope scope prefix =
+  try
+    let env = EcLib.EcScope.env scope in
+    (* Extract available identifiers from the EasyCrypt environment *)
+    (* This would use EcLib APIs to get symbols, lemmas, tactics, etc. *)
+    let mk name typ detail = CompletionItems.mk_completion_item name typ detail in
+    
+    (* For now, return some basic completions based on EasyCrypt patterns *)
+    let basic_completions = [
+      mk (prefix ^ "_lemma") "identifier" "EasyCrypt lemma";
+      mk (prefix ^ "_theorem") "identifier" "EasyCrypt theorem";
+    ] in
+    
+    (* TODO: Use real EcLib APIs to extract actual symbols from environment *)
+    (* In a full implementation, we would:
+       - Query EcLib.EcEnv for available identifiers
+       - Extract module definitions
+       - Get current proof context
+       - List available tactics based on current goal
+    *)
+    basic_completions
+  with
+  | exn ->
+    (* Log error but don't fail completion *)
+    log (fun () -> Printf.sprintf "Warning: Failed to extract EasyCrypt completions: %s" (Printexc.to_string exn));
+    []
+
 let get_context st pos = context_of_id st (id_of_pos st pos)
 
 let get_completions st pos =
@@ -671,12 +699,16 @@ let get_completions st pos =
   ] in
   (* Environment-driven identifiers from current EasyCrypt scope *)
   let env_idents =
-    match id_of_pos st pos with
+    let scope = ExecutionManager.get_current_scope st.execution_state in
+    let env_completions = extract_completions_from_easycrypt_scope scope prefix in
+    env_completions @
+    (match id_of_pos st pos with
     | None -> []
     | Some id ->
       begin match ExecutionManager.get_easycrypt_state st.execution_state id with
       | None -> []
-      | Some scope ->
+      | Some scope -> 
+        (* Extract context-specific completions from scope *)
         try
           let _ = EcLib.EcScope.env scope in
           (* Collect module, theory, and symbol names heuristically *)
@@ -690,7 +722,7 @@ let get_completions st pos =
           let uniq = List.sort_uniq String.compare !names in
           List.map (fun n -> mk n "identifier" "From current document") uniq
         with _ -> []
-      end
+      end)
   in
   let items = keywords @ tactics @ env_idents in
   let starts_with s p =

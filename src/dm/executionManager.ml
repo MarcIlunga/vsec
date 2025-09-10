@@ -974,3 +974,16 @@ module ProofWorkerProcess = struct
   let log = ProofWorker.log
 end
 
+
+(* Get current EasyCrypt scope for completion and analysis *)
+let get_current_scope st = 
+  st.initial
+
+(* Get EasyCrypt state at a specific sentence ID *)
+let get_easycrypt_state st id =
+  try
+    match SM.find id st.of_sentence with
+    | (Done (Success (Some scope)), _) -> Some scope
+    | (Done (Success None), _) -> Some st.initial 
+    | _ -> None
+  with Not_found -> None
