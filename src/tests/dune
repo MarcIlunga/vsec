@@ -91,3 +91,10 @@
   (libraries base stdio lsp)
   (flags -rectypes)
   (modules test_overlapping_edits_safe))
+
+(executable
+  (public_name run_document_lifecycle_tests)
+  (name test_document_lifecycle_safe)
+  (libraries base stdio lsp)
+  (flags -rectypes)
+  (modules test_document_lifecycle_safe))

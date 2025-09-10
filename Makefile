@@ -3,6 +3,9 @@
 
 .PHONY: all build test test-unit test-integration test-e2e test-performance clean help
 
+# LSP binary path (single source of truth)
+LSP_BIN=src/_build/default/eclsp/ecLsp.exe
+
 # Default target
 all: build test
 
@@ -15,7 +18,7 @@ build:
 # Copy LSP binary to extension directory
 install-lsp: build
 	@echo "📦 Installing LSP binary..."
-	cp src/_build/default/eclsp/ecLsp.exe vscode-extension/vsec-lsp
+	cp $(LSP_BIN) vscode-extension/vsec-lsp
 	chmod +x vscode-extension/vsec-lsp
 	@echo "✅ LSP binary installed"
 
@@ -97,17 +100,17 @@ test-fine-grained: test-document-manager test-execution-manager test-lsp-protoco
 # Run Python integration tests
 test-integration: build
 	@echo "🔗 Running integration tests..."
-	cd tests/integration && python3 test_interactive_proving.py
+	python3 tests/integration/test_interactive_proving.py
 
 # Run LSP framing vulnerability tests  
 test-lsp-framing: build
 	@echo "🔍 Running LSP framing vulnerability tests..."
-	cd tests/integration && python3 test_lsp_framing_vulnerabilities.py
+	python3 tests/integration/test_lsp_framing_vulnerabilities.py
 
 # Run JSON-RPC validation tests
 test-jsonrpc-validation: build
 	@echo "🔍 Running JSON-RPC validation tests..."
-	cd tests/integration && python3 test_jsonrpc_validation.py
+	python3 tests/integration/test_jsonrpc_validation.py
 	@echo "✅ JSON-RPC validation tests passed"
 
 # Run end-to-end tests with EasyCrypt files
@@ -159,7 +162,7 @@ coverage: build
 smoke-test: build
 	@echo "💨 Running smoke test..."
 	echo 'lemma test: true. proof. trivial. qed.' > /tmp/test.ec
-	timeout 10s src/_build/default/eclsp/ecLsp.exe < /dev/null || true
+	timeout 10s $(LSP_BIN) < /dev/null || true
 	rm -f /tmp/test.ec
 	@echo "✅ Smoke test passed"
 
