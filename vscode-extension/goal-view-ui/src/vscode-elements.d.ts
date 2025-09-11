@@ -9,5 +9,12 @@ declare namespace JSX {
       disabled?: boolean;
       onClick?: (event: MouseEvent) => void;
     }, HTMLElement>;
+    'vscode-collapsible': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+      open?: boolean;
+      title?: string;
+    }, HTMLElement>;
+    'vscode-icon': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+      name?: string;
+    }, HTMLElement>;
   }
 }

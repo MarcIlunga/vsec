@@ -3,6 +3,8 @@ export interface EasyCryptGoal {
   id: number;
   hypotheses: string[];
   goal: string;
+  isOpen?: boolean;
+  isContextHidden?: boolean;
 }
 
 export interface ProofStepInfo {

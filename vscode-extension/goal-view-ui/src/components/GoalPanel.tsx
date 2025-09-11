@@ -3,7 +3,7 @@ import '@vscode-elements/elements/dist/vscode-badge';
 import '@vscode-elements/elements/dist/vscode-tabs';
 import '@vscode-elements/elements/dist/vscode-tab-header';
 import '@vscode-elements/elements/dist/vscode-tab-panel';
-import { EasyCryptProofState, ProofViewMessage } from '../types';
+import { EasyCryptProofState, ProofViewMessage, EasyCryptGoal } from '../types';
 import Goal from './Goal';
 import NavigationControls from './NavigationControls';
 import ProofProgress from './ProofProgress';
@@ -89,6 +89,7 @@ const panelStyles = {
 
 const GoalPanel: React.FC = () => {
   const [proofState, setProofState] = useState<EasyCryptProofState | null>(null);
+  const [goalStates, setGoalStates] = useState<Map<number, { isOpen: boolean; isContextHidden: boolean }>>(new Map());
 
   // Enhanced navigation handlers
   const handleStepForward = () => {
@@ -129,7 +130,38 @@ const GoalPanel: React.FC = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const renderGoals = (goals: any[], title: string) => {
+  // Goal state management
+  const handleToggleGoalOpen = (goalId: number, isOpen: boolean) => {
+    setGoalStates(prev => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(goalId) || { isOpen: true, isContextHidden: false };
+      newMap.set(goalId, { ...currentState, isOpen });
+      return newMap;
+    });
+  };
+
+  const handleToggleGoalContextHidden = (goalId: number, isContextHidden: boolean) => {
+    setGoalStates(prev => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(goalId) || { isOpen: true, isContextHidden: false };
+      newMap.set(goalId, { ...currentState, isContextHidden });
+      return newMap;
+    });
+  };
+
+  // Helper function to enhance goals with state
+  const enhanceGoalsWithState = (goals: EasyCryptGoal[]) => {
+    return goals.map(goal => {
+      const state = goalStates.get(goal.id) || { isOpen: true, isContextHidden: false };
+      return {
+        ...goal,
+        isOpen: state.isOpen,
+        isContextHidden: state.isContextHidden
+      };
+    });
+  };
+
+  const renderGoals = (goals: EasyCryptGoal[], title: string) => {
     if (goals.length === 0) {
       return (
         <div style={panelStyles.emptyState}>
@@ -138,13 +170,17 @@ const GoalPanel: React.FC = () => {
       );
     }
 
+    const enhancedGoals = enhanceGoalsWithState(goals);
+
     return (
       <div style={panelStyles.goalsContainer}>
-        {goals.map((goal, index) => (
+        {enhancedGoals.map((goal, index) => (
           <Goal 
             key={goal.id || index} 
             goal={goal} 
             isMainGoal={title === 'Main' && index === 0}
+            onToggleOpen={handleToggleGoalOpen}
+            onToggleContextHidden={handleToggleGoalContextHidden}
           />
         ))}
       </div>
