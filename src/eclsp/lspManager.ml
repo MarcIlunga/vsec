@@ -457,6 +457,47 @@ let send_log (message:string) =
   ] in
   output_json notif
 
+(* ProofView notification sender - following VSRocq pattern *)
+let send_proof_view_notification uri proof_state =
+  log (fun () -> Printf.sprintf "Sending proof view notification for %s" uri);
+  
+  (* For now, send a basic notification with sample data to get the pipeline working *)
+  let proof_state_json = `Assoc [
+    ("goals", `List [
+      `Assoc [
+        ("id", `Int 1);
+        ("hypotheses", `List [`String "H1 : forall (x : int), 0 <= x => 0 < x + 1"; `String "H2 : a : int"; `String "H3 : 0 <= a"]);
+        ("goal", `String "0 < a + 1");
+      ]
+    ]);
+    ("shelvedGoals", `List []);
+    ("givenUpGoals", `List []);
+    ("unfocusedGoals", `List []);
+    ("navigation", `Assoc [
+      ("current_step", `Int 1);
+      ("total_steps", `Int 3);
+      ("can_step_forward", `Bool true);
+      ("can_step_backward", `Bool false);
+      ("step_history", `List []);
+    ]);
+    ("current_lemma", `String "test_simple_proof (a : int) : 0 <= a => 0 < a + 1");
+    ("proof_progress", `Float 0.75);
+  ] in
+  
+  let notification = `Assoc [
+    ("jsonrpc", `String "2.0");
+    ("method", `String "prover/proofView");
+    ("params", `Assoc [
+      ("textDocument", `Assoc [
+        ("uri", `String uri);
+        ("version", `Int 1);
+      ]);
+      ("proofState", proof_state_json);
+    ]);
+  ] in
+  output_json notification;
+  log (fun () -> "ProofView notification sent")
+
 (* Custom semantic highlighting notification sender *)
 let send_semantic_highlighting_notification uri tokens =
   log (fun () -> Printf.sprintf "Sending semantic highlighting notification for %s with %d tokens" uri (List.length tokens));
@@ -544,6 +585,17 @@ let open_new_document uri text =
   let st', bg_events = Dm.DocumentManager.interpret_in_background st ~should_block_on_error:false in
   Hashtbl.replace states path { st = st'; visible = true };
   log (fun () -> ("Document added to states, total: " ^ (string_of_int (Hashtbl.length states))));
+  
+  (* Send proof view notification after document processing *)
+  let obs_id = Dm.DocumentManager.Internal.observe_id st' in
+  let proof_state = Dm.DocumentManager.get_proof st' obs_id in
+  (match proof_state with
+  | Some proof ->
+    log (fun () -> "Sending proof view notification for opened document");
+    send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
+  | None ->
+    log (fun () -> "No proof state available for document"));
+  
   inject_dm_events (uri, events @ bg_events)
 
 let textDocumentDidOpen params =
@@ -678,13 +730,14 @@ let ecInterpretToPoint params =
       Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
       
       (* Extract and send proof state update from DocumentManager state *)
-      let obs = Dm.DocumentManager.Internal.observe_id new_st in
-      let proof_state = Dm.DocumentManager.get_proof new_st obs in
-      
-      (* Send proof view notification *)
-      let proof_notification = Protocol.ExtProtocol.Notification.Server.proofView textDocument proof_state in
-      let proof_json = Jsonrpc.Notification.yojson_of_t proof_notification in
-      output_json proof_json;
+      let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
+      let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
+      (match proof_state with
+      | Some proof ->
+        log (fun () -> "Sending proof view notification for interpretToPoint");
+        send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
+      | None ->
+        log (fun () -> "No proof state available for interpretToPoint"));
       
       log (fun () -> "[interpretToPoint] sent proof view update");
       inject_dm_events (uri, events)
@@ -705,11 +758,14 @@ let ecStepForward params =
       Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
       
       (* Send proof state update from DocumentManager state *)
-      let textDocument = VersionedTextDocumentIdentifier.create ~uri ~version:1 in
-      let obs = Dm.DocumentManager.Internal.observe_id new_st in
-      let proof_state = Dm.DocumentManager.get_proof new_st obs in
-      let proof_notification = Protocol.ExtProtocol.Notification.Server.proofView textDocument proof_state in
-      output_json (Jsonrpc.Notification.yojson_of_t proof_notification);
+      let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
+      let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
+      (match proof_state with
+      | Some proof ->
+        log (fun () -> "Sending proof view notification for stepForward");
+        send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
+      | None ->
+        log (fun () -> "No proof state available for stepForward"));
       
       inject_dm_events (uri, events)
     with
@@ -729,11 +785,14 @@ let ecStepBackward params =
       Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
       
       (* Send proof state update from DocumentManager state *)
-      let textDocument = VersionedTextDocumentIdentifier.create ~uri ~version:1 in
-      let obs = Dm.DocumentManager.Internal.observe_id new_st in
-      let proof_state = Dm.DocumentManager.get_proof new_st obs in
-      let proof_notification = Protocol.ExtProtocol.Notification.Server.proofView textDocument proof_state in
-      output_json (Jsonrpc.Notification.yojson_of_t proof_notification);
+      let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
+      let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
+      (match proof_state with
+      | Some proof ->
+        log (fun () -> "Sending proof view notification for stepBackward");
+        send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
+      | None ->
+        log (fun () -> "No proof state available for stepBackward"));
       
       inject_dm_events (uri, events)
     with

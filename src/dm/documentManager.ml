@@ -579,10 +579,16 @@ let execute st id vst_for_next_todo started task background block =
 
 let get_proof st id =
   match id with
-  | None -> None
+  | None -> 
+    (* When no specific sentence ID, show goals from initial state *)
+    let initial_scope = ExecutionManager.get_initial_context st.execution_state in
+    Protocol.ProofState.get_proof ~previous:None initial_scope
   | Some id ->
     begin match ExecutionManager.get_easycrypt_state st.execution_state id with
-    | None -> None
+    | None -> 
+      (* If no state at specific ID, fall back to initial state *)
+      let initial_scope = ExecutionManager.get_initial_context st.execution_state in
+      Protocol.ProofState.get_proof ~previous:None initial_scope
     | Some scope -> Protocol.ProofState.get_proof ~previous:None scope
     end
 
@@ -985,3 +991,44 @@ module Internal = struct
     let inject_doc_events = inject_doc_events
 
 end
+
+(* Interactive proving commands - using existing functions and implementing missing ones *)
+
+let interpret_to_next st =
+  (* Find next sentence and execute to it *)
+  let current_id = Internal.observe_id st in
+  match current_id with
+  | Some current_id ->
+    (* Find next sentence after current *)
+    let sentences = Document.sentences st.document in
+    let rec find_next = function
+      | [] -> None
+      | s :: rest when s.Document.id = current_id ->
+        (match rest with
+         | next :: _ -> Some next.Document.id
+         | [] -> None)
+      | _ :: rest -> find_next rest
+    in
+    (match find_next sentences with
+     | Some next_id -> observe ~background:false st next_id ~should_block_on_error:true
+     | None -> st, [])
+  | None ->
+    (* Start from first sentence *)
+    match Document.sentences st.document with
+    | first :: _ -> observe ~background:false st first.Document.id ~should_block_on_error:true
+    | [] -> st, []
+
+(* interpret_to_previous already exists in the file - just expose it *)
+
+(* interpret_to_position already exists - just expose it via the existing one *)
+
+let interpret_to_end st =
+  (* Execute to the last sentence in the document *)
+  let sentences = Document.sentences st.document in
+  match List.rev sentences with
+  | last :: _ -> 
+    log (fun () -> Printf.sprintf "Executing to end of document (sentence %d)" last.Document.id);
+    observe ~background:false st last.Document.id ~should_block_on_error:true
+  | [] -> 
+    log (fun () -> "No sentences to execute");
+    st, []

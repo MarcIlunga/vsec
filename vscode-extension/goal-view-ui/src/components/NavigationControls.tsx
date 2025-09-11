@@ -1,4 +1,5 @@
 import React from 'react';
+import '@vscode-elements/elements/dist/vscode-button';
 import { ProofNavigation } from '../types';
 
 interface NavigationControlsProps {
@@ -128,27 +129,21 @@ const NavigationControls: React.FC<NavigationControlsProps> = ({
       </div>
 
       <div style={navStyles.controls}>
-        <button
-          style={{
-            ...navStyles.button,
-            ...(navigation.can_step_backward ? {} : navStyles.buttonDisabled)
-          }}
+        <vscode-button
+          appearance="secondary"
           onClick={onStepBackward}
           disabled={!navigation.can_step_backward}
         >
           ⬅️ Previous
-        </button>
+        </vscode-button>
         
-        <button
-          style={{
-            ...navStyles.button,
-            ...(navigation.can_step_forward ? {} : navStyles.buttonDisabled)
-          }}
+        <vscode-button
+          appearance="primary"
           onClick={onStepForward}
           disabled={!navigation.can_step_forward}
         >
           Next ➡️
-        </button>
+        </vscode-button>
 
         <div style={navStyles.progressContainer}>
           <div style={navStyles.progressBar}>

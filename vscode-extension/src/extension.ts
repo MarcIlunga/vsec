@@ -84,6 +84,8 @@ export function activate(context: ExtensionContext) {
         // Set up semantic highlighting BEFORE starting client (VSCoq pattern!)
         Client.writeToVsEcChannel("🎨 EXTENSION: Setting up semantic highlighting (BEFORE client.start - VSCoq pattern)");
         
+        // Proof view notification handler is set up later in the client.start() promise
+
         client.onNotification("vsec/semanticHighlighting", (notification: any) => {
             Client.writeToVsEcChannel(`🎯 EXTENSION: Received ${notification.tokens.length} semantic tokens`);
             
@@ -255,12 +257,18 @@ export function activate(context: ExtensionContext) {
                 Client.writeToVsEcChannel("🎯 Received proof view update from server");
                 console.log('[Extension Host] Proof view update:', params);
                 
-                // Update goal panel if it exists
+                // Auto-open goal panel on first proof state (like VSCoq)
+                if (!GoalPanel.currentPanel) {
+                    Client.writeToVsEcChannel("📋 Auto-opening goal panel for proof state");
+                    GoalPanel.render(context.extensionUri);
+                }
+                
+                // Update goal panel with proof state
                 if (GoalPanel.currentPanel) {
                     GoalPanel.currentPanel.updateProofState(params.proofState, params.textDocument);
                     Client.writeToVsEcChannel("✅ Goal panel updated with new proof state");
                 } else {
-                    Client.writeToVsEcChannel("ℹ️ Goal panel not open, proof state received but not displayed");
+                    Client.writeToVsEcChannel("⚠️ Goal panel creation failed");
                 }
             });
             

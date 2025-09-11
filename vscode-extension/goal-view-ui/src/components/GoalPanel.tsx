@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import '@vscode-elements/elements/dist/vscode-badge';
+import '@vscode-elements/elements/dist/vscode-tabs';
+import '@vscode-elements/elements/dist/vscode-tab-header';
+import '@vscode-elements/elements/dist/vscode-tab-panel';
 import { EasyCryptProofState, ProofViewMessage } from '../types';
 import Goal from './Goal';
 import NavigationControls from './NavigationControls';
@@ -85,7 +89,6 @@ const panelStyles = {
 
 const GoalPanel: React.FC = () => {
   const [proofState, setProofState] = useState<EasyCryptProofState | null>(null);
-  const [activeTab, setActiveTab] = useState<'main' | 'shelved' | 'givenUp' | 'unfocused'>('main');
 
   // Enhanced navigation handlers
   const handleStepForward = () => {
@@ -141,14 +144,13 @@ const GoalPanel: React.FC = () => {
           <Goal 
             key={goal.id || index} 
             goal={goal} 
-            isMainGoal={activeTab === 'main' && index === 0}
+            isMainGoal={title === 'Main' && index === 0}
           />
         ))}
       </div>
     );
   };
 
-  const getTabCount = (goals: any[]) => goals.length > 0 ? ` (${goals.length})` : '';
 
   return (
     <div style={panelStyles.goalPanel}>
@@ -193,41 +195,38 @@ const GoalPanel: React.FC = () => {
         </div>
       ) : (
         <>
-          <div style={panelStyles.tabs}>
-            <button 
-              style={{
-                ...panelStyles.tab,
-                ...(activeTab === 'main' ? panelStyles.tabActive : {})
-              }}
-              onClick={() => setActiveTab('main')}
-            >
-              Main Goals{getTabCount(proofState.goals)}
-            </button>
-            <button 
-              style={{
-                ...panelStyles.tab,
-                ...(activeTab === 'shelved' ? panelStyles.tabActive : {})
-              }}
-              onClick={() => setActiveTab('shelved')}
-            >
-              Shelved{getTabCount(proofState.shelvedGoals)}
-            </button>
-            <button 
-              style={{
-                ...panelStyles.tab,
-                ...(activeTab === 'unfocused' ? panelStyles.tabActive : {})
-              }}
-              onClick={() => setActiveTab('unfocused')}
-            >
-              Background{getTabCount(proofState.unfocusedGoals)}
-            </button>
-          </div>
+          <vscode-tabs>
+            <vscode-tab-header slot="header">
+              <vscode-tab-panel id="main-tab">
+                GOALS
+                {proofState.goals.length > 0 && (
+                  <vscode-badge>{proofState.goals.length}</vscode-badge>
+                )}
+              </vscode-tab-panel>
+              <vscode-tab-panel id="shelved-tab">
+                SHELVED
+                {proofState.shelvedGoals.length > 0 && (
+                  <vscode-badge>{proofState.shelvedGoals.length}</vscode-badge>
+                )}
+              </vscode-tab-panel>
+              <vscode-tab-panel id="unfocused-tab">
+                BACKGROUND
+                {proofState.unfocusedGoals.length > 0 && (
+                  <vscode-badge>{proofState.unfocusedGoals.length}</vscode-badge>
+                )}
+              </vscode-tab-panel>
+            </vscode-tab-header>
 
-          <div>
-            {activeTab === 'main' && renderGoals(proofState.goals, 'Main')}
-            {activeTab === 'shelved' && renderGoals(proofState.shelvedGoals, 'Shelved')}
-            {activeTab === 'unfocused' && renderGoals(proofState.unfocusedGoals, 'Background')}
-          </div>
+            <vscode-tab-panel id="main-view">
+              {renderGoals(proofState.goals, 'Main')}
+            </vscode-tab-panel>
+            <vscode-tab-panel id="shelved-view">
+              {renderGoals(proofState.shelvedGoals, 'Shelved')}
+            </vscode-tab-panel>
+            <vscode-tab-panel id="unfocused-view">
+              {renderGoals(proofState.unfocusedGoals, 'Background')}
+            </vscode-tab-panel>
+          </vscode-tabs>
         </>
       )}
 

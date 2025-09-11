@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getNonce } from '../utilities/getNonce';
 import { getUri } from '../utilities/getUri';
 
@@ -33,8 +35,7 @@ export class GoalPanel {
           enableScripts: true,
           retainContextWhenHidden: true,
           localResourceRoots: [
-            vscode.Uri.joinPath(extensionUri, 'media'),
-            vscode.Uri.joinPath(extensionUri, 'goal-view-ui', 'dist')
+            vscode.Uri.joinPath(extensionUri, 'media')
           ]
         }
       );
@@ -68,25 +69,40 @@ export class GoalPanel {
   }
 
   private _getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
-    const stylesUri = getUri(webview, extensionUri, ['goal-view-ui', 'dist', 'goal-view.css']);
-    const scriptUri = getUri(webview, extensionUri, ['goal-view-ui', 'dist', 'goal-view.js']);
+    const stylesUri = getUri(webview, extensionUri, ['media', 'goal-view', 'goal-view.css']);
+    const scriptUri = getUri(webview, extensionUri, ['media', 'goal-view', 'goal-view.js']);
     const nonce = getNonce();
 
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-          <link rel="stylesheet" type="text/css" href="${stylesUri}">
-          <title>EasyCrypt Goal View</title>
-        </head>
-        <body>
-          <div id="root"></div>
-          <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
-        </body>
-      </html>
-    `;
+    // Read the HTML template file
+    const templatePath = path.join(extensionUri.fsPath, 'src', 'templates', 'goalPanel.html');
+    let htmlTemplate: string;
+    
+    try {
+      htmlTemplate = fs.readFileSync(templatePath, 'utf8');
+    } catch (error) {
+      console.error('Failed to read HTML template:', error);
+      // Fallback to inline HTML if template file is not found
+      htmlTemplate = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}';">
+    <link rel="stylesheet" type="text/css" href="{{stylesUri}}">
+    <title>EasyCrypt Goal View</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" nonce="{{nonce}}" src="{{scriptUri}}"></script>
+  </body>
+</html>`;
+    }
+
+    // Replace placeholders with actual values
+    return htmlTemplate
+      .replace(/{{cspSource}}/g, webview.cspSource)
+      .replace(/{{nonce}}/g, nonce)
+      .replace(/{{stylesUri}}/g, stylesUri.toString())
+      .replace(/{{scriptUri}}/g, scriptUri.toString());
   }
 }

@@ -144,6 +144,19 @@ val locate : state -> Position.t -> pattern:string -> (string, error) Result.t
 
 val print : state -> Position.t -> pattern:string -> (string, error) Result.t
 
+(** Interactive proving commands *)
+val interpret_to_next : state -> (state * event Sel.Event.t list)
+(** Execute the next EasyCrypt statement *)
+
+val interpret_to_previous : state -> (state * event Sel.Event.t list)  
+(** Undo the last executed EasyCrypt statement *)
+
+val interpret_to_position : state -> Position.t -> (state * event Sel.Event.t list)
+(** Execute EasyCrypt statements up to the given position *)
+
+val interpret_to_end : state -> (state * event Sel.Event.t list)
+(** Execute all EasyCrypt statements in the document *)
+
 
 module Internal : sig
 
