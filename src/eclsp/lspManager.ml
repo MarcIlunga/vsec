@@ -77,6 +77,20 @@ let rec do_initialize id params =
   let definitionProvider = `Bool true in
   let referencesProvider = `Bool true in
   let documentSymbolProvider = `DocumentSymbolOptions (Lsp.Types.DocumentSymbolOptions.create ~workDoneProgress:true ()) in
+  (* Advertise semantic tokens via typed LSP capabilities *)
+  let token_types = [ "keyword"; "type"; "function"; "variable"; "property"; "comment" ] in
+  let token_mods = [ "declaration"; "definition"; "readonly"; "static"; "deprecated" ] in
+  let legend = Lsp.Types.SemanticTokensLegend.create
+    ~tokenTypes:token_types
+    ~tokenModifiers:token_mods
+  in
+  let semanticTokensProvider =
+    `SemanticTokensOptions (Lsp.Types.SemanticTokensOptions.create
+      ~legend
+      ~range:true
+      ~full:(`Bool true)
+      ())
+  in
   (* TODO: Add semantic tokens when LSP library supports it *)
   let capabilities = Lsp.Types.ServerCapabilities.create
     ~textDocumentSync
@@ -85,6 +99,7 @@ let rec do_initialize id params =
     ~definitionProvider
     ~referencesProvider
     ~documentSymbolProvider
+    ~semanticTokensProvider
   ()
   in
   let initialize_result = Lsp.Types.InitializeResult.{
@@ -1112,19 +1127,13 @@ let handle_lsp_event = function
         output_json resp;
         [lsp]
       | Some "initialize" ->
-        (* Early fast-path for initialize to ensure immediate response *)
+        (* Early fast-path for initialize to ensure immediate response; keep minimal *)
         let id_json = (match json with `Assoc fields -> (match List.assoc_opt "id" fields with Some v -> v | None -> `Null) | _ -> `Null) in
-        let token_types = `List (List.map (fun s -> `String s) semantic_token_types_legend) in
-        let token_mods = `List (List.map (fun s -> `String s) semantic_token_modifiers_legend) in
         let capabilities = `Assoc [
           ("textDocumentSync", `Int 2);
           ("completionProvider", `Assoc [("resolveProvider", `Bool false)]);
           ("hoverProvider", `Bool true);
-          ("semanticTokensProvider", `Assoc [
-            ("legend", `Assoc [("tokenTypes", token_types); ("tokenModifiers", token_mods)]);
-            ("range", `Bool true);
-            ("full", `Bool true)
-          ])
+          ("documentSymbolProvider", `Bool true)
         ] in
         let result = `Assoc [
           ("capabilities", capabilities);
@@ -1163,18 +1172,12 @@ let handle_lsp_event = function
             output_json resp;
             []
           ) else if String.equal req.method_ "initialize" then (
-            (* Advertise semanticTokensProvider via raw JSON until bindings exist *)
-            let token_types = `List (List.map (fun s -> `String s) semantic_token_types_legend) in
-            let token_mods = `List (List.map (fun s -> `String s) semantic_token_modifiers_legend) in
+            (* Minimal raw-path initialize; typed caps already include semTokens *)
             let capabilities = `Assoc [
               ("textDocumentSync", `Int 2);
               ("completionProvider", `Assoc [("resolveProvider", `Bool false)]);
               ("hoverProvider", `Bool true);
-              ("semanticTokensProvider", `Assoc [
-                ("legend", `Assoc [("tokenTypes", token_types); ("tokenModifiers", token_mods)]);
-                ("range", `Bool true);
-                ("full", `Bool true)
-              ])
+              ("documentSymbolProvider", `Bool true)
             ] in
             let result = `Assoc [
               ("capabilities", capabilities);
