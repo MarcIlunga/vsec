@@ -50,6 +50,14 @@ vscode-extension/node_modules/
 vscode-extension/out/
 vscode-extension/dist/
 vscode-extension/*.vsix
+vscode-extension/media/goal-view/
+vscode-extension/goal-view-ui/node_modules/
+vscode-extension/goal-view-ui/dist/
+vscode-extension/goal-view-ui/.vite/
+vscode-extension/goal-view-ui/build/
+vscode-extension/vsec-lsp
+vscode-extension/bin/
+vscode-extension/vsec-easycrypt-*.vsix
 
 # Testing artifacts
 **/test-results/
