@@ -1,0 +1,41 @@
+/* Minimal button styling like vsrocq - using native button element */
+.minimalButton {
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 4px;
+  margin: 0;
+  cursor: pointer;
+  color: var(--vscode-list-deemphasizedForeground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: auto;
+  height: auto;
+  font-size: inherit;
+  transition: color 0.2s ease;
+}
+
+.minimalButton:hover {
+  background: transparent;
+  color: var(--vscode-list-deemphasizedForeground);
+}
+
+.minimalButton:focus {
+  background: transparent;
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+  color: var(--vscode-list-deemphasizedForeground);
+}
+
+.minimalButton:active {
+  background: transparent;
+  color: var(--vscode-list-deemphasizedForeground);
+}
+
+/* Ensure icons inside get proper styling */
+.minimalButton svg,
+.minimalButton vscode-icon {
+  color: inherit;
+  font-size: 16px;
+}

@@ -33,10 +33,22 @@ type proof_block = {
 } [@@deriving yojson]
 
 (* EasyCrypt simplified goal type - plain strings for web UI compatibility *)
+(* Minimal EasyCrypt PpString support (compatible with VSCoq-style segments) *)
+type pp_atom = {
+  text: string;
+  cls: string option; (* e.g., "keyword", "ident", "type", etc. *)
+} [@@deriving yojson]
+
+type pp = pp_atom list [@@deriving yojson]
+
 type goal = {
   id: int;
+  (* Plain strings for current UI rendering *)
   hypotheses: string list;
   goal: string;
+  (* Enhanced pretty-printed representations for future rendering *)
+  hypotheses_pp: pp list; (* one pp per hypothesis *)
+  goal_pp: pp;
 } [@@deriving yojson]
 
 type proof_step_info = {
@@ -68,10 +80,13 @@ type t = {
 
 (** Create goal from EasyCrypt proof context *)
 let mk_goal id hypotheses goal_text =
+  let mk_pp s : pp = [{ text = s; cls = None }] in
   {
     id;
-    hypotheses = hypotheses;  (* Direct string list - no pp conversion *)
-    goal = goal_text;         (* Direct string - no pp conversion *)
+    hypotheses = hypotheses;
+    goal = goal_text;
+    hypotheses_pp = List.map mk_pp hypotheses;
+    goal_pp = mk_pp goal_text;
   }
 
 (* Real EasyCrypt goal extraction helpers *)

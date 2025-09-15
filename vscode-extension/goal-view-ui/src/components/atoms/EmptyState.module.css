@@ -1,0 +1,13 @@
+.root {
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  padding: 16px 8px;
+}
+
+.hint {
+  margin-top: 8px;
+  color: var(--vscode-list-deemphasizedForeground);
+  font-size: 12px;
+}
+
+

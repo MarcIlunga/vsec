@@ -1,0 +1,41 @@
+.block {
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel {
+  width: 100%;
+  transition: all 300ms ease;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.panel.closed {
+  height: 0;
+  margin-bottom: 0;
+  opacity: 0;
+}
+
+.rotated {
+  transform: rotate(180deg);
+}
+
+.deemphasize {
+  color: var(--vscode-list-deemphasizedForeground);
+}
+
+/* Minimal button styling - overrides are now in global CSS */
+.accordionButton {
+  /* Class for targeting specific buttons if needed */
+}
+
+.chevronIcon {
+  color: var(--vscode-list-deemphasizedForeground);
+  transition: transform 0.2s ease;
+}

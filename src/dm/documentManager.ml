@@ -385,19 +385,93 @@ let get_document_symbols st =
   get_document_symbols outline [] []
 
 let jump_to_definition st pos =
-  (* Find word under cursor and match to outline names, return its range *)
+  (* Robustly find word near cursor and match to outline names; consult env and symbol index; handle dotted names *)
   let raw = Document.raw_document st.document in
-  match RawDocument.word_at_position raw pos with
-  | None -> None
-  | Some word ->
-    let name = String.lowercase_ascii word in
+  let rec word_at_or_backoff p attempts =
+    if attempts > 3 then None else
+    match RawDocument.word_at_position raw p with
+    | Some w -> Some w
+    | None ->
+      let Position.{ line; character } = p in
+      let character' = if character = 0 then 0 else character - 1 in
+      word_at_or_backoff (Position.create ~line ~character:character') (attempts + 1)
+  in
+  let try_outline name =
+    let lname = String.lowercase_ascii name in
     let outline = Document.outline st.document in
     let rec find = function
       | [] -> None
       | (e:Document.outline_element) :: tl ->
-        if String.lowercase_ascii e.name = name then Some e.range else find tl
+        if String.lowercase_ascii e.name = lname then Some e.range else find tl
+    in find outline
+  in
+  let try_symbol_index name =
+    match ExecutionManager.lookup_symbol_def st.execution_state name with
+    | Some (_sid, Some range) -> Some range
+    | Some (_sid, None) ->
+      (* Approximate by returning the current/next sentence range *)
+      (match id_of_pos st pos with
+      | None -> None
+      | Some sid ->
+        match Document.get_sentence st.document sid with
+        | None -> None
+        | Some { stop } ->
+          (match Document.find_sentence_after st.document (stop+1) with
+          | None -> Some (Document.range_of_id st.document sid)
+          | Some { id = next_id } -> Some (Document.range_of_id st.document next_id)))
+    | None -> None
+  in
+  let normalize_candidates (w:string) : string list =
+    let w = String.trim w in
+    if String.length w = 0 then [] else
+    let base = w in
+    let suffix = try
+      let idx = String.rindex w '.' in
+      if idx + 1 < String.length w then String.sub w (idx+1) (String.length w - idx - 1) else w
+    with Not_found -> w
     in
-    Option.map (fun range -> (range, word)) (find outline)
+    if String.equal (String.lowercase_ascii base) (String.lowercase_ascii suffix)
+    then [base]
+    else [base; suffix]
+  in
+  match word_at_or_backoff pos 0 with
+  | None -> None
+  | Some word ->
+    let candidates = normalize_candidates word in
+    (* 1) Try exact outline match on any candidate *)
+    let outline_hit =
+      List.find_map (fun n -> try_outline n) candidates
+    in
+    begin match outline_hit with
+    | Some r -> Some (r, word)
+    | None ->
+      (* 2) Consult EasyCrypt env to avoid jumping for locals/prog vars *)
+      let is_env_local_or_prog =
+        match id_of_pos st pos with
+        | None -> false
+        | Some sid ->
+          begin match ExecutionManager.get_easycrypt_state st.execution_state sid with
+          | None -> false
+          | Some scope ->
+            let env =
+              match ExecutionManager.get_env_of_sentence st.execution_state sid with
+              | Some e -> e
+              | None -> EcLib.EcScope.env scope
+            in
+            let has_local = List.exists (fun n -> try EcLib.EcEnv.Var.lookup_local_opt n env <> None with _ -> false) candidates in
+            if has_local then true else
+            let has_prog = List.exists (fun n ->
+              try (EcLib.EcEnv.Var.lookup_progvar_opt ([], n) env) <> None with _ -> false) candidates in
+            has_prog
+          end
+      in
+      if is_env_local_or_prog then None else
+      (* 3) Try range-aware symbol index using candidates *)
+      let idx_hit = List.find_map (fun n -> try_symbol_index n) candidates in
+      match idx_hit with
+      | Some r -> Some (r, word)
+      | None -> None
+    end
 
 let interpret_to st id check_mode =
   (* EasyCrypt stub - Settings module not implemented yet *)
@@ -760,42 +834,63 @@ let hover_of_sentence st loc pattern sentence =
 
 let hover st pos =
   let raw = Document.raw_document st.document in
-  let word_opt =
-    match RawDocument.word_at_position raw pos with
+  let rec word_at_or_backoff p attempts =
+    if attempts > 3 then None else
+    match RawDocument.word_at_position raw p with
     | Some w -> Some w
     | None ->
-      (* Fallback: try previous character positions to catch words just before cursor *)
-      let rec backoff n =
-        if n > 3 then None
-        else
-          let Position.{ line; character } = pos in
-          let character' = if character = 0 then 0 else character - 1 in
-          let pos' = Position.create ~line ~character:character' in
-          match RawDocument.word_at_position raw pos' with
-          | Some w -> Some w
-          | None -> backoff (n+1)
-      in
-      backoff 1
+      let Position.{ line; character } = p in
+      let character' = if character = 0 then 0 else character - 1 in
+      word_at_or_backoff (Position.create ~line ~character:character') (attempts + 1)
   in
-  match word_opt with
+  match word_at_or_backoff pos 0 with
   | None -> None
   | Some word ->
-    let w = String.lowercase_ascii word in
-    let value =
-      if List.mem w ["lemma"; "theorem"; "axiom"] then
-        Printf.sprintf "**%s** - EasyCrypt definition keyword\n\nUsed to define statements and proofs." word
-      else if List.mem w ["proof"; "qed"] then
-        Printf.sprintf "**%s** - EasyCrypt proof keyword\n\nMarks the %s of a proof block." word (if w = "proof" then "beginning" else "end")
-      else if List.mem w ["module"; "theory"] then
-        Printf.sprintf "**%s** - Organization keyword\n\nOrganize code into logical units." word
-      else if List.mem w ["apply"; "rewrite"; "unfold"; "simplify"; "auto"; "intros"; "split"; "trivial"] then
-        Printf.sprintf "**%s** - Proof tactic" word
-      else if List.mem w ["bool"; "int"; "unit"; "option"] then
-        Printf.sprintf "**%s** - Built-in type" word
-      else
-        Printf.sprintf "**%s** - EasyCrypt symbol" word
-    in
-    Some (MarkupContent.create ~kind:MarkupKind.Markdown ~value)
+    let markdown s = Some (MarkupContent.create ~kind:MarkupKind.Markdown ~value:s) in
+    (* Try environment-based info at the sentence containing pos *)
+    begin match id_of_pos st pos with
+    | None ->
+      (* Fallback to keyword/tactic descriptions *)
+      let w = String.lowercase_ascii word in
+      let value =
+        if List.mem w ["lemma"; "theorem"; "axiom"] then
+          Printf.sprintf "**%s** – definition keyword" word
+        else if List.mem w ["proof"; "qed"] then
+          Printf.sprintf "**%s** – proof keyword" word
+        else if List.mem w ["apply"; "rewrite"; "unfold"; "simplify"; "auto"; "intros"; "split"; "trivial"] then
+          Printf.sprintf "**%s** – tactic" word
+        else
+          Printf.sprintf "**%s** – symbol" word
+      in markdown value
+    | Some id ->
+      begin match ExecutionManager.get_easycrypt_state st.execution_state id with
+      | None -> None
+      | Some scope ->
+        let env =
+          match ExecutionManager.get_env_of_sentence st.execution_state id with
+          | Some e -> e
+          | None -> EcLib.EcScope.env scope
+        in
+        (* Pretty-print using EasyCrypt printers when possible *)
+        let ppe = EcLib.EcPrinting.PPEnv.ofenv env in
+        (* Try locals and program variables; if not found, check document declarations *)
+        let is_local = try EcLib.EcEnv.Var.lookup_local_opt word env <> None with _ -> false in
+        if is_local then markdown (Printf.sprintf "`%s` – local variable" word) else
+        let prog_info = try EcLib.EcEnv.Var.lookup_progvar_opt ([], word) env with _ -> None in
+        (match prog_info with
+        | Some (`Var pv, _ty) ->
+            let s = Format.asprintf "program variable %a" (EcLib.EcPrinting.pp_pv ppe) pv in
+            markdown ("`" ^ word ^ "` – " ^ s)
+        | Some (`Proj (pv, _), _ty) ->
+            let s = Format.asprintf "program variable %a" (EcLib.EcPrinting.pp_pv ppe) pv in
+            markdown ("`" ^ word ^ "` – " ^ s)
+        | None ->
+          let name_l = String.lowercase_ascii word in
+          let declared = List.exists (fun (e:Document.outline_element) -> String.equal (String.lowercase_ascii e.name) name_l) (Document.outline st.document) in
+          if declared then markdown (Printf.sprintf "`%s` – declaration in this document" word)
+          else markdown (Printf.sprintf "`%s` – symbol" word))
+      end
+    end
 
 (* EasyCrypt stub - Pcoq not needed *)
 let lconstr = ref (fun _ -> "")
@@ -804,19 +899,75 @@ let lconstr = ref (fun _ -> "")
 let jump_to_definition _  _ = None
 let jump_to_definition st pos =
   let raw = Document.raw_document st.document in
-  match RawDocument.word_at_position raw pos with
+  let rec word_at_or_backoff p attempts =
+    if attempts > 3 then None else
+    match RawDocument.word_at_position raw p with
+    | Some w -> Some w
+    | None ->
+      let Position.{ line; character } = p in
+      let character' = if character = 0 then 0 else character - 1 in
+      word_at_or_backoff (Position.create ~line ~character:character') (attempts + 1)
+  in
+  let normalize_candidates (w:string) : string list =
+    let w = String.trim w in
+    if String.length w = 0 then [] else
+    let base = w in
+    let suffix = try
+      let idx = String.rindex w '.' in
+      if idx + 1 < String.length w then String.sub w (idx+1) (String.length w - idx - 1) else w
+    with Not_found -> w
+    in
+    if String.equal (String.lowercase_ascii base) (String.lowercase_ascii suffix)
+    then [base]
+    else [base; suffix]
+  in
+  match word_at_or_backoff pos 0 with
   | None -> None
   | Some word ->
-    let target = String.lowercase_ascii word in
-    let outline = Document.outline st.document in
-    let rec find_by_name = function
-      | [] -> None
-      | (e:Document.outline_element) :: tl ->
-        if String.lowercase_ascii e.name = target then Some e.range else find_by_name tl
+    let candidates = normalize_candidates word in
+    let try_outline name =
+      let lname = String.lowercase_ascii name in
+      let outline = Document.outline st.document in
+      let rec find = function
+        | [] -> None
+        | (e:Document.outline_element) :: tl ->
+          if String.lowercase_ascii e.name = lname then Some e.range else find tl
+      in find outline
     in
-    match find_by_name outline with
-    | None -> None
-    | Some range -> Some (range, word)
+    let try_symbol_index name =
+      match ExecutionManager.lookup_symbol_def st.execution_state name with
+      | Some (_sid, Some range) -> Some range
+      | Some (_sid, None) ->
+        (match get_next_range st pos with Some r -> Some r | None -> None)
+      | None -> None
+    in
+    (* Prefer outline hit *)
+    (match List.find_map try_outline candidates with
+    | Some r -> Some (r, word)
+    | None ->
+      (* Avoid jumping for locals/prog vars *)
+      let is_env_local_or_prog =
+        match id_of_pos st pos with
+        | None -> false
+        | Some sid ->
+          begin match ExecutionManager.get_easycrypt_state st.execution_state sid with
+          | None -> false
+          | Some scope ->
+            let env =
+              match ExecutionManager.get_env_of_sentence st.execution_state sid with
+              | Some e -> e
+              | None -> EcLib.EcScope.env scope
+            in
+            let has_local = List.exists (fun n -> try EcLib.EcEnv.Var.lookup_local_opt n env <> None with _ -> false) candidates in
+            if has_local then true else
+            let has_prog = List.exists (fun n -> try EcLib.EcEnv.Var.lookup_progvar_opt ([], n) env <> None with _ -> false) candidates in
+            has_prog
+          end
+      in
+      if is_env_local_or_prog then None else
+      match List.find_map try_symbol_index candidates with
+      | Some r -> Some (r, word)
+      | None -> None)
 
 let references st pos =
   let raw = Document.raw_document st.document in

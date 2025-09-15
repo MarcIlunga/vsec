@@ -272,6 +272,23 @@ export function activate(context: ExtensionContext) {
                 }
             });
             
+            // 🔄 Listen for Execution Overview Updates (prepared/processing/processed)
+            client.onNotification('prover/executionOverview', (params: any) => {
+                Client.writeToVsEcChannel("📦 Received execution overview update from server");
+                if (GoalPanel.currentPanel) {
+                    // Forward to webview to render range highlighting
+                    GoalPanel.currentPanel['updateExecutionOverview']?.(params.overview, params.textDocument);
+                }
+            });
+
+            // 🔔 Listen for server-side messages (errors/warnings/info) for webview display
+            client.onNotification('prover/messages', (params: any) => {
+                Client.writeToVsEcChannel(`🧭 Received ${params.messages?.length ?? 0} messages from server`);
+                if (GoalPanel.currentPanel) {
+                    GoalPanel.currentPanel['updateMessages']?.(params.messages, params.textDocument);
+                }
+            });
+            
             Client.writeToVsEcChannel("✅ Interactive proving commands registered successfully!");
             
             // Create status bar item

@@ -1,0 +1,61 @@
+.tabsRoot {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tabsHeader {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  border-bottom: none;
+  margin-bottom: 0;
+  background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+  min-height: 35px; /* Match VS Code tab height */
+}
+
+.tabButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--vscode-tab-inactiveForeground);
+  border: none;
+  background: var(--vscode-tab-inactiveBackground);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  height: 35px; /* Match VS Code tab height */
+  box-sizing: border-box;
+}
+
+.tabButton:hover {
+  background-color: var(--vscode-tab-hoverBackground);
+  color: var(--vscode-tab-inactiveForeground);
+}
+
+.tabButtonActive {
+  color: var(--vscode-tab-activeForeground);
+  background: var(--vscode-tab-activeBackground);
+  border-bottom-color: var(--vscode-tab-activeBorderTop, var(--vscode-focusBorder, #007acc));
+}
+
+.tabButton:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.tabPanel {
+  display: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tabPanelActive {
+  display: block;
+}
+
+

@@ -15,6 +15,37 @@ export class GoalPanel {
     // Set the webview's initial html content
     this._panel.webview.html = this._getWebviewContent(this._panel.webview, extensionUri);
     
+    // Bridge: receive messages from webview and dispatch VS Code commands
+    this._panel.webview.onDidReceiveMessage(async (msg: any) => {
+      if (!msg || typeof msg !== 'object') { return; }
+      
+      if (msg.type === 'command' && typeof msg.command === 'string') {
+        const args = Array.isArray(msg.args) ? msg.args : (msg.args !== undefined ? [msg.args] : []);
+        vscode.commands.executeCommand(msg.command, ...args).then(undefined, err => {
+          console.error('[GoalPanel] Command failed:', msg.command, err);
+        });
+      } else if (msg.type === 'lspRequest') {
+        // Handle LSP requests from webview
+        try {
+          const result = await this.handleLspRequest(msg.method, msg.params);
+          this._panel.webview.postMessage({
+            type: 'lspResponse',
+            id: msg.id,
+            result
+          });
+        } catch (error) {
+          this._panel.webview.postMessage({
+            type: 'lspResponse',
+            id: msg.id,
+            error: {
+              code: -32603,
+              message: error instanceof Error ? error.message : 'Internal error'
+            }
+          });
+        }
+      }
+    }, null, this._disposables);
+    
     // Listen for when the panel is disposed
     // This happens when the user closes the panel or when the panel is closed programmatically
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -54,6 +85,50 @@ export class GoalPanel {
     });
   }
 
+  public updateExecutionOverview(overview: any, textDocument: any) {
+    this._panel.webview.postMessage({
+      type: 'executionOverview',
+      textDocument,
+      overview
+    });
+  }
+
+  public updateMessages(messages: any[], textDocument: any) {
+    this._panel.webview.postMessage({
+      type: 'messages',
+      textDocument,
+      messages
+    });
+  }
+
+  private async handleLspRequest(method: string, params: any): Promise<any> {
+    // Get the active text editor to access the LSP client
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+      throw new Error('No active text editor');
+    }
+
+    // Get the LSP client from the extension context
+    const lspClient = (vscode.extensions.getExtension('vsec.vsec-easycrypt') as any)?.exports?.client;
+    if (!lspClient) {
+      throw new Error('LSP client not available');
+    }
+
+    // Forward the LSP request to the language server
+    switch (method) {
+      case 'textDocument/semanticTokens/full':
+        return lspClient.sendRequest('textDocument/semanticTokens/full', params);
+      case 'textDocument/semanticTokens/range':
+        return lspClient.sendRequest('textDocument/semanticTokens/range', params);
+      case 'textDocument/hover':
+        return lspClient.sendRequest('textDocument/hover', params);
+      case 'textDocument/completion':
+        return lspClient.sendRequest('textDocument/completion', params);
+      default:
+        throw new Error(`Unsupported LSP method: ${method}`);
+    }
+  }
+
   public dispose() {
     GoalPanel.currentPanel = undefined;
 
@@ -71,24 +146,18 @@ export class GoalPanel {
   private _getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
     const stylesUri = getUri(webview, extensionUri, ['media', 'goal-view', 'goal-view.css']);
     const scriptUri = getUri(webview, extensionUri, ['media', 'goal-view', 'goal-view.js']);
+    const codiconsUri = getUri(webview, extensionUri, ['media', 'goal-view', 'codicon.css']);
     const nonce = getNonce();
 
-    // Read the HTML template file
-    const templatePath = path.join(extensionUri.fsPath, 'src', 'templates', 'goalPanel.html');
-    let htmlTemplate: string;
-    
-    try {
-      htmlTemplate = fs.readFileSync(templatePath, 'utf8');
-    } catch (error) {
-      console.error('Failed to read HTML template:', error);
-      // Fallback to inline HTML if template file is not found
-      htmlTemplate = `<!DOCTYPE html>
+    // Use inline HTML template (avoid reading from src/templates in packaged extension)
+    const htmlTemplate = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}';">
     <link rel="stylesheet" type="text/css" href="{{stylesUri}}">
+    <link id="vscode-codicon-stylesheet" rel="stylesheet" type="text/css" href="{{codiconsUri}}">
     <title>EasyCrypt Goal View</title>
   </head>
   <body>
@@ -96,13 +165,25 @@ export class GoalPanel {
     <script type="module" nonce="{{nonce}}" src="{{scriptUri}}"></script>
   </body>
 </html>`;
-    }
 
     // Replace placeholders with actual values
-    return htmlTemplate
+    // Inject acquireVsCodeApi shim for React app messaging
+    const shim = `
+      <script nonce="{{nonce}}">(function(){
+        try { (window as any).vscode = acquireVsCodeApi(); } catch(_) {}
+      })();</script>`;
+
+    // Cache-bust webview resources to avoid stale bundles
+    const versionParam = `?v=${nonce}`;
+    let html = htmlTemplate
       .replace(/{{cspSource}}/g, webview.cspSource)
       .replace(/{{nonce}}/g, nonce)
-      .replace(/{{stylesUri}}/g, stylesUri.toString())
-      .replace(/{{scriptUri}}/g, scriptUri.toString());
+      .replace(/{{stylesUri}}/g, stylesUri.toString() + versionParam)
+      .replace(/{{scriptUri}}/g, scriptUri.toString() + versionParam)
+      .replace(/{{codiconsUri}}/g, codiconsUri.toString() + versionParam);
+
+    // Add shim before our main script tag
+    html = html.replace('</head>', shim + '\n</head>');
+    return html;
   }
 }

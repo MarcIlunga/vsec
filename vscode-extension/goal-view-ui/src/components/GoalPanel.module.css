@@ -1,0 +1,209 @@
+.page {
+  height: 100%;
+  width: 100%;
+}
+
+.buttonContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: fit-content;
+  margin-bottom: 12px;
+}
+
+.helpMessage {
+  font-style: italic;
+  opacity: .4;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  flex-basis: auto;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: auto;
+}
+
+.settingsPanel {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+
+.settingsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settingsDisplayMode {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.settingsDefaults {
+  display: flex;
+  gap: 18px;
+  margin-top: 4px;
+  align-items: center;
+}
+
+.settingsLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settingsLabel input {
+  margin: 0;
+}
+
+/* Settings button states */
+.settingsButton {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.settingsButton:hover {
+  opacity: 1;
+}
+
+.settingsButtonActive {
+  opacity: 1;
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.headerTitle {
+  color: var(--vscode-textPreformat-foreground);
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding-bottom: 8px;
+}
+
+.messages {
+  margin-bottom: 8px;
+  color: var(--vscode-editor-foreground);
+}
+
+.messageItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.messageInfo {
+  color: var(--vscode-notificationsInfoIcon-foreground, var(--vscode-descriptionForeground));
+}
+.messageWarn {
+  color: var(--vscode-notificationsWarningIcon-foreground, var(--vscode-descriptionForeground));
+}
+.messageError {
+  color: var(--vscode-notificationsErrorIcon-foreground, var(--vscode-descriptionForeground));
+}
+
+.section {
+  margin-bottom: 8px;
+}
+
+.centeredPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60%;
+  text-align: center;
+}
+
+.emptyState {
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  padding: 40px 20px;
+}
+
+.goalsContainer {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.welcomeTitle {
+  color: var(--vscode-textLink-foreground);
+  margin-bottom: 12px;
+}
+
+.welcomeText {
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 20px;
+}
+
+.helpText {
+  text-align: left;
+  max-width: 400px;
+  color: var(--vscode-editor-foreground);
+}
+
+.helpList {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.helpListItem {
+  margin: 4px 0;
+}
+
+.helpCode {
+  background-color: var(--vscode-textPreformat-background);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.tabs {
+  margin-bottom: 12px;
+}
+
+.tabsHeader {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  margin-bottom: 8px;
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 6px 8px;
+  border-bottom: 2px solid transparent;
+}
+
+.tabLabel:hover {
+  background-color: var(--vscode-tab-hoverBackground);
+}
+
+.tabLabel[active] {
+  color: var(--vscode-tab-activeForeground);
+  border-bottom-color: var(--vscode-focusBorder);
+}
+
+.tabLabel:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+

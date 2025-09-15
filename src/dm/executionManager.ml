@@ -89,6 +89,10 @@ type state = {
   sel_feedback_queue : (int * sentence_id * feedback_message) Queue.t;
   sel_cancellation_handle : Sel.Event.cancellation_handle;
   overview: exec_overview;
+  (* AST captured per sentence (currently stores the raw command string; to be replaced by real AST) *)
+  ast_index: (sentence_id, string) Hashtbl.t;
+  (* Captured EasyCrypt environment per sentence (derived from scope) *)
+  env_index: (sentence_id, EcLib.EcEnv.env) Hashtbl.t;
 }
 
 let get_id_of_executed_task task =
@@ -155,15 +159,132 @@ let inject_proof_event = Sel.Event.map (fun x -> ProofWorkerEvent x)
 let inject_proof_events st l =
   (st, List.map inject_proof_event l)
 
+(* --- AST/Symbol indexing for hover/definition (lightweight) --- *)
+module SymbolIndex = struct
+  let by_doc : (document_id, (string, sentence_id) Hashtbl.t) Hashtbl.t = Hashtbl.create 7
+
+  let ensure (doc_id:document_id) : (string, sentence_id) Hashtbl.t =
+    match Hashtbl.find_opt by_doc doc_id with
+    | Some tbl -> tbl
+    | None -> let tbl = Hashtbl.create 97 in Hashtbl.add by_doc doc_id tbl; tbl
+
+  let strip_comments (s:string) : string =
+    let len = String.length s in
+    let buf = Buffer.create len in
+    let rec loop i depth =
+      if i >= len then () else
+      if depth = 0 && i + 1 < len && s.[i] = '(' && s.[i+1] = '*' then
+        loop (i+2) 1
+      else if depth > 0 && i + 1 < len && s.[i] = '*' && s.[i+1] = ')' then
+        loop (i+2) (max 0 (depth-1))
+      else if depth > 0 then
+        loop (i+1) depth
+      else begin Buffer.add_char buf s.[i]; loop (i+1) depth end
+    in
+    loop 0 0; Buffer.contents buf
+
+  let register_sentence_symbols (doc_id:document_id) (sid:sentence_id) (ast:string) : unit =
+    let tbl = ensure doc_id in
+    let line = strip_comments ast |> String.lowercase_ascii in
+    let defs = [
+      Str.regexp "^\\s*\\(lemma\\|theorem\\|axiom\\)\\s+\\([a-z_][a-z0-9_'']*\)";
+      Str.regexp "^\\s*\\(module\\|theory\\)\\s+\\([a-z_][a-z0-9_]*\)";
+    ] in
+    let rec try_defs = function
+      | [] -> ()
+      | re :: tl ->
+        if Str.string_match re line 0 then (
+          let name = try Str.matched_group 2 line with _ -> "" in
+          if String.length name > 0 then Hashtbl.replace tbl name sid
+        ) else try_defs tl
+    in
+    try_defs defs
+
+  let lookup (st:state) (name:string) : sentence_id option =
+    match Hashtbl.find_opt by_doc st.doc_id with
+    | None -> None
+    | Some tbl -> Hashtbl.find_opt tbl (String.lowercase_ascii name)
+
+  let clear (doc_id:document_id) : unit =
+    Hashtbl.remove by_doc doc_id
+end
+
+(* Extended symbol index with approximate ranges, using document to compute positions *)
+module SymbolIndexEx = struct
+  type def = { sid: sentence_id; range: Range.t option }
+  let by_doc : (document_id, (string, def) Hashtbl.t) Hashtbl.t = Hashtbl.create 7
+
+  let ensure (doc_id:document_id) : (string, def) Hashtbl.t =
+    match Hashtbl.find_opt by_doc doc_id with
+    | Some tbl -> tbl
+    | None -> let tbl = Hashtbl.create 97 in Hashtbl.add by_doc doc_id tbl; tbl
+
+  let register_with_doc (document:Document.document) (doc_id:document_id) (sid:sentence_id) (ast:string) : unit =
+    let tbl = ensure doc_id in
+    let line = SymbolIndex.strip_comments ast in
+    let defs = [
+      Str.regexp "^\\s*\\(lemma\\|theorem\\|axiom\\)\\s+\\([A-Za-z_][A-Za-z0-9_'']*\\)";
+      Str.regexp "^\\s*\\(module\\|theory\\)\\s+\\([A-Za-z_][A-Za-z0-9_]*\\)";
+    ] in
+    let rec try_defs = function
+      | [] -> ()
+      | re :: tl ->
+        if Str.string_match re line 0 then (
+          let name = try Str.matched_group 2 line with _ -> "" in
+          if String.length name > 0 then (
+            let raw = Document.raw_document document in
+            let sentence_start_loc = match Document.get_sentence document sid with None -> 0 | Some s -> s.start in
+            let name_offset_in_ast =
+              try let _ = Str.search_forward (Str.regexp_string name) line 0 in Str.match_beginning () with _ -> 0
+            in
+            let loc_start = sentence_start_loc + name_offset_in_ast in
+            let loc_end = loc_start + String.length name in
+            let start_pos = RawDocument.position_of_loc raw loc_start in
+            let end_pos = RawDocument.position_of_loc raw loc_end in
+            let range = Range.create ~start:start_pos ~end_:end_pos in
+            Hashtbl.replace tbl (String.lowercase_ascii name) { sid; range = Some range }
+          )
+        ) else try_defs tl
+    in
+    try_defs defs
+
+  let lookup_def (st:state) (name:string) : (sentence_id * Range.t option) option =
+    match Hashtbl.find_opt by_doc st.doc_id with
+    | None -> None
+    | Some tbl ->
+      (match Hashtbl.find_opt tbl (String.lowercase_ascii name) with
+       | None -> None
+       | Some { sid; range } -> Some (sid, range))
+
+  let clear (doc_id:document_id) : unit =
+    Hashtbl.remove by_doc doc_id
+end
+
 let interp_error_recovery strategy st : EcLib.EcScope.scope =
   match strategy with
   | RSkip -> st
   | RAdmitted -> st (* Return current state unchanged - no error recovery in EasyCrypt yet *)
 
-(* Helper function to check if command contains keyword *)
+(* Helper function to check if command contains keyword (simple substring search) *)
 let contains_keyword command keyword =
-  let re = Str.regexp (".*\\b" ^ keyword ^ "\\b.*") in
-  Str.string_match re command 0
+  try let _ = Str.search_forward (Str.regexp_string keyword) command 0 in true
+  with Not_found -> false
+(* Remove EasyCrypt comments (nested ( * * )) from a string *)
+let strip_comments (s:string) : string =
+  let len = String.length s in
+  let buf = Buffer.create len in
+  let rec loop i depth =
+    if i >= len then () else
+    if depth = 0 && i + 1 < len && s.[i] = '(' && s.[i+1] = '*' then
+      loop (i+2) (depth+1)
+    else if depth > 0 && i + 1 < len && s.[i] = '*' && s.[i+1] = ')' then
+      loop (i+2) (max 0 (depth-1))
+    else if depth > 0 then
+      loop (i+1) depth
+    else begin Buffer.add_char buf s.[i]; loop (i+1) depth end
+  in
+  loop 0 0; Buffer.contents buf
+
 
 (* Enhanced EasyCrypt error categorization *)
 let categorize_easycrypt_error exn command =
@@ -326,11 +447,20 @@ let interp_ast ~doc_id ~state_id ~st ~error_recovery ast =
           let parsed_successfully = 
             try
               (* Basic syntax validation by checking for common EasyCrypt patterns *)
-              let command_lower = String.lowercase_ascii ast_trimmed in
+        let command_lower = String.lowercase_ascii ast_trimmed in
               String.contains ast_trimmed '.' && 
               (List.exists (contains_keyword command_lower) ["lemma"; "theorem"; "axiom"; "proof"; "qed"; "by"; "trivial"; "theory"; "end"; "module"; "require"; "import"])
             with _ -> false
           in
+          (* Additional check: definitions should contain a colon before terminating '.' *)
+          let looks_like_def_no_colon =
+            try
+              let re = Str.regexp_case_fold "^\\s*\\(lemma\\|theorem\\|axiom\\)\\s+[^:]+\\.\\s*$" in
+              let lc = String.lowercase_ascii (strip_comments ast_trimmed) in
+              Str.string_match re lc 0
+            with _ -> false
+          in
+          let parsed_successfully = parsed_successfully && (not looks_like_def_no_colon) in
           
           if parsed_successfully then (
             log (fun () -> "EasyCrypt command parsed successfully");
@@ -357,7 +487,23 @@ let interp_ast ~doc_id ~state_id ~st ~error_recovery ast =
       if invalid then
         let loc = EasyCryptLocation.{ start_line = 2; start_col = 2; end_line = 2; end_col = 16 } in
         Error ((loc, "Unknown tactic: invalid_tactic"), Some st)
-      else success scope_after
+      else (
+        (* Recompute quick-parse check here to avoid scope issues *)
+        let command_lower = String.lowercase_ascii ast_trimmed in
+        let base_ok =
+          String.contains ast_trimmed '.' &&
+          (List.exists (contains_keyword command_lower)
+            ["lemma"; "theorem"; "axiom"; "proof"; "qed"; "by"; "trivial"; "theory"; "end"; "module"; "require"; "import"]) in
+        let looks_like_def_no_colon =
+          try
+            let re = Str.regexp_case_fold "^\\s*\\(lemma\\|theorem\\|axiom\\)\\s+[^:]+\\.\\s*$" in
+            Str.string_match re (String.lowercase_ascii ast_trimmed) 0
+          with _ -> false
+        in
+        if (not base_ok) || looks_like_def_no_colon then
+          let loc = compute_error_location ast_trimmed (Failure "parse_error") in
+          Error ((loc, "EasyCrypt parsing error"), Some st)
+        else success scope_after)
     in
     (* Return status with updated scope; events omitted in simplified model *)
     scope_after, status, []
@@ -565,6 +711,8 @@ let init vernac_state =
     sel_feedback_queue;
     sel_cancellation_handle;
     overview = empty_overview;
+    ast_index = Hashtbl.create 257;
+    env_index = Hashtbl.create 257;
   },
   event
 
@@ -652,6 +800,7 @@ let jobs : (DelegationManager.job_handle * Sel.Event.cancellation_handle * Proof
 let destroy st =
   feedback_cleanup st;
   Queue.iter (fun (h,c,_) -> DelegationManager.cancel_job h; Sel.Event.cancel c) jobs
+  ; SymbolIndex.clear st.doc_id
 
 
 let last_opt l = 
@@ -700,6 +849,7 @@ let worker_execute ~doc_id ~send_back (vs,events) { id; ast; synterp; error_reco
   let vs = synterp in
   log (fun () -> "worker interp " ^ Document.sentence_ido_string id);
   let vs, v, ev = interp_ast ~doc_id ~state_id:id ~st:vs ~error_recovery ast in
+  SymbolIndex.register_sentence_symbols doc_id id ast;
   send_back (ProofJob.UpdateExecStatus (id,purge_state v));
   (vs, events @ ev)
 
@@ -771,6 +921,9 @@ let execute_task st (vs, events, interrupted) task =
             vs, st, [], exec_error
           else
             let vs, v, ev = interp_ast ~doc_id:st.doc_id ~state_id:id ~st:vs ~error_recovery ast in
+            Hashtbl.replace st.ast_index id ast;
+            (try let env = EcLib.EcScope.env vs in Hashtbl.replace st.env_index id env with _ -> ());
+            SymbolIndex.register_sentence_symbols st.doc_id id ast;
             let st = update st id v in
             let exec_error = exec_error_of_execution_status id v in
             vs, st, ev, exec_error
@@ -834,6 +987,10 @@ let execute_task st (vs, events, interrupted) task =
 let execute st document (vs, events, interrupted) task block_on_first_error : (prepared_task option * state * EcLib.EcScope.scope * event Sel.Event.t list * errored_sentence) =
   let st, vst_for_next_todo, events, _, exec_error =
     execute_task st (vs, events, interrupted) task in
+  (* Register range-aware symbols for executed sentences when possible *)
+  (match task with
+  | PExec { id; ast; _ } -> SymbolIndexEx.register_with_doc document st.doc_id id ast
+  | _ -> ());
   match block_on_first_error, exec_error with
   | false, _ | _, None ->
     let st = update_overview task st document in
@@ -1008,6 +1165,19 @@ let get_easycrypt_state st id =
   | Some (Success None) -> None
   | Some (Success (Some scope))
   | Some (Error (_, Some scope)) -> Some scope
+(* Public lookup for symbol -> sentence_id *)
+let lookup_symbol_id st name =
+  SymbolIndex.lookup st name
+
+let lookup_symbol_def st name =
+  SymbolIndexEx.lookup_def st name
+
+let get_ast_of_sentence st id =
+  Hashtbl.find_opt st.ast_index id
+
+let get_env_of_sentence st id =
+  Hashtbl.find_opt st.env_index id
+
 
 module ProofWorkerProcess = struct
   type options = ProofWorker.options

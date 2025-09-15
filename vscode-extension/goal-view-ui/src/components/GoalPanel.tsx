@@ -1,128 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import '@vscode-elements/elements/dist/vscode-badge';
-import '@vscode-elements/elements/dist/vscode-tabs';
-import '@vscode-elements/elements/dist/vscode-tab-header';
-import '@vscode-elements/elements/dist/vscode-tab-panel';
-import { EasyCryptProofState, ProofViewMessage, EasyCryptGoal } from '../types';
-import Goal from './Goal';
-import NavigationControls from './NavigationControls';
-import ProofProgress from './ProofProgress';
+import styles from './GoalPanel.module.css';
+import MinimalButton from './atoms/MinimalButton';
+import { VscGear } from 'react-icons/vsc';
+import { EasyCryptProofState, ProofViewMessage } from '../types';
+import GoalSection from './organisms/GoalSection';
+import Message from './atoms/Message';
+import Accordion from './atoms/Accordion';
+import EmptyState from './atoms/EmptyState';
 
-const panelStyles = {
-  goalPanel: {
-    padding: '16px',
-    height: '100vh',
-    overflowY: 'auto' as const
-  },
-  headerH2: {
-    color: 'var(--vscode-textPreformat-foreground)',
-    margin: '0 0 16px 0',
-    fontSize: '18px',
-    borderBottom: '1px solid var(--vscode-panel-border)',
-    paddingBottom: '8px'
-  },
-  noProof: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '60%',
-    textAlign: 'center' as const
-  },
-  welcomeMessageH3: {
-    color: 'var(--vscode-textLink-foreground)',
-    marginBottom: '12px'
-  },
-  welcomeMessageP: {
-    color: 'var(--vscode-descriptionForeground)',
-    marginBottom: '20px'
-  },
-  helpText: {
-    textAlign: 'left' as const,
-    maxWidth: '400px',
-    color: 'var(--vscode-editor-foreground)'
-  },
-  helpTextUl: {
-    listStyleType: 'none' as const,
-    paddingLeft: '0'
-  },
-  helpTextLi: {
-    margin: '4px 0'
-  },
-  helpTextCode: {
-    backgroundColor: 'var(--vscode-textPreformat-background)',
-    padding: '2px 6px',
-    borderRadius: '3px',
-    fontFamily: 'var(--vscode-editor-font-family, monospace)'
-  },
-  tabs: {
-    display: 'flex',
-    borderBottom: '1px solid var(--vscode-panel-border)',
-    marginBottom: '16px'
-  },
-  tab: {
-    background: 'transparent',
-    border: 'none',
-    padding: '8px 16px',
-    color: 'var(--vscode-tab-inactiveForeground)',
-    cursor: 'pointer',
-    borderBottom: '2px solid transparent',
-    fontSize: '14px'
-  },
-  tabHover: {
-    color: 'var(--vscode-tab-activeForeground)',
-    backgroundColor: 'var(--vscode-tab-hoverBackground)'
-  },
-  tabActive: {
-    color: 'var(--vscode-tab-activeForeground)',
-    borderBottomColor: 'var(--vscode-focusBorder)'
-  },
-  emptyState: {
-    textAlign: 'center' as const,
-    color: 'var(--vscode-descriptionForeground)',
-    padding: '40px 20px'
-  },
-  goalsContainer: {
-    maxHeight: 'calc(100vh - 200px)',
-    overflowY: 'auto' as const
-  }
-};
+// Styles moved to CSS Module
 
 const GoalPanel: React.FC = () => {
   const [proofState, setProofState] = useState<EasyCryptProofState | null>(null);
+  const [messages, setMessages] = useState<any[] | null>(null);
+  const [displayMode, setDisplayMode] = useState<'tabs' | 'list'>('tabs');
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [goalStates, setGoalStates] = useState<Map<number, { isOpen: boolean; isContextHidden: boolean }>>(new Map());
-
-  // Enhanced navigation handlers
-  const handleStepForward = () => {
-    // Send step forward command to VS Code
-    window.parent?.postMessage({
-      type: 'command',
-      command: 'vsec.stepForward'
-    }, '*');
-  };
-
-  const handleStepBackward = () => {
-    // Send step backward command to VS Code
-    window.parent?.postMessage({
-      type: 'command', 
-      command: 'vsec.stepBackward'
-    }, '*');
-  };
-
-  const handleJumpToStep = (step: number) => {
-    // Send jump to step command to VS Code
-    window.parent?.postMessage({
-      type: 'command',
-      command: 'vsec.jumpToStep',
-      args: { step }
-    }, '*');
-  };
+  const [prefs, setPrefs] = useState<{ defaultOpen: boolean; defaultContextHidden: boolean }>({ defaultOpen: true, defaultContextHidden: false });
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent<ProofViewMessage>) => {
       const { data } = event;
       if (data.type === 'proofView') {
         setProofState(data.proofState);
-        console.log('EasyCrypt proof state updated:', data.proofState);
+      } else if ((data as any).type === 'messages') {
+        setMessages((data as any).messages || []);
       }
     };
 
@@ -130,142 +32,142 @@ const GoalPanel: React.FC = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Goal state management
+  // Load persisted settings on mount
+  useEffect(() => {
+    try {
+      const vscode = (window as any).acquireVsCodeApi ? (window as any).acquireVsCodeApi() : (window as any).vscode;
+      const state = vscode?.getState?.();
+      if (state?.goalPrefs) {
+        setPrefs(state.goalPrefs);
+      }
+      if (state?.goalDisplayMode && (state.goalDisplayMode === 'tabs' || state.goalDisplayMode === 'list')) {
+        setDisplayMode(state.goalDisplayMode);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }, []);
+
+  // Persist settings when changed
+  useEffect(() => {
+    try {
+      const vscode = (window as any).acquireVsCodeApi ? (window as any).acquireVsCodeApi() : (window as any).vscode;
+      const prev = vscode?.getState?.() || {};
+      vscode?.setState?.({ ...prev, goalPrefs: prefs, goalDisplayMode: displayMode });
+    } catch (_) {}
+  }, [prefs, displayMode]);
+
+  // Goal state management handlers
   const handleToggleGoalOpen = (goalId: number, isOpen: boolean) => {
-    setGoalStates(prev => {
-      const newMap = new Map(prev);
-      const currentState = newMap.get(goalId) || { isOpen: true, isContextHidden: false };
+    setGoalStates(prevStates => {
+      const newMap = new Map(prevStates);
+      const currentState = newMap.get(goalId) || { isOpen: prefs.defaultOpen, isContextHidden: prefs.defaultContextHidden };
       newMap.set(goalId, { ...currentState, isOpen });
       return newMap;
     });
+    // Auto-scroll to goal when opened (like vsrocq)
+    if (isOpen) {
+      setTimeout(() => {
+        const el = document.querySelector(`[data-goal-id="${goalId}"]`);
+        if (el && 'scrollIntoView' in el) {
+          (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 0);
+    }
   };
 
   const handleToggleGoalContextHidden = (goalId: number, isContextHidden: boolean) => {
-    setGoalStates(prev => {
-      const newMap = new Map(prev);
+    setGoalStates(prevStates => {
+      const newMap = new Map(prevStates);
       const currentState = newMap.get(goalId) || { isOpen: true, isContextHidden: false };
       newMap.set(goalId, { ...currentState, isContextHidden });
       return newMap;
     });
   };
 
-  // Helper function to enhance goals with state
-  const enhanceGoalsWithState = (goals: EasyCryptGoal[]) => {
-    return goals.map(goal => {
-      const state = goalStates.get(goal.id) || { isOpen: true, isContextHidden: false };
-      return {
-        ...goal,
-        isOpen: state.isOpen,
-        isContextHidden: state.isContextHidden
-      };
-    });
+  const settingsClickHandler = () => {
+    setSettingsOpen(!settingsOpen);
   };
-
-  const renderGoals = (goals: EasyCryptGoal[], title: string) => {
-    if (goals.length === 0) {
-      return (
-        <div style={panelStyles.emptyState}>
-          <p>No {title.toLowerCase()} goals</p>
-        </div>
-      );
-    }
-
-    const enhancedGoals = enhanceGoalsWithState(goals);
-
-    return (
-      <div style={panelStyles.goalsContainer}>
-        {enhancedGoals.map((goal, index) => (
-          <Goal 
-            key={goal.id || index} 
-            goal={goal} 
-            isMainGoal={title === 'Main' && index === 0}
-            onToggleOpen={handleToggleGoalOpen}
-            onToggleContextHidden={handleToggleGoalContextHidden}
-          />
-        ))}
-      </div>
-    );
-  };
-
 
   return (
-    <div style={panelStyles.goalPanel}>
-      <div>
-        <h2 style={panelStyles.headerH2}>🎯 EasyCrypt Interactive Proving</h2>
+    <div className={styles.page}>
+      {/* Header with settings button like vsrocq */}
+      <div className={styles.buttonContainer}>
+        <div className={styles.helpMessage}>
+          {/* Help message can go here */}
+        </div>
+        <MinimalButton 
+          title="Open goal panel settings"
+          onClick={settingsClickHandler}
+          ariaLabel="Open goal panel settings"
+          className={settingsOpen ? styles.settingsButtonActive : styles.settingsButton}
+        >
+          <VscGear />
+        </MinimalButton>
       </div>
 
-      {/* Show proof progress if available */}
-      {proofState && proofState.proof_progress !== undefined && (
-        <ProofProgress
-          progress={proofState.proof_progress}
-          currentLemma={proofState.current_lemma}
-          totalGoals={proofState.goals.length + 3} // assume some completed
-          completedGoals={3}
-        />
-      )}
-
-      {/* Show navigation controls if available */}
-      {proofState?.navigation && (
-        <NavigationControls
-          navigation={proofState.navigation}
-          onStepForward={handleStepForward}
-          onStepBackward={handleStepBackward}
-          onJumpToStep={handleJumpToStep}
-        />
-      )}
-
       {!proofState ? (
-        <div style={panelStyles.noProof}>
-          <div>
-            <h3 style={panelStyles.welcomeMessageH3}>Welcome to EasyCrypt Interactive Proving!</h3>
-            <p style={panelStyles.welcomeMessageP}>Open an EasyCrypt file (.ec) with proof blocks to start interactive proving.</p>
-            <div style={panelStyles.helpText}>
-              <strong>Keybindings:</strong>
-              <ul style={panelStyles.helpTextUl}>
-                <li style={panelStyles.helpTextLi}><code style={panelStyles.helpTextCode}>Ctrl+Right</code> - Step forward</li>
-                <li style={panelStyles.helpTextLi}><code style={panelStyles.helpTextCode}>Ctrl+Left</code> - Step backward</li>
-                <li style={panelStyles.helpTextLi}><code style={panelStyles.helpTextCode}>Ctrl+End</code> - Interpret to cursor</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <EmptyState message="Not in proof mode" />
       ) : (
         <>
-          <vscode-tabs>
-            <vscode-tab-header slot="header">
-              <vscode-tab-panel id="main-tab">
-                GOALS
-                {proofState.goals.length > 0 && (
-                  <vscode-badge>{proofState.goals.length}</vscode-badge>
-                )}
-              </vscode-tab-panel>
-              <vscode-tab-panel id="shelved-tab">
-                SHELVED
-                {proofState.shelvedGoals.length > 0 && (
-                  <vscode-badge>{proofState.shelvedGoals.length}</vscode-badge>
-                )}
-              </vscode-tab-panel>
-              <vscode-tab-panel id="unfocused-tab">
-                BACKGROUND
-                {proofState.unfocusedGoals.length > 0 && (
-                  <vscode-badge>{proofState.unfocusedGoals.length}</vscode-badge>
-                )}
-              </vscode-tab-panel>
-            </vscode-tab-header>
+          {/* Proof accordion - like vsrocq */}
+          <Accordion title="Proof" collapsed={false}>
+            {/* Settings panel */}
+            {settingsOpen && (
+              <div className={styles.settingsPanel}>
+                <div className={styles.settingsContent}>
+                  <div>
+                    <strong>Display mode</strong>
+                    <div className={styles.settingsDisplayMode}>
+                      <vscode-button appearance={displayMode === 'tabs' ? 'primary' : 'secondary'} onClick={() => setDisplayMode('tabs')}>Tabs</vscode-button>
+                      <vscode-button appearance={displayMode === 'list' ? 'primary' : 'secondary'} onClick={() => setDisplayMode('list')}>List</vscode-button>
+                    </div>
+                  </div>
+                    <div>
+                      <strong>Goal Display Preferences</strong>
+                      <div className={styles.settingsDefaults}>
+                        <label className={styles.settingsLabel} title="New goals will start expanded by default">
+                          <input type="checkbox" checked={prefs.defaultOpen} onChange={e => setPrefs(prev => ({ ...prev, defaultOpen: (e.target as HTMLInputElement).checked }))} />
+                          Goals open by default
+                        </label>
+                        <label className={styles.settingsLabel} title="New goals will hide hypotheses context by default">
+                          <input type="checkbox" checked={prefs.defaultContextHidden} onChange={e => setPrefs(prev => ({ ...prev, defaultContextHidden: (e.target as HTMLInputElement).checked }))} />
+                          Hide context by default
+                        </label>
+                      </div>
+                    </div>
+                </div>
+              </div>
+            )}
 
-            <vscode-tab-panel id="main-view">
-              {renderGoals(proofState.goals, 'Main')}
-            </vscode-tab-panel>
-            <vscode-tab-panel id="shelved-view">
-              {renderGoals(proofState.shelvedGoals, 'Shelved')}
-            </vscode-tab-panel>
-            <vscode-tab-panel id="unfocused-view">
-              {renderGoals(proofState.unfocusedGoals, 'Background')}
-            </vscode-tab-panel>
-          </vscode-tabs>
+            <GoalSection
+              goals={proofState.goals}
+              shelvedGoals={proofState.shelvedGoals}
+              unfocusedGoals={proofState.unfocusedGoals}
+              givenUpGoals={proofState.givenUpGoals}
+              display={displayMode === 'tabs' ? 'Tabs' : 'List'}
+              goalStates={goalStates}
+              onToggleGoalOpen={handleToggleGoalOpen}
+              onToggleGoalContextHidden={handleToggleGoalContextHidden}
+              prefs={prefs}
+            />
+          </Accordion>
+
+          {/* Messages accordion - like vsrocq */}
+          {messages && messages.length > 0 && (
+            <Accordion title="Messages" collapsed={false}>
+              <div className={styles.panel}>
+                {messages.map((m, idx) => {
+                  const sev = (m.severity || 'info').toLowerCase();
+                  return (
+                    <Message key={idx} severity={(sev as any) || 'info'} text={m.message} />
+                  );
+                })}
+              </div>
+            </Accordion>
+          )}
         </>
       )}
-
     </div>
   );
 };

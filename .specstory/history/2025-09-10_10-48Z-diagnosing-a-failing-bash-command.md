@@ -534,3 +534,9 @@ Would you like me to implement these fixes?
 
 ---
 
+_**User**_
+
+Work on the remaining toods. Always run make-test and build_lsp.sh to ensure we can move to the next task
+
+---
+

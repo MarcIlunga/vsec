@@ -1,0 +1,85 @@
+.goal {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  background-color: var(--vscode-editor-background);
+  box-shadow: 0 0 0 1px transparent;
+  scroll-margin: 12px;
+}
+
+.mainGoal {
+  border-color: var(--vscode-focusBorder);
+  border-left: 3px solid var(--vscode-focusBorder);
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goalHeader {
+  color: var(--vscode-textPreformat-foreground);
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.collapsibleContent {
+  margin-top: 8px;
+}
+
+.hypothesesHeader {
+  color: var(--vscode-textLink-foreground);
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.hypothesis {
+  font-family: var(--vscode-editor-font-family, "Consolas", monospace);
+  font-size: 13px;
+  color: var(--vscode-editor-foreground);
+  margin-bottom: 4px;
+  padding-left: 8px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.separator {
+  color: var(--vscode-panel-border);
+  margin: 8px 0;
+  font-family: monospace;
+}
+
+.conclusion {
+  font-family: var(--vscode-editor-font-family, "Consolas", monospace);
+  font-size: 14px;
+  color: var(--vscode-textPreformat-foreground);
+  padding: 8px;
+  background-color: var(--vscode-textBlockQuote-background);
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  margin-top: 8px;
+  border-radius: 3px;
+}
+
+.conclusionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+

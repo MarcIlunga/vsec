@@ -1,5 +1,30 @@
 # VsEc - EasyCrypt Language Support
 
+## Build and Package
+
+Prereqs: Node 20+ (Node 24 recommended). If using nvm:
+
+```bash
+bash -lc 'source ~/.nvm/nvm.sh && nvm use 24 && node -v'
+```
+
+Build and package (runs webview build + compile):
+
+```bash
+cd vscode-extension
+npm run package
+```
+
+Non-interactive packaging (bypass missing repository prompt):
+
+```bash
+npx @vscode/vsce@latest package --allow-missing-repository --no-gitHubIssueLinking
+```
+
+The webview assets are emitted to `media/goal-view/` from `goal-view-ui` via Vite during prepublish.
+
+# VsEc - EasyCrypt Language Support
+
 Rich language support for EasyCrypt with semantic highlighting, completion, and proof assistance.
 
 ## Features

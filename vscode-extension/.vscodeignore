@@ -9,7 +9,11 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.ts
 node_modules/**
+**/node_modules/**
 *.vsix
 webpack.config.js
 scripts/**
 tsconfig.json
+goal-view-ui/**
+dist/tests/**
+**/*.map

@@ -8,9 +8,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@vscode-elements/elements": "^2.3.0",
+    "@vscode/codicons": "^0.0.40",
+    "monaco-editor": "^0.53.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

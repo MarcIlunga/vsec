@@ -1,0 +1,71 @@
+.block {
+  width: 100%;
+}
+
+.separatorZone {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.goalIndex {
+  color: var(--vscode-rocq-goalId, var(--vscode-descriptionForeground));
+  margin-right: 6px;
+  text-wrap: nowrap;
+  font-size: x-small;
+}
+
+.separator {
+  flex: 1;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.conclusionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.conclusionText {
+  font-family: var(--vscode-editor-font-family, "Consolas", monospace);
+  font-size: var(--vscode-editor-font-size, 14px);
+  color: var(--vscode-editor-foreground);
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.panel {
+  transition: height 200ms ease;
+}
+
+.panelClosed {
+  display: none;
+}
+
+.deemphasize {
+  color: var(--vscode-list-deemphasizedForeground);
+  font-size: 12px;
+}
+
+.rotated {
+  transform: rotate(180deg);
+}
+
+
+/* Copy button styling */
+.copyButton {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.copyButton:hover {
+  opacity: 1;
+}
+
+

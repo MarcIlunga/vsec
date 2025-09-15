@@ -2,7 +2,7 @@
   "name": "vsec-easycrypt",
   "displayName": "VsEc - EasyCrypt Language Support",
   "description": "Rich language support for EasyCrypt with semantic highlighting, completion, and proof assistance",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "publisher": "vsec",
   "engines": {
     "vscode": "^1.74.0"
@@ -42,38 +42,7 @@
         "path": "./syntaxes/easycrypt.tmLanguage.json"
       }
     ],
-    "commands": [
-      {
-        "command": "vsec.showGoalPanel",
-        "title": "Show Goal Panel",
-        "category": "VsEc"
-      },
-      {
-        "command": "vsec.stepForward",
-        "title": "Step Forward",
-        "category": "VsEc"
-      },
-      {
-        "command": "vsec.stepBackward", 
-        "title": "Step Backward",
-        "category": "VsEc"
-      },
-      {
-        "command": "vsec.interpretToPoint",
-        "title": "Interpret to Point",
-        "category": "VsEc"
-      },
-      {
-        "command": "vsec.interpretToEnd",
-        "title": "Interpret to End",
-        "category": "VsEc"
-      },
-      {
-        "command": "vsec.proofSearch",
-        "title": "Proof Search & Discovery",
-        "category": "VsEc"
-      }
-    ],
+    
     "configuration": [
       {
         "title": "EasyCrypt configuration",
@@ -263,14 +232,15 @@
     "onCommand:vsec.proofSearch"
   ],
   "scripts": {
-    "vscode:prepublish-disabled": "npm run package-prep",
+    "vscode:prepublish": "npm run package-prep",
     "compile": "webpack",
     "compile-tsc": "tsc -p ./",
     "watch": "webpack --watch",
     "watch-tsc": "tsc -watch -p ./",
     "build-binaries": "node scripts/build-binaries.js",
     "build-all-platforms": "node scripts/build-all-platforms.js",
-    "package-prep": "npm run build-binaries && npm run compile",
+    "build-webview": "npm --prefix goal-view-ui run build",
+    "package-prep": "npm run build-webview && npm run build-binaries && npm run compile",
     "pretest": "npm run compile-tsc",
     "package": "vsce package"
   },

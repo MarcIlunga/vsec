@@ -70,8 +70,18 @@ val get_initial_context : state -> EcLib.EcScope.scope
 (** Returns the EasyCrypt scope state after the sentence *)
 val get_easycrypt_state : state -> sentence_id -> EcLib.EcScope.scope option
 
+val lookup_symbol_id : state -> string -> sentence_id option
+
+val lookup_symbol_def : state -> string -> (sentence_id * Lsp.Types.Range.t option) option
+
 (** Returns the vernac state after the sentence - EasyCrypt equivalent *)
 val get_vernac_state : state -> sentence_id -> EcLib.EcScope.scope option
+
+(** Retrieve the resolved EasyCrypt environment at a sentence, if available *)
+val get_env_of_sentence : state -> sentence_id -> EcLib.EcEnv.env option
+
+(** Retrieve stored AST (raw command string) for a sentence, if available *)
+val get_ast_of_sentence : state -> sentence_id -> string option
 
 (** Events for the main loop *)
 val handle_event : event -> state -> (sentence_id option * state option * events)

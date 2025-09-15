@@ -1,0 +1,74 @@
+.container {
+  width: 100%;
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2));
+  border-radius: 3px;
+  overflow: hidden;
+  background-color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.editor {
+  width: 100%;
+  min-height: 60px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+/* Override Monaco's default styling to match VS Code */
+.container :global(.monaco-editor) {
+  background-color: transparent !important;
+}
+
+.container :global(.monaco-editor .view-lines) {
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace) !important;
+  font-size: var(--vscode-editor-font-size, 13px) !important;
+  line-height: var(--vscode-editor-line-height, 1.4) !important;
+}
+
+.container :global(.monaco-editor .margin) {
+  background-color: transparent !important;
+}
+
+.container :global(.monaco-editor .monaco-editor-background) {
+  background-color: transparent !important;
+}
+
+/* Ensure proper text selection */
+.container :global(.monaco-editor .selected-text) {
+  background-color: var(--vscode-editor-selectionBackground, #264f78) !important;
+}
+
+/* Semantic token styling */
+.container :global(.semantic-token-keyword) {
+  color: var(--vscode-textLink-foreground, #569CD6) !important;
+  font-weight: bold;
+}
+
+.container :global(.semantic-token-type) {
+  color: var(--vscode-textLink-foreground, #4EC9B0) !important;
+}
+
+.container :global(.semantic-token-function) {
+  color: var(--vscode-textLink-foreground, #DCDCAA) !important;
+}
+
+.container :global(.semantic-token-variable) {
+  color: var(--vscode-editor-foreground, #9CDCFE) !important;
+}
+
+.container :global(.semantic-token-property) {
+  color: var(--vscode-textPreformat-foreground, #9CDCFE) !important;
+}
+
+.container :global(.semantic-token-comment) {
+  color: var(--vscode-textPreformat-foreground, #6A9955) !important;
+  font-style: italic;
+}
+
+.lspStatus {
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  color: var(--vscode-descriptionForeground, #cccccc);
+  font-size: 11px;
+  pointer-events: none;
+}

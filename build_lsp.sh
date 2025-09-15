@@ -9,6 +9,7 @@ PROJECT_ROOT="/home/marcilunga/dev/vsec"
 SRC_DIR="$PROJECT_ROOT/src"
 EXTENSION_DIR="$PROJECT_ROOT/vscode-extension"
 LSP_EXECUTABLE="$SRC_DIR/_build/default/eclsp/ecLsp.exe"
+ALT_LSP_EXECUTABLE="$SRC_DIR/_build/default/driver/ecLsp.exe"
 BUNDLED_LSP="$EXTENSION_DIR/vsec-lsp"
 
 echo "🔨 EasyCrypt LSP Build Script"
@@ -25,6 +26,10 @@ build_lsp() {
     if [ -f "$LSP_EXECUTABLE" ]; then
         echo "✅ LSP server built successfully: $LSP_EXECUTABLE"
         ls -lh "$LSP_EXECUTABLE"
+    elif [ -f "$ALT_LSP_EXECUTABLE" ]; then
+        echo "✅ LSP server built successfully (alt path): $ALT_LSP_EXECUTABLE"
+        ls -lh "$ALT_LSP_EXECUTABLE"
+        LSP_EXECUTABLE="$ALT_LSP_EXECUTABLE"
     else
         echo "❌ LSP server build failed - executable not found"
         exit 1
@@ -56,6 +61,30 @@ install_lsp() {
     fi
 }
 
+# Build webview UI (goal-view-ui)
+build_webview() {
+    echo "🧱 Building webview UI (goal-view-ui)..."
+    cd "$EXTENSION_DIR"
+    npm --prefix goal-view-ui ci
+    # Clean previous outDir to avoid stale assets
+    rm -rf "$EXTENSION_DIR/media/goal-view" || true
+    # Build with vite and force emptyOutDir
+    npm --prefix goal-view-ui run build --silent -- --emptyOutDir
+    echo "✅ Webview built: $EXTENSION_DIR/media/goal-view"
+}
+
+# Package with modern Node (prefer nvm Node 24)
+package_with_modern_node() {
+    echo "📦 Creating VSIX package (Node >= 20)..."
+    # Try using nvm Node 24 if available
+    if [ -s "$HOME/.nvm/nvm.sh" ]; then
+        bash -lc 'source ~/.nvm/nvm.sh && nvm install 24 >/dev/null && nvm use 24 >/dev/null && node -v && cd '"$EXTENSION_DIR"' && echo "y" | npx --yes @vscode/vsce@latest package --allow-missing-repository --no-gitHubIssueLinking'
+        return $?
+    fi
+    # Fallback: run the existing package script inside nix-shell (expects Node >= 20 there)
+    nix-shell "$PROJECT_ROOT/shell.nix" --command "npm run package"
+}
+
 # Function to bundle LSP with VS Code extension
 bundle_extension() {
     echo "📦 Bundling LSP server with VS Code extension..."
@@ -70,7 +99,15 @@ bundle_extension() {
     [ -f "$BUNDLED_LSP" ] && rm -f "$BUNDLED_LSP"
     
     # Copy to extension directory
-    cp "$LSP_EXECUTABLE" "$BUNDLED_LSP"
+    # Use whichever path exists
+    if [ -f "$LSP_EXECUTABLE" ]; then
+        cp "$LSP_EXECUTABLE" "$BUNDLED_LSP"
+    elif [ -f "$ALT_LSP_EXECUTABLE" ]; then
+        cp "$ALT_LSP_EXECUTABLE" "$BUNDLED_LSP"
+    else
+        echo "❌ Could not find built LSP executable to bundle"
+        exit 1
+    fi
     chmod +x "$BUNDLED_LSP"
     
     echo "✅ LSP server bundled: $BUNDLED_LSP"
@@ -81,6 +118,8 @@ bundle_extension() {
 package_extension() {
     echo "📦 Packaging VS Code extension..."
     bundle_extension
+    # Build webview bundle explicitly to ensure latest UI is included
+    build_webview
     
     cd "$EXTENSION_DIR"
     echo "🔧 Compiling TypeScript with webpack..."
@@ -88,7 +127,31 @@ package_extension() {
     echo "📦 Creating VSIX package..."
     # Remove old vsix to avoid picking the wrong artifact
     rm -f "$EXTENSION_DIR"/vsec-easycrypt-*.vsix || true
-    nix-shell "$PROJECT_ROOT/shell.nix" --command "npm run package"
+    # Use modern Node for vsce packaging when possible
+    package_with_modern_node
+    
+    if ls "$EXTENSION_DIR"/vsec-easycrypt-*.vsix 1> /dev/null 2>&1; then
+        echo "✅ Extension packaged successfully:"
+        ls -lh "$EXTENSION_DIR"/vsec-easycrypt-*.vsix
+    else
+        echo "❌ Extension packaging failed"
+        exit 1
+    fi
+}
+
+# Function to build and package UI only (no LSP rebuild)
+package_ui_only() {
+    echo "🎨 Building UI only (no LSP rebuild)..."
+    build_webview
+    
+    cd "$EXTENSION_DIR"
+    echo "🔧 Compiling TypeScript with webpack..."
+    nix-shell "$PROJECT_ROOT/shell.nix" --command "npm run compile"
+    echo "📦 Creating VSIX package..."
+    # Remove old vsix to avoid picking the wrong artifact
+    rm -f "$EXTENSION_DIR"/vsec-easycrypt-*.vsix || true
+    # Use modern Node for vsce packaging when possible
+    package_with_modern_node
     
     if ls "$EXTENSION_DIR"/vsec-easycrypt-*.vsix 1> /dev/null 2>&1; then
         echo "✅ Extension packaged successfully:"
@@ -110,6 +173,15 @@ install_vsix() {
         echo "❌ No VSIX found to install"
         exit 1
     fi
+    
+    # Uninstall old extension first
+    echo "🗑️ Uninstalling old extension..."
+    if command -v code &> /dev/null; then
+        code --uninstall-extension vsec.vsec-easycrypt || echo "⚠️ Extension not installed or already uninstalled"
+    elif command -v codium &> /dev/null; then
+        codium --uninstall-extension vsec.vsec-easycrypt || echo "⚠️ Extension not installed or already uninstalled"
+    fi
+    
     echo "Installing: $VSIX_FILE"
     if command -v code &> /dev/null; then
         code --install-extension "$VSIX_FILE" --force
@@ -143,6 +215,13 @@ case "${1:-build}" in
         build_lsp
         install_vsix
         ;;
+    "ui-only")
+        package_ui_only
+        ;;
+    "install-ui")
+        package_ui_only
+        install_vsix
+        ;;
     "build"|"")
         build_lsp
         ;;
@@ -150,12 +229,15 @@ case "${1:-build}" in
         echo "Usage: $0 [command]"
         echo ""
         echo "Commands:"
-        echo "  build     Build LSP server (default)"
-        echo "  clean     Clean build artifacts"
-        echo "  install   Build and install LSP server locally"
-        echo "  bundle    Build and bundle LSP with VS Code extension"
-        echo "  package   Build, bundle, and package complete extension"
-        echo "  help      Show this help message"
+        echo "  build        Build LSP server (default)"
+        echo "  clean        Clean build artifacts"
+        echo "  install      Build and install LSP server locally"
+        echo "  bundle       Build and bundle LSP with VS Code extension"
+        echo "  package      Build, bundle, and package complete extension"
+        echo "  install-vsix Build, bundle, package, and install VSIX extension"
+        echo "  ui-only      Build and package UI only (no LSP rebuild)"
+        echo "  install-ui   Build UI, package, and install VSIX extension"
+        echo "  help         Show this help message"
         ;;
     *)
         echo "❌ Unknown command: $1"

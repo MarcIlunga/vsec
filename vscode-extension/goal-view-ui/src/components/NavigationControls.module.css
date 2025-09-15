@@ -1,0 +1,94 @@
+.container {
+  padding: 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editor-inactiveSelectionBackground);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.title {
+  color: var(--vscode-textPreformat-foreground);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.stepInfo {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progressContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  background-color: var(--vscode-progressBar-background);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--vscode-progressBar-foreground);
+  transition: width 0.3s ease;
+}
+
+.stepText {
+  color: var(--vscode-textPreformat-foreground);
+  font-size: 11px;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.history {
+  margin-top: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.historyItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--vscode-editor-foreground);
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.historyItem:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.current {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.command {
+  font-family: var(--vscode-editor-font-family, monospace);
+  color: var(--vscode-textLink-foreground);
+}
+
+.timestamp {
+  color: var(--vscode-descriptionForeground);
+}
+
+
