@@ -1394,6 +1394,33 @@ let handle_lsp_event = function
             in
             let resp = `Assoc [ ("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", symbols_json) ] in
             output_json resp; []
+          ) else if String.equal req.method_ "workspace/symbol" then (
+            (* Workspace symbol: simple filter over all tracked document symbols *)
+            let params_json = match json with `Assoc fields -> (match List.assoc_opt "params" fields with Some v -> v | None -> `Null) | _ -> `Null in
+            let query = match params_json with
+              | `Assoc fields -> (match List.assoc_opt "query" fields with Some (`String s) -> s | _ -> "")
+              | _ -> ""
+            in
+            let matches name =
+              let q = String.lowercase_ascii query in
+              let n = String.lowercase_ascii name in
+              q = "" || (String.length q <= String.length n && String.sub n 0 (String.length q) = q)
+            in
+            let all = Hashtbl.fold (fun path { st; _ } acc ->
+              let uri = Lsp.Types.DocumentUri.of_path path in
+              let syms = Dm.DocumentManager.get_document_symbols st in
+              let rec flat (s:Lsp.Types.DocumentSymbol.t) : Lsp.Types.SymbolInformation.t list =
+                let open Lsp.Types in
+                let info = SymbolInformation.create ~name:s.name ~kind:s.kind ~location:(Location.create ~uri ~range:s.range) () in
+                let children = match s.children with None -> [] | Some ch -> List.concat (List.map flat ch) in
+                info :: children
+              in
+              (List.concat (List.map flat syms)) @ acc
+            ) states [] in
+            let filtered = List.filter (fun (si:Lsp.Types.SymbolInformation.t) -> matches si.name) all in
+            let result = `List (List.map Lsp.Types.SymbolInformation.yojson_of_t filtered) in
+            let resp = `Assoc [ ("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result) ] in
+            output_json resp; []
           ) else (
           log (fun () -> "About to call Request.Client.t_of_jsonrpc");
           (* Standard decode & dispatch *)
