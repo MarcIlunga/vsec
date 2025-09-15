@@ -1450,7 +1450,1145 @@ Intermezo task: We should mostly exclude client artifacts from git and only keep
 
 _**Assistant**_
 
+<think><details><summary>Thought Process</summary>**Checking .gitignore existence**
 
+I’m planning to implement a process to create or update the .gitignore file. First, I need to check if it already exists in the repository. I can use commands like grep or list_dir to look for it in the repo root. My specific focus is on the path /home/marcilunga/dev/vsec/.gitignore to see if the file is there before making any changes.</details></think>
+
+---
+
+I'll add ignore rules for client build artifacts and dependencies, untrack already committed artifacts, and commit the cleanup.
+
+---
+
+<details>
+            <summary>Listed directory undefined • **0** results</summary>
+        
+No results found
+</details>
+
+---
+
+Read file: undefined
+
+---
+
+
+
+---
+
+```bash
+bash -lc "git rm -r --cached --ignore-unmatch vscode-extension/node_modules vscode-extension/out vscode-extension/dist vscode-extension/media/goal-view vscode-extension/goal-view-ui/node_modules vscode-extension/goal-view-ui/dist vscode-extension/goal-view-ui/.vite vscode-extension/goal-view-ui/build vscode-extension/vsec-lsp vscode-extension/bin vscode-extension/vsec-easycrypt-*.vsix | cat"
+```
+
+```
+'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/parse.d.ts'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/parse.js'                                                                
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/parser.js'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/postcss.d.mts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/postcss.d.ts'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/postcss.js'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/postcss.mjs'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/previous-map.d.ts'                                                       
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/previous-map.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/processor.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/processor.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/result.d.ts'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/result.js'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/root.d.ts'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/root.js'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/rule.d.ts'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/rule.js'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/stringifier.d.ts'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/stringifier.js'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/stringify.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/stringify.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/symbols.js'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/terminal-highlight.js'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/tokenize.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/warn-once.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/warning.d.ts'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/lib/warning.js'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/postcss/package.json'                                                                
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/LICENSE'
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/README.md'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-server-legacy.browser.development.js'                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-server-legacy.browser.production.min.js'                     
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js'                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-server-legacy.node.production.min.js'                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-server.browser.development.js'                               
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-server.browser.production.min.js'                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-server.node.development.js'                                  
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-server.node.production.min.js'                               
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-test-utils.development.js'                                   
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom-test-utils.production.min.js'                                
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom.development.js'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom.production.min.js'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/cjs/react-dom.profiling.min.js'                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/client.js'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/index.js'
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/package.json'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/profiling.js'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/server.browser.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/server.js'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/server.node.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/test-utils.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-server-legacy.browser.development.js'                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-server-legacy.browser.production.min.js'                     
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-server.browser.development.js'                               
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-server.browser.production.min.js'                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-test-utils.development.js'                                   
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-test-utils.production.min.js'                                
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom.development.js'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom.production.min.js'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom.profiling.min.js'                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/LICENSE'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/README.md'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ai/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ai/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ai/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ai/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/bi/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/bi/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/bi/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/bi/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/bs/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/bs/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/bs/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/bs/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/cg/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/cg/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/cg/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/cg/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ci/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ci/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ci/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ci/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/di/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/di/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/di/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/di/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fa/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fa/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fa/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fa/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fa6/index.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fa6/index.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fa6/index.mjs'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fa6/package.json'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fc/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fc/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fc/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fc/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fi/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fi/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fi/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/fi/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/gi/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/gi/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/gi/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/gi/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/go/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/go/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/go/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/go/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/gr/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/gr/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/gr/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/gr/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/hi/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/hi/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/hi/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/hi/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/hi2/index.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/hi2/index.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/hi2/index.mjs'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/hi2/package.json'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/im/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/im/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/im/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/im/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/index.d.ts'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/index.js'                                                                
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/index.mjs'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/io/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/io/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/io/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/io/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/io5/index.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/io5/index.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/io5/index.mjs'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/io5/package.json'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lia/index.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lia/index.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lia/index.mjs'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lia/package.json'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconBase.d.ts'                                                       
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconBase.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconBase.mjs'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconContext.d.ts'                                                    
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconContext.js'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconContext.mjs'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconsManifest.d.ts'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconsManifest.js'                                                    
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconsManifest.mjs'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/index.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/index.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/index.mjs'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lib/package.json'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lu/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lu/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lu/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/lu/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/md/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/md/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/md/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/md/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/package.json'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/pi/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/pi/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/pi/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/pi/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ri/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ri/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ri/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ri/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/rx/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/rx/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/rx/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/rx/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/si/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/si/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/si/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/si/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/sl/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/sl/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/sl/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/sl/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/tb/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/tb/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/tb/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/tb/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/tfi/index.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/tfi/index.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/tfi/index.mjs'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/tfi/package.json'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ti/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ti/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ti/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/ti/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/vsc/index.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/vsc/index.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/vsc/index.mjs'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/vsc/package.json'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/wi/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/wi/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/wi/index.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react-icons/wi/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/LICENSE'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/README.md'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/babel.js'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/cjs/react-refresh-babel.development.js'                                
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/cjs/react-refresh-babel.production.js'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/cjs/react-refresh-runtime.development.js'                              
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/cjs/react-refresh-runtime.production.js'                               
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/package.json'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react-refresh/runtime.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react/LICENSE'
+rm 'vscode-extension/goal-view-ui/node_modules/react/README.md'
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-dev-runtime.development.js'                                      
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-dev-runtime.production.min.js'                                   
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-dev-runtime.profiling.min.js'                                    
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-runtime.development.js'                                          
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-runtime.production.min.js'                                       
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-runtime.profiling.min.js'                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react.development.js'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react.production.min.js'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react.shared-subset.development.js'                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react/cjs/react.shared-subset.production.min.js'                                     
+rm 'vscode-extension/goal-view-ui/node_modules/react/index.js'
+rm 'vscode-extension/goal-view-ui/node_modules/react/jsx-dev-runtime.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/react/jsx-runtime.js'                                                                
+rm 'vscode-extension/goal-view-ui/node_modules/react/package.json'
+rm 'vscode-extension/goal-view-ui/node_modules/react/react.shared-subset.js'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/react/umd/react.development.js'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/react/umd/react.production.min.js'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/react/umd/react.profiling.min.js'                                                    
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/LICENSE.md'
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/README.md'
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/bin/rollup'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/es/getLogFilter.js'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/es/package.json'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/es/rollup.js'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/es/shared/node-entry.js'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/es/shared/watch.js'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/getLogFilter.d.ts'                                                       
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/getLogFilter.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/loadConfigFile.d.ts'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/loadConfigFile.js'                                                       
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/rollup.d.ts'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/rollup.js'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/fsevents-importer.js'                                             
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/index.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/loadConfigFile.js'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/rollup.js'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/watch-cli.js'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/watch-proxy.js'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/watch.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/rollup/package.json'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/LICENSE'
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/README.md'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler-unstable_mock.development.js'                                
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler-unstable_mock.production.min.js'                             
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler-unstable_post_task.development.js'                           
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler-unstable_post_task.production.min.js'                        
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler.development.js'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler.production.min.js'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/index.js'
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/package.json'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler-unstable_mock.development.js'                                
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler-unstable_mock.production.min.js'                             
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler.development.js'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler.production.min.js'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler.profiling.min.js'                                            
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/unstable_mock.js'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/scheduler/unstable_post_task.js'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/semver/LICENSE'
+rm 'vscode-extension/goal-view-ui/node_modules/semver/README.md'
+rm 'vscode-extension/goal-view-ui/node_modules/semver/bin/semver.js'                                                                
+rm 'vscode-extension/goal-view-ui/node_modules/semver/package.json'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/semver/range.bnf'
+rm 'vscode-extension/goal-view-ui/node_modules/semver/semver.js'
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/LICENSE'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/README.md'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/array-set.js'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/base64-vlq.js'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/base64.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/binary-search.js'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/mapping-list.js'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/quick-sort.js'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-map-consumer.d.ts'                                          
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-map-consumer.js'                                            
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-map-generator.d.ts'                                         
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-map-generator.js'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-node.d.ts'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-node.js'                                                    
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/lib/util.js'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/package.json'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/source-map.d.ts'                                                       
+rm 'vscode-extension/goal-view-ui/node_modules/source-map-js/source-map.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/CHANGELOG.md'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/LICENSE'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/README.md'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/lib/cjs/state-local.js'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/lib/es/state-local.js'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/lib/types.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/lib/umd/state-local.js'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/lib/umd/state-local.min.js'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/package.json'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/state-local/rollup.config.mjs'                                                       
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/LICENSE.txt'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/README.md'                                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/SECURITY.md'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/ThirdPartyNoticeText.txt'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/bin/tsc'
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/bin/tsserver'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/_tsc.js'                                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/_tsserver.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/_typingsInstaller.js'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/cs/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/de/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/es/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/fr/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/it/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/ja/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/ko/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.d.ts'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.decorators.d.ts'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.decorators.legacy.d.ts'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.dom.asynciterable.d.ts'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.dom.d.ts'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.dom.iterable.d.ts'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.collection.d.ts'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.core.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.generator.d.ts'                                            
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.iterable.d.ts'                                             
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.promise.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.proxy.d.ts'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.reflect.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.symbol.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts'                                     
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2016.array.include.d.ts'                                        
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2016.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2016.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2016.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.arraybuffer.d.ts'                                          
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.date.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.object.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts'                                         
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.string.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.typedarrays.d.ts'                                          
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts'                                       
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.asynciterable.d.ts'                                        
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.promise.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.regexp.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.array.d.ts'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.object.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.string.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.symbol.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.bigint.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.date.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.number.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.promise.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts'                                         
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.string.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts'                                     
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.promise.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.string.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.weakref.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.array.d.ts'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.error.d.ts'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.object.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.regexp.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.string.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.array.d.ts'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.collection.d.ts'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.arraybuffer.d.ts'                                          
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.collection.d.ts'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.object.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.promise.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.regexp.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.sharedmemory.d.ts'                                         
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.string.d.ts'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es5.d.ts'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es6.d.ts'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.array.d.ts'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.collection.d.ts'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.decorators.d.ts'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.disposable.d.ts'                                           
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.error.d.ts'                                                
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.float16.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.full.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.intl.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.iterator.d.ts'                                             
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.promise.d.ts'                                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.sharedmemory.d.ts'                                         
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.scripthost.d.ts'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.webworker.asynciterable.d.ts'                                     
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.webworker.d.ts'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.webworker.importscripts.d.ts'                                     
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.webworker.iterable.d.ts'                                          
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/pl/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/pt-br/diagnosticMessages.generated.json'                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/ru/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/tr/diagnosticMessages.generated.json'                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/tsc.js'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/tsserver.js'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/tsserverlibrary.d.ts'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/tsserverlibrary.js'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/typesMap.json'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/typescript.d.ts'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/typescript.js'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/typingsInstaller.js'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/watchGuard.js'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/zh-cn/diagnosticMessages.generated.json'                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/lib/zh-tw/diagnosticMessages.generated.json'                              
+rm 'vscode-extension/goal-view-ui/node_modules/typescript/package.json'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/update-browserslist-db/LICENSE'                                                      
+rm 'vscode-extension/goal-view-ui/node_modules/update-browserslist-db/README.md'                                                    
+rm 'vscode-extension/goal-view-ui/node_modules/update-browserslist-db/check-npm-version.js'                                         
+rm 'vscode-extension/goal-view-ui/node_modules/update-browserslist-db/cli.js'                                                       
+rm 'vscode-extension/goal-view-ui/node_modules/update-browserslist-db/index.d.ts'                                                   
+rm 'vscode-extension/goal-view-ui/node_modules/update-browserslist-db/index.js'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/update-browserslist-db/package.json'                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/update-browserslist-db/utils.js'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/vite/LICENSE.md'
+rm 'vscode-extension/goal-view-ui/node_modules/vite/README.md'
+rm 'vscode-extension/goal-view-ui/node_modules/vite/bin/openChrome.applescript'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/vite/bin/vite.js'
+rm 'vscode-extension/goal-view-ui/node_modules/vite/client.d.ts'
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/client/client.mjs'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/client/client.mjs.map'                                                     
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/client/env.mjs'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/client/env.mjs.map'                                                        
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node-cjs/publicUtils.cjs'                                                  
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-7ec6f216.js'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-827b23df.js'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-c423598f.js'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-f0c7dae0.js'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-f1e8587f.js'                                               
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/cli.js'                                                               
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/constants.js'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/index.d.ts'                                                           
+rm 'vscode-extension/goal-view-ui/node_modules/vite/dist/node/index.js'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/vite/index.cjs'
+rm 'vscode-extension/goal-view-ui/node_modules/vite/package.json'
+rm 'vscode-extension/goal-view-ui/node_modules/vite/types/customEvent.d.ts'                                                         
+rm 'vscode-extension/goal-view-ui/node_modules/vite/types/hmrPayload.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/vite/types/hot.d.ts'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/vite/types/importGlob.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/vite/types/importMeta.d.ts'                                                          
+rm 'vscode-extension/goal-view-ui/node_modules/vite/types/metadata.d.ts'                                                            
+rm 'vscode-extension/goal-view-ui/node_modules/vite/types/package.json'                                                             
+rm 'vscode-extension/goal-view-ui/node_modules/yallist/LICENSE'
+rm 'vscode-extension/goal-view-ui/node_modules/yallist/README.md'
+rm 'vscode-extension/goal-view-ui/node_modules/yallist/iterator.js'                                                                 
+rm 'vscode-extension/goal-view-ui/node_modules/yallist/package.json'                                                                
+rm 'vscode-extension/goal-view-ui/node_modules/yallist/yallist.js'
+rm 'vscode-extension/media/goal-view/codicon.css'
+rm 'vscode-extension/media/goal-view/goal-view-chunk.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk10.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk11.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk12.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk13.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk14.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk15.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk16.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk17.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk18.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk19.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk2.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk20.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk21.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk22.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk23.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk24.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk25.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk26.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk27.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk28.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk29.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk3.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk30.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk31.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk32.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk33.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk34.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk35.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk36.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk37.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk38.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk39.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk4.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk40.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk41.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk42.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk43.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk44.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk45.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk46.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk47.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk48.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk49.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk5.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk50.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk51.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk52.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk53.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk54.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk55.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk56.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk57.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk58.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk59.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk6.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk60.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk61.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk62.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk63.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk64.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk65.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk66.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk67.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk68.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk69.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk7.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk70.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk71.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk72.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk73.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk74.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk75.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk76.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk77.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk78.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk79.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk8.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk80.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk81.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk82.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk83.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk84.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk85.js'
+rm 'vscode-extension/media/goal-view/goal-view-chunk9.js'
+rm 'vscode-extension/media/goal-view/goal-view.css'
+rm 'vscode-extension/media/goal-view/goal-view.js'
+rm 'vscode-extension/media/goal-view/goal-view.ttf'
+rm 'vscode-extension/media/goal-view/index.html'
+rm 'vscode-extension/vsec-lsp'
+```
+
+---
+
+```bash
+bash -lc "git add -A && git commit -m 'chore(git): ignore and untrack VS Code client build artifacts and binaries' | cat"
+```
+
+```
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-server.browser.production.min.js             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-test-utils.development.js                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom-test-utils.production.min.js                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom.development.js                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom.production.min.js                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-dom/umd/react-dom.profiling.min.js                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/LICENSE                                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/README.md                                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ai/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ai/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ai/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ai/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/bi/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/bi/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/bi/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/bi/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/bs/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/bs/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/bs/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/bs/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/cg/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/cg/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/cg/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/cg/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ci/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ci/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ci/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ci/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/di/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/di/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/di/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/di/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fa/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fa/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fa/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fa/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fa6/index.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fa6/index.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fa6/index.mjs                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fa6/package.json                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fc/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fc/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fc/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fc/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fi/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fi/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fi/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/fi/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/gi/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/gi/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/gi/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/gi/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/go/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/go/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/go/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/go/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/gr/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/gr/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/gr/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/gr/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/hi/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/hi/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/hi/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/hi/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/hi2/index.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/hi2/index.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/hi2/index.mjs                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/hi2/package.json                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/im/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/im/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/im/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/im/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/index.d.ts                                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/index.js                                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/index.mjs                                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/io/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/io/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/io/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/io/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/io5/index.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/io5/index.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/io5/index.mjs                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/io5/package.json                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lia/index.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lia/index.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lia/index.mjs                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lia/package.json                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconBase.d.ts                                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconBase.js                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconBase.mjs                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconContext.d.ts                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconContext.js                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconContext.mjs                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconsManifest.d.ts                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconsManifest.js                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/iconsManifest.mjs                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/index.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/index.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/index.mjs                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lib/package.json                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lu/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lu/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lu/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/lu/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/md/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/md/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/md/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/md/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/package.json                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/pi/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/pi/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/pi/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/pi/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ri/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ri/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ri/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ri/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/rx/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/rx/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/rx/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/rx/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/si/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/si/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/si/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/si/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/sl/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/sl/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/sl/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/sl/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/tb/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/tb/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/tb/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/tb/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/tfi/index.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/tfi/index.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/tfi/index.mjs                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/tfi/package.json                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ti/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ti/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ti/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/ti/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/vsc/index.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/vsc/index.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/vsc/index.mjs                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/vsc/package.json                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/wi/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/wi/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/wi/index.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-icons/wi/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/LICENSE                                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/README.md                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/babel.js                                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/cjs/react-refresh-babel.development.js                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/cjs/react-refresh-babel.production.js                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/cjs/react-refresh-runtime.development.js               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/cjs/react-refresh-runtime.production.js                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/package.json                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react-refresh/runtime.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/LICENSE                                                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/README.md                                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-dev-runtime.development.js                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-dev-runtime.production.min.js                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-dev-runtime.profiling.min.js                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-runtime.development.js                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-runtime.production.min.js                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react-jsx-runtime.profiling.min.js                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react.development.js                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react.production.min.js                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react.shared-subset.development.js                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/cjs/react.shared-subset.production.min.js                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/index.js                                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/jsx-dev-runtime.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/jsx-runtime.js                                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/package.json                                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/react.shared-subset.js                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/umd/react.development.js                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/umd/react.production.min.js                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/react/umd/react.profiling.min.js                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/LICENSE.md                                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/README.md                                                     
+ delete mode 100755 vscode-extension/goal-view-ui/node_modules/rollup/dist/bin/rollup                                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/es/getLogFilter.js                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/es/package.json                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/es/rollup.js                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/es/shared/node-entry.js                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/es/shared/watch.js                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/getLogFilter.d.ts                                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/getLogFilter.js                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/loadConfigFile.d.ts                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/loadConfigFile.js                                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/rollup.d.ts                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/rollup.js                                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/fsevents-importer.js                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/index.js                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/loadConfigFile.js                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/rollup.js                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/watch-cli.js                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/watch-proxy.js                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/dist/shared/watch.js                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/rollup/package.json                                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/LICENSE                                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/README.md                                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler-unstable_mock.development.js                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler-unstable_mock.production.min.js              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler-unstable_post_task.development.js            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler-unstable_post_task.production.min.js         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler.development.js                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/cjs/scheduler.production.min.js                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/index.js                                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/package.json                                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler-unstable_mock.development.js                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler-unstable_mock.production.min.js              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler.development.js                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler.production.min.js                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/umd/scheduler.profiling.min.js                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/unstable_mock.js                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/scheduler/unstable_post_task.js                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/semver/LICENSE                                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/semver/README.md                                                     
+ delete mode 100755 vscode-extension/goal-view-ui/node_modules/semver/bin/semver.js                                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/semver/package.json                                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/semver/range.bnf                                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/semver/semver.js                                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/LICENSE                                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/README.md                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/array-set.js                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/base64-vlq.js                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/base64.js                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/binary-search.js                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/mapping-list.js                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/quick-sort.js                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-map-consumer.d.ts                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-map-consumer.js                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-map-generator.d.ts                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-map-generator.js                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-node.d.ts                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/source-node.js                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/lib/util.js                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/package.json                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/source-map.d.ts                                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/source-map-js/source-map.js                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/CHANGELOG.md                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/LICENSE                                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/README.md                                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/lib/cjs/state-local.js                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/lib/es/state-local.js                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/lib/types.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/lib/umd/state-local.js                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/lib/umd/state-local.min.js                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/package.json                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/state-local/rollup.config.mjs                                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/LICENSE.txt                                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/README.md                                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/SECURITY.md                                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/ThirdPartyNoticeText.txt                                  
+ delete mode 100755 vscode-extension/goal-view-ui/node_modules/typescript/bin/tsc                                                   
+ delete mode 100755 vscode-extension/goal-view-ui/node_modules/typescript/bin/tsserver                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/_tsc.js                                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/_tsserver.js                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/_typingsInstaller.js                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/cs/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/de/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/es/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/fr/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/it/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/ja/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/ko/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.d.ts                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.decorators.d.ts                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.decorators.legacy.d.ts                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.dom.asynciterable.d.ts                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.dom.d.ts                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.dom.iterable.d.ts                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.collection.d.ts                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.core.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.generator.d.ts                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.iterable.d.ts                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.promise.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.proxy.d.ts                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.reflect.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.symbol.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2016.array.include.d.ts                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2016.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2016.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2016.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.arraybuffer.d.ts                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.date.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.object.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.string.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2017.typedarrays.d.ts                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.asynciterable.d.ts                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.promise.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2018.regexp.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.array.d.ts                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.object.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.string.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2019.symbol.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.bigint.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.date.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.number.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.promise.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.string.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.promise.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.string.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2021.weakref.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.array.d.ts                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.error.d.ts                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.object.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.regexp.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2022.string.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.array.d.ts                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.collection.d.ts                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2023.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.arraybuffer.d.ts                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.collection.d.ts                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.object.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.promise.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.regexp.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.sharedmemory.d.ts                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es2024.string.d.ts                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es5.d.ts                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.es6.d.ts                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.array.d.ts                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.collection.d.ts                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.decorators.d.ts                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.disposable.d.ts                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.error.d.ts                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.float16.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.full.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.intl.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.iterator.d.ts                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.promise.d.ts                               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.esnext.sharedmemory.d.ts                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.scripthost.d.ts                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.webworker.asynciterable.d.ts                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.webworker.d.ts                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.webworker.importscripts.d.ts                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/lib.webworker.iterable.d.ts                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/pl/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/pt-br/diagnosticMessages.generated.json               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/ru/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/tr/diagnosticMessages.generated.json                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/tsc.js                                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/tsserver.js                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/tsserverlibrary.d.ts                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/tsserverlibrary.js                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/typesMap.json                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/typescript.d.ts                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/typescript.js                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/typingsInstaller.js                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/watchGuard.js                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/zh-cn/diagnosticMessages.generated.json               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/lib/zh-tw/diagnosticMessages.generated.json               
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/typescript/package.json                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/update-browserslist-db/LICENSE                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/update-browserslist-db/README.md                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/update-browserslist-db/check-npm-version.js                          
+ delete mode 100755 vscode-extension/goal-view-ui/node_modules/update-browserslist-db/cli.js                                        
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/update-browserslist-db/index.d.ts                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/update-browserslist-db/index.js                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/update-browserslist-db/package.json                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/update-browserslist-db/utils.js                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/LICENSE.md                                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/README.md                                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/bin/openChrome.applescript                                      
+ delete mode 100755 vscode-extension/goal-view-ui/node_modules/vite/bin/vite.js                                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/client.d.ts                                                     
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/client/client.mjs                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/client/client.mjs.map                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/client/env.mjs                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/client/env.mjs.map                                         
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node-cjs/publicUtils.cjs                                   
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-7ec6f216.js                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-827b23df.js                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-c423598f.js                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-f0c7dae0.js                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/chunks/dep-f1e8587f.js                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/cli.js                                                
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/constants.js                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/index.d.ts                                            
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/dist/node/index.js                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/index.cjs                                                       
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/package.json                                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/types/customEvent.d.ts                                          
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/types/hmrPayload.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/types/hot.d.ts                                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/types/importGlob.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/types/importMeta.d.ts                                           
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/types/metadata.d.ts                                             
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/vite/types/package.json                                              
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/yallist/LICENSE                                                      
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/yallist/README.md                                                    
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/yallist/iterator.js                                                  
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/yallist/package.json                                                 
+ delete mode 100644 vscode-extension/goal-view-ui/node_modules/yallist/yallist.js                                                   
+ delete mode 100644 vscode-extension/media/goal-view/codicon.css
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk.js                                                             
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk10.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk11.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk12.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk13.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk14.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk15.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk16.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk17.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk18.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk19.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk2.js                                                            
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk20.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk21.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk22.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk23.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk24.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk25.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk26.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk27.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk28.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk29.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk3.js                                                            
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk30.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk31.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk32.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk33.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk34.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk35.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk36.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk37.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk38.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk39.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk4.js                                                            
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk40.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk41.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk42.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk43.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk44.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk45.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk46.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk47.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk48.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk49.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk5.js                                                            
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk50.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk51.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk52.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk53.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk54.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk55.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk56.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk57.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk58.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk59.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk6.js                                                            
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk60.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk61.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk62.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk63.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk64.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk65.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk66.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk67.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk68.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk69.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk7.js                                                            
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk70.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk71.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk72.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk73.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk74.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk75.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk76.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk77.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk78.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk79.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk8.js                                                            
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk80.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk81.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk82.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk83.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk84.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk85.js                                                           
+ delete mode 100644 vscode-extension/media/goal-view/goal-view-chunk9.js                                                            
+ delete mode 100644 vscode-extension/media/goal-view/goal-view.css
+ delete mode 100644 vscode-extension/media/goal-view/goal-view.js
+ delete mode 100644 vscode-extension/media/goal-view/goal-view.ttf
+ delete mode 100644 vscode-extension/media/goal-view/index.html
+ delete mode 100755 vscode-extension/vsec-lsp
+```
+
+---
+
+- Added gitignore rules to exclude VS Code client artifacts and binaries.
+- Removed already-committed artifacts from the index and committed the cleanup.
+
+- Commit: chore(git): ignore and untrack VS Code client build artifacts and binaries
+
+---
+
+_**User**_
+
+Ok, please work on the next task according to the instructions. In particular, recall not to stop after giving the summary of what was accomplished on the current task. Just write and continue. First, give verbal confirmation that the strategy and instructions are understood
 
 ---
 

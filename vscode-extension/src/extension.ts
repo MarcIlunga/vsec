@@ -3,7 +3,6 @@ import {workspace, window, commands, languages, ExtensionContext, env,
   TextEditor,
   ViewColumn,
   TextEditorRevealType,
-  Selection,
   Uri,
   StatusBarItem,
   extensions,
@@ -81,85 +80,8 @@ export function activate(context: ExtensionContext) {
         // Create the language client (like VSCoq)
         client = new Client(serverOptions, clientOptions);
         
-        // Set up semantic highlighting BEFORE starting client (VSCoq pattern!)
-        Client.writeToVsEcChannel("🎨 EXTENSION: Setting up semantic highlighting (BEFORE client.start - VSCoq pattern)");
-        
-        // Proof view notification handler is set up later in the client.start() promise
-
-        client.onNotification("vsec/semanticHighlighting", (notification: any) => {
-            Client.writeToVsEcChannel(`🎯 EXTENSION: Received ${notification.tokens.length} semantic tokens`);
-            
-            // Apply decorations like VSCoq does
-            const editors = window.visibleTextEditors.filter(editor => 
-                editor.document.uri.toString() === notification.uri
-            );
-            
-            if (editors.length > 0) {
-                // Apply semantic highlighting decorations
-                Client.writeToVsEcChannel(`✨ EXTENSION: Applying decorations to ${editors.length} editors`);
-                
-                // Create decoration types - red keywords + varied colors (Rust Analyzer inspired)
-                const decorationTypes = new Map<string, any>();
-                if (!decorationTypes.has('keyword')) {
-                    decorationTypes.set('keyword', window.createTextEditorDecorationType({
-                        color: '#ff6b6b', // Red for keywords (lemma, theorem, proof, qed)
-                        fontWeight: 'bold'
-                    }));
-                    decorationTypes.set('tactic', window.createTextEditorDecorationType({
-                        color: '#c586c0', // Purple for tactics (apply, rewrite, auto) - like VS Code functions
-                        fontStyle: 'italic'
-                    }));
-                    decorationTypes.set('type', window.createTextEditorDecorationType({
-                        color: '#4ec9b0', // Teal/cyan for types (bool, int, unit) - like Rust Analyzer
-                        fontWeight: '500'
-                    }));
-                    decorationTypes.set('identifier', window.createTextEditorDecorationType({
-                        color: '#9cdcfe', // Light blue for identifiers - like VS Code variables
-                    }));
-                    decorationTypes.set('module', window.createTextEditorDecorationType({
-                        color: '#4fc1ff', // Bright blue for modules/theories - like VS Code namespaces
-                        fontWeight: 'bold'
-                    }));
-                }
-                
-                // Group tokens by type for efficient decoration
-                const tokensByType = new Map<string, any[]>();
-                
-                notification.tokens.forEach((token: any) => {
-                    const startPos = {line: token.line, character: token.startChar};
-                    const endPos = {line: token.line, character: token.startChar + token.length};
-                    const range = new Selection(startPos.line, startPos.character, endPos.line, endPos.character);
-                    
-                    if (!tokensByType.has(token.tokenType)) {
-                        tokensByType.set(token.tokenType, []);
-                    }
-                    tokensByType.get(token.tokenType)!.push(range);
-                });
-                
-                // Apply decorations to all visible editors
-                editors.forEach(editor => {
-                    // Clear existing decorations first
-                    decorationTypes.forEach((decorationType, _) => {
-                        editor.setDecorations(decorationType, []);
-                    });
-                    
-                    // Apply new decorations
-                    tokensByType.forEach((ranges, tokenType) => {
-                        const decorationType = decorationTypes.get(tokenType);
-                        if (decorationType) {
-                            editor.setDecorations(decorationType, ranges);
-                            Client.writeToVsEcChannel(`🎨 Applied ${ranges.length} ${tokenType} decorations`);
-                        }
-                    });
-                });
-                
-                Client.writeToVsEcChannel(`🎉 Semantic highlighting applied successfully!`);
-            } else {
-                Client.writeToVsEcChannel("⚠️ EXTENSION: No visible editors found for semantic highlighting");
-            }
-        });
-        
-        Client.writeToVsEcChannel("✅ EXTENSION: Semantic highlighting notifications registered (BEFORE start)!");
+        // Rely on built-in LSP semantic tokens provider from the server initialize result
+        Client.writeToVsEcChannel("🎨 EXTENSION: Using VS Code semantic tokens via LSP capabilities");
         
         // Now start the client (VSCoq pattern)
         console.log('[Extension Host] Starting Language Client...');
