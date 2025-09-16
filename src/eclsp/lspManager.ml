@@ -603,6 +603,70 @@ let send_log (message:string) =
   ] in
   output_json notif
 
+(* ---- WorkDoneProgress helpers ---- *)
+
+let progress_ids = Hashtbl.create 17
+let fresh_rpc_id =
+  let c = ref 20000 in
+  fun () -> let v = !c in incr c; `Int v
+
+let send_progress_create token =
+  if not (Hashtbl.mem progress_ids token) then (
+    Hashtbl.add progress_ids token true;
+    let req = `Assoc [
+      ("jsonrpc", `String "2.0");
+      ("id", fresh_rpc_id ());
+      ("method", `String "window/workDoneProgress/create");
+      ("params", `Assoc [("token", `String token)])
+    ] in
+    output_json req
+  )
+
+let send_progress_begin token title message =
+  let notif = `Assoc [
+    ("jsonrpc", `String "2.0");
+    ("method", `String "$/progress");
+    ("params", `Assoc [
+      ("token", `String token);
+      ("value", `Assoc [
+        ("kind", `String "begin");
+        ("title", `String title);
+        ("cancellable", `Bool true);
+        ("message", `String message)
+      ])
+    ])
+  ] in
+  output_json notif
+
+let send_progress_report token message =
+  let notif = `Assoc [
+    ("jsonrpc", `String "2.0");
+    ("method", `String "$/progress");
+    ("params", `Assoc [
+      ("token", `String token);
+      ("value", `Assoc [
+        ("kind", `String "report");
+        ("cancellable", `Bool true);
+        ("message", `String message)
+      ])
+    ])
+  ] in
+  output_json notif
+
+let send_progress_end token message =
+  let notif = `Assoc [
+    ("jsonrpc", `String "2.0");
+    ("method", `String "$/progress");
+    ("params", `Assoc [
+      ("token", `String token);
+      ("value", `Assoc [
+        ("kind", `String "end");
+        ("message", `String message)
+      ])
+    ])
+  ] in
+  output_json notif
+
 (* ProofView notification sender - following VSRocq pattern *)
 let send_proof_view_notification uri (proof_state:Protocol.ProofState.t) =
   log (fun () -> Printf.sprintf "Sending proof view notification for %s" uri);
@@ -1487,9 +1551,13 @@ let handle_lsp_event = function
                  | Some { st; visible } ->
                    (try
                      send_log (Printf.sprintf "[interpretToPoint] executing to (%d,%d)" pos.line pos.character);
+                     let token = (DocumentUri.to_string uri) ^ "::proof" in
+                     send_progress_create token; send_progress_begin token "EasyCrypt" "Interpreting to point";
                      let (new_st, events) = Dm.DocumentManager.interpret_to_position st pos in
                      Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
-                     inject_dm_events (uri, events)
+                     send_progress_report token "Queuing execution";
+                     let evs = inject_dm_events (uri, events) in
+                     send_progress_end token "Done"; evs
                    with exn -> send_log ("[interpretToPoint] exception: " ^ Printexc.to_string exn); handle_ok ())
                  end
                | _ -> handle_ok ())
