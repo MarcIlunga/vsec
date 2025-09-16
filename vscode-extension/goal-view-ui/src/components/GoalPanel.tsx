@@ -106,9 +106,12 @@ const GoalPanel: React.FC = () => {
         </MinimalButton>
       </div>
 
-      {!proofState ? (
+      {(!proofState || (proofState && proofState.goals && proofState.goals.length === 0)) ? (
         <>
-          <EmptyState message="Not in proof mode" hint="Open an EasyCrypt file and start a proof to view goals." />
+          <EmptyState 
+            message={(!proofState || !proofState.in_proof) ? 'Not in proof mode' : 'No goals'}
+            hint={(!proofState || !proofState.in_proof) ? 'Open an EasyCrypt file and start a proof to view goals.' : 'Open a proof and step forward to see current goals.'}
+          />
           {messages && messages.length > 0 && (
             <Accordion title="Messages" collapsed={false}>
               <div className={styles.panel}>

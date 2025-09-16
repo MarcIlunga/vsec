@@ -37,6 +37,7 @@ type t = {
   navigation: proof_navigation option;
   current_lemma: string option;
   proof_progress: float;
+  in_proof: bool;
 } [@@deriving yojson]
 
 val get_proof : previous: t option -> EcLib.EcScope.scope -> t option

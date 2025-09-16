@@ -669,6 +669,7 @@ let get_proof st id =
         navigation = None;
         current_lemma = None;
         proof_progress = 0.0;
+        in_proof = true;
       }
     | _ ->
       let goals = ExecutionManager.get_current_goals_text st.execution_state in
@@ -687,6 +688,7 @@ let get_proof st id =
         navigation = None;
         current_lemma = None;
         proof_progress = 0.0;
+        in_proof = true;
       }
     | _ ->
       let goals = ExecutionManager.get_current_goals_text st.execution_state in
