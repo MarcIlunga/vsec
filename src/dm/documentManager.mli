@@ -157,6 +157,11 @@ val interpret_to_position : state -> Position.t -> (state * event Sel.Event.t li
 val interpret_to_end : state -> (state * event Sel.Event.t list)
 (** Execute all EasyCrypt statements in the document *)
 
+(** AST/env and symbol index plumbing for LSP callers *)
+val get_env_of_sentence : state -> sentence_id -> EcLib.EcEnv.env option
+val get_ast_of_sentence : state -> sentence_id -> string option
+val lookup_symbol_def : state -> string -> (sentence_id * Lsp.Types.Range.t option) option
+
 
 module Internal : sig
 

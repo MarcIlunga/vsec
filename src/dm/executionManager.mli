@@ -70,6 +70,11 @@ val get_initial_context : state -> EcLib.EcScope.scope
 (** Returns the EasyCrypt scope state after the sentence *)
 val get_easycrypt_state : state -> sentence_id -> EcLib.EcScope.scope option
 
+val get_current_goals_text : state -> string list
+
+(** Adapter-provided EasyCrypt goals for current scope, if available *)
+val get_current_goals_pp : state -> Protocol.ProofState.goal list option
+
 val lookup_symbol_id : state -> string -> sentence_id option
 
 val lookup_symbol_def : state -> string -> (sentence_id * Lsp.Types.Range.t option) option

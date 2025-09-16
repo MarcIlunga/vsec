@@ -10,6 +10,8 @@ open Types
 
 let Log log = Log.mk_log "ecAdapter"
 
+(* Execution adapter *)
+
 type ec_process = EcLib.EcScope.scope -> string -> EcLib.EcScope.scope
 
 let process_ref : ec_process option ref = ref None
@@ -24,6 +26,24 @@ let try_process scope cmd =
   | Some f ->
     try Some (f scope cmd) with exn ->
       log (fun () -> ("Adapter process failed: " ^ Printexc.to_string exn));
+      None
+
+(* Goals adapter *)
+
+type ec_goals = EcLib.EcScope.scope -> Protocol.ProofState.goal list
+
+let goals_ref : ec_goals option ref = ref None
+
+let register_goals (f:ec_goals) =
+  log (fun () -> "Registered EasyCrypt goals adapter");
+  goals_ref := Some f
+
+let try_goals scope =
+  match !goals_ref with
+  | None -> None
+  | Some f ->
+    try Some (f scope) with exn ->
+      log (fun () -> ("Adapter goals failed: " ^ Printexc.to_string exn));
       None
 
 let adapter_loaded = ref false

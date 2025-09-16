@@ -7,7 +7,9 @@ interface CollapsibleGoalBlockProps {
   index?: number;
   count?: number;
   hypotheses: string[];
+  hypotheses_pp?: { text: string; cls?: string | null }[][];
   goal: string;
+  goal_pp?: { text: string; cls?: string | null }[];
   isOpen?: boolean;
   isContextHidden?: boolean;
   onToggleOpen?: (goalId: number, isOpen: boolean) => void;
@@ -19,8 +21,10 @@ const CollapsibleGoalBlock: FunctionComponent<CollapsibleGoalBlockProps> = (prop
     id, 
     index, 
     count, 
-    hypotheses, 
-    goal, 
+    hypotheses,
+    hypotheses_pp,
+    goal,
+    goal_pp,
     isOpen = true, 
     isContextHidden = false, 
     onToggleOpen, 
@@ -52,7 +56,9 @@ const CollapsibleGoalBlock: FunctionComponent<CollapsibleGoalBlockProps> = (prop
         index={index}
         count={count}
         hypotheses={hypotheses}
+        hypotheses_pp={hypotheses_pp}
         goal={goal}
+        goal_pp={goal_pp}
         isContextHidden={isContextHidden}
       />
     </Accordion>

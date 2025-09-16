@@ -107,7 +107,21 @@ const GoalPanel: React.FC = () => {
       </div>
 
       {!proofState ? (
-        <EmptyState message="Not in proof mode" />
+        <>
+          <EmptyState message="Not in proof mode" hint="Open an EasyCrypt file and start a proof to view goals." />
+          {messages && messages.length > 0 && (
+            <Accordion title="Messages" collapsed={false}>
+              <div className={styles.panel}>
+                {messages.map((m, idx) => {
+                  const sev = (m.severity || 'info').toLowerCase();
+                  return (
+                    <Message key={idx} severity={(sev as any) || 'info'} text={m.message} />
+                  );
+                })}
+              </div>
+            </Accordion>
+          )}
+        </>
       ) : (
         <>
           {/* Proof accordion - like vsrocq */}

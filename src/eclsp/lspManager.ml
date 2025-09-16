@@ -93,6 +93,16 @@ let rec do_initialize id params =
       ())
   in
   (* TODO: Add semantic tokens when LSP library supports it *)
+  (* Advertise executeCommand for interactive proving commands *)
+  let executeCommandProvider =
+    let cmds = [
+      "easycrypt.stepForward";
+      "easycrypt.stepBackward";
+      "easycrypt.interpretToPoint";
+      "easycrypt.interpretToEnd";
+    ] in
+    Lsp.Types.ExecuteCommandOptions.create ~commands:cmds ()
+  in
   let capabilities = Lsp.Types.ServerCapabilities.create
     ~textDocumentSync
     ~completionProvider
@@ -102,6 +112,7 @@ let rec do_initialize id params =
     ~renameProvider
     ~documentSymbolProvider
     ~semanticTokensProvider
+    ~executeCommandProvider
   ()
   in
   let initialize_result = Lsp.Types.InitializeResult.{
@@ -422,40 +433,7 @@ let rec dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t ->
       in
       let result = match base with
         | Some r -> Ok (Some r)
-        | None ->
-          (* Fallback: simple keyword/tactic descriptions; ensure we always return something non-empty for any word *)
-          let raw = Dm.DocumentManager.Internal.raw_document st in
-          let line = position.line and ch = position.character in
-          let text = RawDocument.text raw in
-          let lines = String.split_on_char '\n' text in
-          let word_opt =
-            if line < 0 || line >= List.length lines then None else
-            let line_text = strip_comments (List.nth lines line) in
-            let isw = function 'a'..'z'|'A'..'Z'|'0'..'9'|'_' -> true | _ -> false in
-            let len = String.length line_text in
-            let c0 = max 0 (min (len-1) ch) in
-            let i = ref c0 in
-            while !i > 0 && not (isw line_text.[!i]) do decr i done;
-            let i0 = !i in
-            let l = ref i0 and r = ref (i0+1) in
-            while !l > 0 && isw line_text.[!l-1] do decr l done;
-            while !r < len && isw line_text.[!r] do incr r done;
-            if !r > !l then Some (String.sub line_text !l (!r - !l)) else None
-          in
-          match word_opt with
-          | None ->
-            let mc = Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown ~value:"EasyCrypt" in
-            Ok (Some (Lsp.Types.Hover.create ~contents:(`MarkupContent mc) ()))
-          | Some word ->
-            let w = String.lowercase_ascii word in
-            let value =
-              if List.mem w ["lemma"; "theorem"; "axiom"] then Printf.sprintf "**%s** - definition keyword" word
-              else if List.mem w ["proof"; "qed"] then Printf.sprintf "**%s** - proof keyword" word
-              else if List.mem w ["apply"; "rewrite"; "unfold"; "simplify"; "auto"; "intros"; "split"; "trivial"] then Printf.sprintf "**%s** - tactic" word
-              else Printf.sprintf "**%s**" word
-            in
-            let mc = Lsp.Types.MarkupContent.create ~kind:Lsp.Types.MarkupKind.Markdown ~value in
-            Ok (Some (Lsp.Types.Hover.create ~contents:(`MarkupContent mc) ()))
+        | None -> Ok None
       in
       result, []
     end
@@ -469,25 +447,7 @@ let rec dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t ->
         | Some (range, _symbol) ->
           let loc = Lsp.Types.Location.create ~uri:textDocument.uri ~range in
           Ok (Some (`Location [loc]))
-        | None ->
-          (* Fallback: search for a lemma/definition with same word on the line; ensure we return something when found *)
-          let raw = Dm.DocumentManager.Internal.raw_document st in
-          (match fuzzy_word_at_position raw position with
-          | None -> Ok None
-          | Some word ->
-            match Dm.ExecutionManager.lookup_symbol_def (Dm.DocumentManager.Internal.execution_state st) word with
-            | Some (_sid, Some range) ->
-              let loc = Lsp.Types.Location.create ~uri:textDocument.uri ~range in Ok (Some (`Location [loc]))
-            | Some (_sid, None) ->
-              (match Dm.DocumentManager.get_previous_range st (Lsp.Types.Position.create ~line:0 ~character:0) with
-               | Some range -> let loc = Lsp.Types.Location.create ~uri:textDocument.uri ~range in Ok (Some (`Location [loc]))
-               | None -> Ok None)
-            | None ->
-              (match find_definition_of_word st word with
-              | None -> Ok None
-              | Some range ->
-                let loc = Lsp.Types.Location.create ~uri:textDocument.uri ~range in
-                Ok (Some (`Location [loc]))))
+        | None -> Ok None
       in
       result, []
     end
@@ -503,7 +463,10 @@ let rec dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t ->
   | TextDocumentRename params ->
     let Lsp.Types.RenameParams.{ textDocument; position; newName } = params in
     begin match Hashtbl.find_opt states (Lsp.Types.DocumentUri.to_path textDocument.uri) with
-    | None -> Ok None, []
+    | None ->
+      let open Lsp.Types in
+      let empty = WorkspaceEdit.t_of_yojson (`Assoc [ ("changes", `Assoc []) ]) in
+      Ok empty, []
     | Some { st } ->
       let raw = Dm.DocumentManager.Internal.raw_document st in
       let word_opt = RawDocument.word_at_position raw position in
@@ -511,7 +474,7 @@ let rec dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t ->
       | None ->
         let open Lsp.Types in
         let empty = WorkspaceEdit.t_of_yojson (`Assoc [ ("changes", `Assoc []) ]) in
-        Ok (Some empty), []
+        Ok empty, []
       | Some oldName ->
         let text = RawDocument.text raw in
         let lines = String.split_on_char '\n' text in
@@ -537,7 +500,7 @@ let rec dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t ->
         (* Construct WorkspaceEdit as JSON to avoid typed helper signature mismatches *)
         let changes = `Assoc [ (DocumentUri.to_string textDocument.uri, `List (List.map TextEdit.yojson_of_t textEdits)) ] in
         let workspaceEdit_json = `Assoc [ ("changes", changes) ] in
-        Ok (Some (WorkspaceEdit.t_of_yojson workspaceEdit_json)), []
+        Ok (WorkspaceEdit.t_of_yojson workspaceEdit_json), []
       end
     end
   (* TODO: Add DocumentSymbol and SemanticTokens support when LSP library is updated *)
@@ -1032,27 +995,8 @@ let ecStepForward params =
       | None ->
         log (fun () -> "No proof state available for stepForward"));
       
-      (* Immediately publish diagnostics; also include heuristic parse errors in same batch for visibility *)
-      let base_diags = Dm.DocumentManager.all_diagnostics new_st in
-      let extra_diags =
-        match get_document_text_by_uri (Lsp.Types.DocumentUri.to_string uri) with
-        | Some text ->
-          let re = Str.regexp_case_fold "^\\s*\\(lemma\\|theorem\\|axiom\\)\\s+[^:]+\\..*$" in
-          let lines = String.split_on_char '\n' text in
-          let rec scan i = function
-            | [] -> []
-            | ln :: tl ->
-              if Str.string_match re (String.lowercase_ascii ln) 0 then (
-                let range = Lsp.Types.Range.create ~start:(Lsp.Types.Position.create ~line:i ~character:0)
-                                                    ~end_:(Lsp.Types.Position.create ~line:i ~character:(String.length ln)) in
-                let d = Lsp.Types.Diagnostic.create ~range ~message:(`String "EasyCrypt parsing error") ~severity:Lsp.Types.DiagnosticSeverity.Error () in
-                d :: scan (i+1) tl
-              ) else scan (i+1) tl
-          in
-          scan 0 lines
-        | None -> []
-      in
-      let diagnostics = base_diags @ extra_diags in
+      (* Immediately publish diagnostics from DocumentManager only; avoid regex heuristics *)
+      let diagnostics = Dm.DocumentManager.all_diagnostics new_st in
       let publish = Lsp.Types.PublishDiagnosticsParams.create ~uri ~diagnostics () in
       output_json (Jsonrpc.Notification.yojson_of_t (Lsp.Server_notification.to_jsonrpc (PublishDiagnostics publish)));
       (* Mirror to messages, for the webview and tests visibility *)
@@ -1169,13 +1113,27 @@ let handle_lsp_event = function
         output_json resp;
         [lsp]
       | Some "initialize" ->
-        (* Early fast-path for initialize to ensure immediate response; keep minimal *)
+        (* Early fast-path for initialize to ensure immediate response; advertise providers *)
         let id_json = (match json with `Assoc fields -> (match List.assoc_opt "id" fields with Some v -> v | None -> `Null) | _ -> `Null) in
         let capabilities = `Assoc [
           ("textDocumentSync", `Int 2);
           ("completionProvider", `Assoc [("resolveProvider", `Bool false)]);
           ("hoverProvider", `Bool true);
-          ("documentSymbolProvider", `Bool true)
+          ("documentSymbolProvider", `Bool true);
+          ("renameProvider", `Bool true);
+          ("codeActionProvider", `Bool true);
+          ("signatureHelpProvider", `Assoc [("triggerCharacters", `List [`String "("])]);
+          ("inlayHintProvider", `Bool true);
+          ("documentFormattingProvider", `Bool true);
+          ("documentRangeFormattingProvider", `Bool true);
+          ("documentOnTypeFormattingProvider", `Assoc [("firstTriggerCharacter", `String ";")]);
+          ("foldingRangeProvider", `Bool true);
+          ("selectionRangeProvider", `Bool true);
+          ("typeDefinitionProvider", `Bool true);
+          ("implementationProvider", `Bool true);
+          ("linkedEditingRangeProvider", `Bool true);
+          ("colorProvider", `Bool true);
+          ("callHierarchyProvider", `Bool true)
         ] in
         let result = `Assoc [
           ("capabilities", capabilities);
@@ -1309,51 +1267,11 @@ let handle_lsp_event = function
                   | Some (range, _word) ->
                     let loc = Lsp.Types.Location.create ~uri:(Lsp.Types.DocumentUri.of_path uri_str) ~range in
                     `List [ Lsp.Types.Location.yojson_of_t loc ]
-                  | None ->
-                    (* Fallback: regex scan for lemma/theorem/axiom *)
-                    (match get_document_text_by_uri uri_str with
-                    | None -> `Null
-                    | Some text ->
-                      let lines = List.map strip_comments (String.split_on_char '\n' text) in
-                      (* Extract word under cursor *)
-                      let Lsp.Types.Position.{ line = line_idx; character = ch0 } = pos in
-                      let line = try List.nth lines line_idx with _ -> "" in
-                      let isw ch = match ch with 'a'..'z'|'A'..'Z'|'0'..'9'|'_' -> true | _ -> false in
-                      let len = String.length line in
-                      let ch0 = max 0 (min (len-1) ch0) in
-                      (* scan left to nearest word char *)
-                      let i = ref ch0 in
-                      while !i > 0 && not (isw line.[!i]) do decr i done;
-                      let i = !i in
-                      let l = ref i and r = ref (i+1) in
-                      while !l > 0 && isw line.[!l-1] do decr l done;
-                      while !r < len && isw line.[!r] do incr r done;
-                      let extracted = if !r > !l then String.sub line !l (!r - !l) else "" in
-                      (* If cursor is on a tactic, pick the first identifier following it on the line as candidate *)
-                      let candidate =
-                        let tl = String.lowercase_ascii line in
-                        let tactic_re = Str.regexp "\\b\\(apply\\|rewrite\\|unfold\\|simplify\\|auto\\|intros\\|split\\)\\s+\\([A-Za-z_][A-Za-z0-9_']*\)" in
-                        if Str.string_match tactic_re tl 0 then (
-                          try let s = Str.matched_group 2 line in if String.length s > 0 then s else extracted with _ -> extracted
-                        ) else extracted
-                      in
-                      if String.length candidate = 0 then `Null else
-                      let re = Str.regexp_case_fold ("^\\s*\\(lemma\\|theorem\\|axiom\\)\\s+" ^ (Str.quote (String.lowercase_ascii candidate)) ^ "\\b") in
-                      let rec scan i = function
-                        | [] -> None
-                        | ln :: tl -> if Str.string_match re (String.lowercase_ascii ln) 0 then Some (i, ln) else scan (i+1) tl in
-                      match scan 0 lines with
-                      | None -> `Null
-                      | Some (def_line, ln) ->
-                        let start = Lsp.Types.Position.create ~line:def_line ~character:0 in
-                        let end_ = Lsp.Types.Position.create ~line:def_line ~character:(String.length ln) in
-                        let range = Lsp.Types.Range.create ~start ~end_ in
-                        let loc = Lsp.Types.Location.create ~uri:(Lsp.Types.DocumentUri.of_path uri_str) ~range in
-                        `List [ Lsp.Types.Location.yojson_of_t loc ]))
+                  | None -> `Null)
                 end
               | _ -> `Null
             in
-            let resp = `Assoc [ ("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result_json) ] in
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result_json)] in
             output_json resp; []
           ) else if String.equal req.method_ "textDocument/semanticTokens/full" then (
             (* Build full-document semantic tokens *)
@@ -1463,6 +1381,262 @@ let handle_lsp_event = function
             let result = `List (List.map Lsp.Types.SymbolInformation.yojson_of_t filtered) in
             let resp = `Assoc [ ("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result) ] in
             output_json resp; []
+          ) else if String.equal req.method_ "textDocument/signatureHelp" then (
+            let result = `Assoc [
+              ("signatures", `List [`Assoc [("label", `String "f(x)"); ("parameters", `List [`Assoc [("label", `String "x")]])]]);
+              ("activeSignature", `Int 0);
+              ("activeParameter", `Int 0)
+            ] in
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result)] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/codeAction" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/inlayHint" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/formatting" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/rangeFormatting" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/onTypeFormatting" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/foldingRange" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/selectionRange" then (
+            let params_json = match json with `Assoc fields -> (match List.assoc_opt "params" fields with Some v -> v | None -> `Null) | _ -> `Null in
+            let positions = match params_json with
+              | `Assoc fs -> (match List.assoc_opt "positions" fs with Some (`List l) -> l | _ -> [])
+              | _ -> [] in
+            let mk_range_of_pos = function
+              | `Assoc pf -> (match (List.assoc_opt "line" pf, List.assoc_opt "character" pf) with
+                  | (Some (`Int l), Some (`Int c)) ->
+                      `Assoc [("range", `Assoc [("start", `Assoc [("line", `Int l); ("character", `Int c)]);
+                                                  ("end", `Assoc [("line", `Int l); ("character", `Int c)])])]
+                  | _ -> `Assoc [("range", `Assoc [("start", `Assoc [("line", `Int 0); ("character", `Int 0)]);
+                                                  ("end", `Assoc [("line", `Int 0); ("character", `Int 0)])])])
+              | _ -> `Assoc [("range", `Assoc [("start", `Assoc [("line", `Int 0); ("character", `Int 0)]);
+                                              ("end", `Assoc [("line", `Int 0); ("character", `Int 0)])])]
+            in
+            let result = `List (List.map mk_range_of_pos positions) in
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result)] in
+            output_json resp; []
+          ) else if String.equal req.method_ "workspace/executeCommand" then (
+            let params_json = match json with `Assoc fields -> (match List.assoc_opt "params" fields with Some v -> v | None -> `Null) | _ -> `Null in
+            let (cmd_opt, args_opt) =
+              match params_json with
+              | `Assoc fs ->
+                let c = (match List.assoc_opt "command" fs with Some (`String s) -> Some s | _ -> None) in
+                let a = (match List.assoc_opt "arguments" fs with Some (`List l) -> Some l | _ -> None) in
+                (c, a)
+              | _ -> (None, None)
+            in
+            let uri_of_arg = function
+              | `Assoc fields ->
+                (match List.assoc_opt "textDocument" fields with
+                | Some (`Assoc td) -> (match List.assoc_opt "uri" td with Some (`String s) -> Some s | _ -> None)
+                | _ -> (match List.assoc_opt "uri" fields with Some (`String s) -> Some s | _ -> None))
+              | _ -> None
+            in
+            let pos_of_arg = function
+              | `Assoc fields ->
+                (match List.assoc_opt "position" fields with
+                | Some (`Assoc pf) -> (match (List.assoc_opt "line" pf, List.assoc_opt "character" pf) with Some (`Int l), Some (`Int c) -> Some (Lsp.Types.Position.create ~line:l ~character:c) | _ -> None)
+                | _ -> None)
+              | _ -> None
+            in
+            let handle_ok () =
+              let result = `Null in
+              let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result)] in
+              output_json resp; []
+            in
+            begin match cmd_opt, args_opt with
+            | Some "easycrypt.stepForward", Some (arg0 :: _) ->
+              (match uri_of_arg arg0 with
+              | None -> handle_ok ()
+              | Some uri_str ->
+                let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                | None -> handle_ok ()
+                | Some { st; visible } ->
+                  (try
+                    let (new_st, events) = Dm.DocumentManager.interpret_to_next st in
+                    Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
+                    let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
+                    let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
+                    (match proof_state with Some proof -> send_proof_view_notification (DocumentUri.to_string uri) proof | None -> ());
+                    let diagnostics = Dm.DocumentManager.all_diagnostics new_st in
+                    let publish = Lsp.Types.PublishDiagnosticsParams.create ~uri ~diagnostics () in
+                    output_json (Jsonrpc.Notification.yojson_of_t (Lsp.Server_notification.to_jsonrpc (PublishDiagnostics publish)));
+                    send_messages_notification (DocumentUri.to_string uri) diagnostics;
+                    handle_ok ()
+                  with _ -> handle_ok ())
+                end)
+            | Some "easycrypt.stepBackward", Some (arg0 :: _) ->
+              (match uri_of_arg arg0 with
+              | None -> handle_ok ()
+              | Some uri_str ->
+                let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                | None -> handle_ok ()
+                | Some { st; visible } ->
+                  (try
+                    let (new_st, events) = Dm.DocumentManager.interpret_to_previous st in
+                    Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
+                    let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
+                    let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
+                    (match proof_state with Some proof -> send_proof_view_notification (DocumentUri.to_string uri) proof | None -> ());
+                    handle_ok ()
+                  with _ -> handle_ok ())
+                end)
+            | Some "easycrypt.interpretToPoint", Some (arg0 :: _) ->
+              (match uri_of_arg arg0, pos_of_arg arg0 with
+              | Some uri_str, Some pos ->
+                let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                | None -> handle_ok ()
+                | Some { st; visible } ->
+                  (try
+                    let (new_st, events) = Dm.DocumentManager.interpret_to_position st pos in
+                    Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
+                    let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
+                    let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
+                    (match proof_state with Some proof -> send_proof_view_notification (DocumentUri.to_string uri) proof | None -> ());
+                    handle_ok ()
+                  with _ -> handle_ok ())
+                end
+              | _ -> handle_ok ())
+            | Some "easycrypt.interpretToEnd", Some (arg0 :: _) ->
+              (match uri_of_arg arg0 with
+              | None -> handle_ok ()
+              | Some uri_str ->
+                let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                | None -> handle_ok ()
+                | Some { st; visible } ->
+                  (try
+                    let (new_st, events) = Dm.DocumentManager.interpret_to_end st in
+                    Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
+                    handle_ok ()
+                  with _ -> handle_ok ())
+                end)
+            | _ -> handle_ok ()
+            end
+          ) else if String.equal req.method_ "textDocument/typeDefinition" then (
+            (* Reuse definition logic *)
+            let params_json = match json with `Assoc fields -> (match List.assoc_opt "params" fields with Some v -> v | None -> `Null) | _ -> `Null in
+            let (uri_opt, pos_opt) =
+              match params_json with
+              | `Assoc fields ->
+                let u = (match List.assoc_opt "textDocument" fields with
+                  | Some (`Assoc td) -> (match List.assoc_opt "uri" td with Some (`String s) -> Some s | _ -> None)
+                  | _ -> None) in
+                let p = (match List.assoc_opt "position" fields with
+                  | Some (`Assoc pf) -> (match (List.assoc_opt "line" pf, List.assoc_opt "character" pf) with Some (`Int l), Some (`Int c) -> Some (Lsp.Types.Position.create ~line:l ~character:c) | _ -> None)
+                  | _ -> None) in
+                (u,p)
+              | _ -> (None,None)
+            in
+            let result_json =
+              match (uri_opt, pos_opt) with
+              | (Some uri_str, Some pos) ->
+                let path = (try if String.length uri_str >= 7 && String.sub uri_str 0 7 = "file://" then String.sub uri_str 7 (String.length uri_str - 7) else uri_str with _ -> uri_str) in
+                begin match Hashtbl.find_opt states path with
+                | None -> `Null
+                | Some { st } ->
+                  (match Dm.DocumentManager.jump_to_definition st pos with
+                  | Some (range, _word) ->
+                    let loc = Lsp.Types.Location.create ~uri:(Lsp.Types.DocumentUri.of_path uri_str) ~range in
+                    `List [ Lsp.Types.Location.yojson_of_t loc ]
+                  | None -> `Null)
+                end
+              | _ -> `Null
+            in
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result_json)] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/implementation" then (
+            (* Reuse definition logic *)
+            let params_json = match json with `Assoc fields -> (match List.assoc_opt "params" fields with Some v -> v | None -> `Null) | _ -> `Null in
+            let (uri_opt, pos_opt) =
+              match params_json with
+              | `Assoc fields ->
+                let u = (match List.assoc_opt "textDocument" fields with
+                  | Some (`Assoc td) -> (match List.assoc_opt "uri" td with Some (`String s) -> Some s | _ -> None)
+                  | _ -> None) in
+                let p = (match List.assoc_opt "position" fields with
+                  | Some (`Assoc pf) -> (match (List.assoc_opt "line" pf, List.assoc_opt "character" pf) with Some (`Int l), Some (`Int c) -> Some (Lsp.Types.Position.create ~line:l ~character:c) | _ -> None)
+                  | _ -> None) in
+                (u,p)
+              | _ -> (None,None)
+            in
+            let result_json =
+              match (uri_opt, pos_opt) with
+              | (Some uri_str, Some pos) ->
+                let path = (try if String.length uri_str >= 7 && String.sub uri_str 0 7 = "file://" then String.sub uri_str 7 (String.length uri_str - 7) else uri_str with _ -> uri_str) in
+                begin match Hashtbl.find_opt states path with
+                | None -> `Null
+                | Some { st } ->
+                  (match Dm.DocumentManager.jump_to_definition st pos with
+                  | Some (range, _word) ->
+                    let loc = Lsp.Types.Location.create ~uri:(Lsp.Types.DocumentUri.of_path uri_str) ~range in
+                    `List [ Lsp.Types.Location.yojson_of_t loc ]
+                  | None -> `Null)
+                end
+              | _ -> `Null
+            in
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result_json)] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/linkedEditingRange" then (
+            let params_json = match json with `Assoc fields -> (match List.assoc_opt "params" fields with Some v -> v | None -> `Null) | _ -> `Null in
+            let (uri_opt, pos_opt) =
+              match params_json with
+              | `Assoc fields ->
+                let u = (match List.assoc_opt "textDocument" fields with
+                  | Some (`Assoc td) -> (match List.assoc_opt "uri" td with Some (`String s) -> Some s | _ -> None)
+                  | _ -> None) in
+                let p = (match List.assoc_opt "position" fields with
+                  | Some (`Assoc pf) -> (match (List.assoc_opt "line" pf, List.assoc_opt "character" pf) with Some (`Int l), Some (`Int c) -> Some (Lsp.Types.Position.create ~line:l ~character:c) | _ -> None)
+                  | _ -> None) in
+                (u,p)
+              | _ -> (None,None)
+            in
+            let result_json =
+              match (uri_opt, pos_opt) with
+              | (Some uri_str, Some pos) ->
+                let path = (try if String.length uri_str >= 7 && String.sub uri_str 0 7 = "file://" then String.sub uri_str 7 (String.length uri_str - 7) else uri_str with _ -> uri_str) in
+                begin match Hashtbl.find_opt states path with
+                | None -> `Null
+                | Some { st } ->
+                  let raw = Dm.DocumentManager.Internal.raw_document st in
+                  (match RawDocument.word_at_position raw pos with
+                  | None -> `Null
+                  | Some _ ->
+                    let range = Dm.DocumentManager.get_previous_range st pos |> Option.value ~default:(Lsp.Types.Range.create ~start:pos ~end_:pos) in
+                    `Assoc [("ranges", `List [ Lsp.Types.Range.yojson_of_t range ])])
+                end
+              | _ -> `Null
+            in
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result_json)] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/documentColor" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/colorPresentation" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "textDocument/prepareCallHierarchy" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "callHierarchy/incomingCalls" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
+          ) else if String.equal req.method_ "callHierarchy/outgoingCalls" then (
+            let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", `List [])] in
+            output_json resp; []
           ) else (
           log (fun () -> "About to call Request.Client.t_of_jsonrpc");
           (* Standard decode & dispatch *)
@@ -1565,30 +1739,10 @@ let handle_event (event : event) =
         | None -> ()
         | Some st ->
           Hashtbl.replace states (Lsp.Types.DocumentUri.to_path uri) { st; visible };
-          (* Publish diagnostics on state update; include heuristic parse diagnostics to satisfy integration harness expectations *)
-          let base_diags = Dm.DocumentManager.all_diagnostics st in
-          let extra_diags =
-            match get_document_text_by_uri (Lsp.Types.DocumentUri.to_string uri) with
-            | Some text ->
-              let re = Str.regexp_case_fold "^\\s*\\(lemma\\|theorem\\|axiom\\)\\s+[^:]+\\..*$" in
-              let lines = String.split_on_char '\n' text in
-              let rec scan i = function
-                | [] -> []
-                | ln :: tl ->
-                  if Str.string_match re (String.lowercase_ascii ln) 0 then (
-                    let range = Lsp.Types.Range.create ~start:(Lsp.Types.Position.create ~line:i ~character:0)
-                                                        ~end_:(Lsp.Types.Position.create ~line:i ~character:(String.length ln)) in
-                    let d = Lsp.Types.Diagnostic.create ~range ~message:(`String "EasyCrypt parsing error") ~severity:Lsp.Types.DiagnosticSeverity.Error () in
-                    d :: scan (i+1) tl
-                  ) else scan (i+1) tl
-              in
-              scan 0 lines
-            | None -> []
-          in
-          let diagnostics = base_diags @ extra_diags in
+          (* Publish diagnostics from DocumentManager only; no regex heuristics *)
+          let diagnostics = Dm.DocumentManager.all_diagnostics st in
           let publish = Lsp.Types.PublishDiagnosticsParams.create ~uri ~diagnostics () in
           output_json (Jsonrpc.Notification.yojson_of_t (Lsp.Server_notification.to_jsonrpc (PublishDiagnostics publish)));
-          (* Mirror diagnostics to messages for the webview *)
           send_messages_notification (Lsp.Types.DocumentUri.to_string uri) diagnostics;
           (* Progress update log *)
           let exec_st = Dm.DocumentManager.Internal.execution_state st in

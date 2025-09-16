@@ -3,6 +3,8 @@ export interface EasyCryptGoal {
   id: number;
   hypotheses: string[];
   goal: string;
+  hypotheses_pp?: { text: string; cls?: string | null }[][];
+  goal_pp?: { text: string; cls?: string | null }[];
   isOpen?: boolean;
   isContextHidden?: boolean;
 }

@@ -4,5 +4,9 @@
         "*.ec": "easycrypt"
     },
     "vsec-language-server.trace.server": "verbose",
-    "vsec.path": ""
+    "vsec.path": "",
+    "ocaml.sandbox": {
+        "kind": "opam",
+        "switch": "default"
+    }
 }

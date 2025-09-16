@@ -45,7 +45,7 @@ const GoalSection: React.FC<GoalSectionProps> = ({
         ...goal,
         isOpen: state.isOpen,
         isContextHidden: state.isContextHidden
-      };
+      } as EasyCryptGoal;
     });
   };
 
@@ -75,7 +75,9 @@ const GoalSection: React.FC<GoalSectionProps> = ({
                   index={i} 
                   count={unfocusedGoals.length} 
                   hypotheses={g.hypotheses} 
+                  hypotheses_pp={g.hypotheses_pp}
                   goal={g.goal}
+                  goal_pp={g.goal_pp}
                   isOpen={g.isOpen}
                   isContextHidden={g.isContextHidden}
                   onToggleOpen={onToggleGoalOpen}
@@ -109,7 +111,9 @@ const GoalSection: React.FC<GoalSectionProps> = ({
             index={i} 
             count={goals.length} 
             hypotheses={g.hypotheses} 
+            hypotheses_pp={g.hypotheses_pp}
             goal={g.goal}
+            goal_pp={g.goal_pp}
             isOpen={g.isOpen}
             isContextHidden={g.isContextHidden}
             onToggleOpen={onToggleGoalOpen}

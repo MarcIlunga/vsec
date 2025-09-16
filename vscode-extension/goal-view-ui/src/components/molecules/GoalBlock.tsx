@@ -4,13 +4,16 @@ import styles from './GoalBlock.module.css';
 import PpRenderer from '../atoms/PpRenderer';
 import MinimalButton from '../atoms/MinimalButton';
 import { VscCopy } from 'react-icons/vsc';
+import PpInline from '../atoms/PpInline';
 
 interface GoalBlockProps {
   id?: number;
   index?: number;
   count?: number;
   hypotheses: string[];
+  hypotheses_pp?: { text: string; cls?: string | null }[][];
   goal: string;
+  goal_pp?: { text: string; cls?: string | null }[];
   isContextHidden?: boolean;
 }
 
@@ -18,21 +21,31 @@ const GoalBlock: React.FC<GoalBlockProps> = ({
   id, 
   index, 
   count, 
-  hypotheses, 
-  goal, 
+  hypotheses,
+  hypotheses_pp,
+  goal,
+  goal_pp,
   isContextHidden = false
 }) => {
   const indicator = typeof index === 'number' && typeof count === 'number' ? `(${index + 1} / ${count})` : undefined;
   
   return (
     <div className={styles.block} data-goal-id={id}>
-      {!isContextHidden && <HypothesesBlock hypotheses={hypotheses} />}
+      {!isContextHidden && <HypothesesBlock hypotheses={hypotheses} hypotheses_pp={hypotheses_pp} />}
       <div className={styles.separatorZone}>
         {indicator && <span className={styles.goalIndex}>{indicator}</span>}
         <div className={styles.separator} />
       </div>
       <div className={styles.conclusionRow}>
-        <div className={styles.conclusionText}><strong><PpRenderer content={goal} /></strong></div>
+        <div className={styles.conclusionText}>
+          <strong>
+            {goal_pp && goal_pp.length > 0 ? (
+              <PpInline pp={goal_pp} />
+            ) : (
+              <PpRenderer content={goal} />
+            )}
+          </strong>
+        </div>
         <MinimalButton 
           title="Copy goal text to clipboard" 
           ariaLabel="Copy goal text to clipboard" 

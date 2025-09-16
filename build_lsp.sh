@@ -21,7 +21,7 @@ echo "Source dir: $SRC_DIR"
 build_lsp() {
     echo "📦 Building LSP server..."
     cd "$SRC_DIR"
-    opam exec -- dune build
+    opam exec -- dune build eclsp/ecLsp.exe
     
     if [ -f "$LSP_EXECUTABLE" ]; then
         echo "✅ LSP server built successfully: $LSP_EXECUTABLE"
@@ -118,12 +118,8 @@ bundle_extension() {
 package_extension() {
     echo "📦 Packaging VS Code extension..."
     bundle_extension
-    # Build webview bundle explicitly to ensure latest UI is included
-    build_webview
     
     cd "$EXTENSION_DIR"
-    echo "🔧 Compiling TypeScript with webpack..."
-    nix-shell "$PROJECT_ROOT/shell.nix" --command "npm run compile"
     echo "📦 Creating VSIX package..."
     # Remove old vsix to avoid picking the wrong artifact
     rm -f "$EXTENSION_DIR"/vsec-easycrypt-*.vsix || true

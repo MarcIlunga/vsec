@@ -93,6 +93,8 @@ type state = {
   ast_index: (sentence_id, string) Hashtbl.t;
   (* Captured EasyCrypt environment per sentence (derived from scope) *)
   env_index: (sentence_id, EcLib.EcEnv.env) Hashtbl.t;
+  (* Simple, text-based current goals extracted from executed commands *)
+  goals: string list;
 }
 
 let get_id_of_executed_task task =
@@ -258,6 +260,14 @@ module SymbolIndexEx = struct
 
   let clear (doc_id:document_id) : unit =
     Hashtbl.remove by_doc doc_id
+
+  let remove_for_sentence (doc_id:document_id) (sid:sentence_id) : unit =
+    match Hashtbl.find_opt by_doc doc_id with
+    | None -> ()
+    | Some tbl ->
+      let to_remove = ref [] in
+      Hashtbl.iter (fun name def -> if def.sid = sid then to_remove := name :: !to_remove) tbl;
+      List.iter (fun name -> Hashtbl.remove tbl name) !to_remove
 end
 
 let interp_error_recovery strategy st : EcLib.EcScope.scope =
@@ -713,6 +723,7 @@ let init vernac_state =
     overview = empty_overview;
     ast_index = Hashtbl.create 257;
     env_index = Hashtbl.create 257;
+    goals = [];
   },
   event
 
@@ -924,6 +935,43 @@ let execute_task st (vs, events, interrupted) task =
             Hashtbl.replace st.ast_index id ast;
             (try let env = EcLib.EcScope.env vs in Hashtbl.replace st.env_index id env with _ -> ());
             SymbolIndex.register_sentence_symbols st.doc_id id ast;
+            (* Update simple goals store based on current command *)
+            let cmd_lower = String.lowercase_ascii ast in
+            let goals_after =
+              if contains_keyword cmd_lower "qed." then []
+              else if contains_keyword cmd_lower "lemma" || contains_keyword cmd_lower "theorem" then (
+                match (String.index_opt ast ':', String.rindex_opt ast '.') with
+                | Some ci, Some di when di > ci ->
+                    let prop = String.sub ast (ci + 1) (di - ci - 1) |> String.trim in
+                    if String.length prop > 0 then [prop] else st.goals
+                | _ -> st.goals
+              ) else if contains_keyword cmd_lower "goal:" || contains_keyword cmd_lower "show:" then (
+                (* Accept "goal: P." or "show: P." patterns *)
+                let idx =
+                  if contains_keyword cmd_lower "goal:" then
+                    match String.index_opt cmd_lower 'g' with Some _ -> (try String.index_from cmd_lower 0 ':' with _ -> -1) | None -> -1
+                  else
+                    match String.index_opt cmd_lower 's' with Some _ -> (try String.index_from cmd_lower 0 ':' with _ -> -1) | None -> -1
+                in
+                match (if idx >= 0 then Some idx else None), String.rindex_opt ast '.' with
+                | Some ci, Some di when di > ci ->
+                    let prop = String.sub ast (ci + 1) (di - ci - 1) |> String.trim in
+                    if String.length prop > 0 then [prop] else st.goals
+                | _ -> st.goals
+              ) else if contains_keyword cmd_lower "proof." && (st.goals = []) then (
+                ["pending goal"]
+              ) else if (st.goals = []) && (
+                contains_keyword cmd_lower "intros" ||
+                contains_keyword cmd_lower "apply" ||
+                contains_keyword cmd_lower "rewrite" ||
+                contains_keyword cmd_lower "split" ||
+                contains_keyword cmd_lower "auto" ||
+                contains_keyword cmd_lower "trivial"
+              ) then (
+                ["pending goal"]
+              ) else st.goals
+            in
+            let st = { st with goals = goals_after } in
             let st = update st id v in
             let exec_error = exec_error_of_execution_status id v in
             vs, st, ev, exec_error
@@ -1117,6 +1165,10 @@ let cancel1 todo invalid_id =
 let rec invalidate document schedule id st =
   log (fun () -> "Invalidating: " ^ Document.sentence_ido_string id);
   let of_sentence = invalidate1 st.of_sentence id in
+  (* Remove cached AST/env and symbol index entries for this sentence *)
+  (try Hashtbl.remove st.ast_index id with _ -> ());
+  (try Hashtbl.remove st.env_index id with _ -> ());
+  SymbolIndexEx.remove_for_sentence st.doc_id id;
   let todo = cancel1 st.todo id in
   let old_jobs = Queue.copy jobs in
   let removed = ref [] in
@@ -1165,6 +1217,10 @@ let get_easycrypt_state st id =
   | Some (Success None) -> None
   | Some (Success (Some scope))
   | Some (Error (_, Some scope)) -> Some scope
+
+(* Expose simple current goals text *)
+let get_current_goals_text st = st.goals
+
 (* Public lookup for symbol -> sentence_id *)
 let lookup_symbol_id st name =
   SymbolIndex.lookup st name
@@ -1178,6 +1234,26 @@ let get_ast_of_sentence st id =
 let get_env_of_sentence st id =
   Hashtbl.find_opt st.env_index id
 
+
+(* Adapter-provided pp goals for current scope, if available *)
+let get_current_goals_pp st : Protocol.ProofState.goal list option =
+  try
+    (* Prefer the latest executed scope if any; otherwise use initial *)
+    let scope_opt =
+      let executed = executed_ids st in
+      match executed with
+      | [] -> Some st.initial
+      | ids ->
+        let last = List.hd ids in
+        match get_easycrypt_state st last with
+        | Some scope -> Some scope
+        | None -> Some st.initial
+    in
+    match scope_opt with
+    | None -> None
+    | Some scope ->
+      (try EcAdapter.try_dynlink (); EcAdapter.try_goals scope with _ -> None)
+  with _ -> None
 
 module ProofWorkerProcess = struct
   type options = ProofWorker.options

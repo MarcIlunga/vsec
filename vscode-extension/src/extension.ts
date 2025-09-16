@@ -108,9 +108,12 @@ export function activate(context: ExtensionContext) {
             const stepForwardCommand = commands.registerCommand('vsec.stepForward', () => {
                 const activeEditor = window.activeTextEditor;
                 if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
-                    Client.writeToVsEcChannel("▶️ Stepping forward...");
-                    client.sendNotification('prover/stepForward', {
-                        textDocument: { uri: activeEditor.document.uri.toString() }
+                    Client.writeToVsEcChannel("▶️ Stepping forward (executeCommand)...");
+                    client.sendRequest('workspace/executeCommand', {
+                        command: 'easycrypt.stepForward',
+                        arguments: [{
+                            textDocument: { uri: activeEditor.document.uri.toString(), version: activeEditor.document.version }
+                        }]
                     });
                 } else {
                     window.showWarningMessage('Step forward is only available for EasyCrypt files');
@@ -122,9 +125,12 @@ export function activate(context: ExtensionContext) {
             const stepBackwardCommand = commands.registerCommand('vsec.stepBackward', () => {
                 const activeEditor = window.activeTextEditor;
                 if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
-                    Client.writeToVsEcChannel("◀️ Stepping backward...");
-                    client.sendNotification('prover/stepBackward', {
-                        textDocument: { uri: activeEditor.document.uri.toString() }
+                    Client.writeToVsEcChannel("◀️ Stepping backward (executeCommand)...");
+                    client.sendRequest('workspace/executeCommand', {
+                        command: 'easycrypt.stepBackward',
+                        arguments: [{
+                            textDocument: { uri: activeEditor.document.uri.toString(), version: activeEditor.document.version }
+                        }]
                     });
                 } else {
                     window.showWarningMessage('Step backward is only available for EasyCrypt files');
@@ -136,16 +142,13 @@ export function activate(context: ExtensionContext) {
             const interpretToPointCommand = commands.registerCommand('vsec.interpretToPoint', () => {
                 const activeEditor = window.activeTextEditor;
                 if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
-                    Client.writeToVsEcChannel("🎯 Interpreting to cursor position...");
-                    client.sendNotification('prover/interpretToPoint', {
-                        textDocument: { 
-                            uri: activeEditor.document.uri.toString(),
-                            version: activeEditor.document.version 
-                        },
-                        position: {
-                            line: activeEditor.selection.active.line,
-                            character: activeEditor.selection.active.character
-                        }
+                    Client.writeToVsEcChannel("🎯 Interpreting to cursor position (executeCommand)...");
+                    client.sendRequest('workspace/executeCommand', {
+                        command: 'easycrypt.interpretToPoint',
+                        arguments: [{
+                            textDocument: { uri: activeEditor.document.uri.toString(), version: activeEditor.document.version },
+                            position: { line: activeEditor.selection.active.line, character: activeEditor.selection.active.character }
+                        }]
                     });
                 } else {
                     window.showWarningMessage('Interpret to point is only available for EasyCrypt files');
@@ -157,9 +160,12 @@ export function activate(context: ExtensionContext) {
             const interpretToEndCommand = commands.registerCommand('vsec.interpretToEnd', () => {
                 const activeEditor = window.activeTextEditor;
                 if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
-                    Client.writeToVsEcChannel("⏭️ Interpreting to end of document...");
-                    client.sendNotification('prover/interpretToEnd', {
-                        textDocument: { uri: activeEditor.document.uri.toString() }
+                    Client.writeToVsEcChannel("⏭️ Interpreting to end of document (executeCommand)...");
+                    client.sendRequest('workspace/executeCommand', {
+                        command: 'easycrypt.interpretToEnd',
+                        arguments: [{
+                            textDocument: { uri: activeEditor.document.uri.toString(), version: activeEditor.document.version }
+                        }]
                     });
                 } else {
                     window.showWarningMessage('Interpret to end is only available for EasyCrypt files');

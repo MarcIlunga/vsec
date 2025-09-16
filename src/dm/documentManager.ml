@@ -484,7 +484,11 @@ let interpret_to_next_position st pos =
     observe ~background:false st id ~should_block_on_error:true
 
 let interpret_to_position st pos =
-  interpret_to_next_position st pos
+  (* Ensure we execute up to the sentence that contains pos (or just before),
+     so lemma/proof openers are included before mid-proof tactics. *)
+  match id_of_pos st pos with
+  | Some id -> observe ~background:false st id ~should_block_on_error:true
+  | None -> interpret_to_next_position st pos
 
 let get_next_range st pos =
   match id_of_pos st pos with
@@ -654,16 +658,40 @@ let execute st id vst_for_next_todo started task background block =
 let get_proof st id =
   match id with
   | None -> 
-    (* When no specific sentence ID, show goals from initial state *)
-    let initial_scope = ExecutionManager.get_initial_context st.execution_state in
-    Protocol.ProofState.get_proof ~previous:None initial_scope
+    let pp_goals_opt = ExecutionManager.get_current_goals_pp st.execution_state in
+    begin match pp_goals_opt with
+    | Some pp_goals when List.length pp_goals > 0 ->
+      Some { Protocol.ProofState.
+        goals = pp_goals;
+        shelvedGoals = [];
+        givenUpGoals = [];
+        unfocusedGoals = [];
+        navigation = None;
+        current_lemma = None;
+        proof_progress = 0.0;
+      }
+    | _ ->
+      let goals = ExecutionManager.get_current_goals_text st.execution_state in
+      if List.length goals = 0 then None else
+      Some (Protocol.ProofState.of_strings goals)
+    end
   | Some id ->
-    begin match ExecutionManager.get_easycrypt_state st.execution_state id with
-    | None -> 
-      (* If no state at specific ID, fall back to initial state *)
-      let initial_scope = ExecutionManager.get_initial_context st.execution_state in
-      Protocol.ProofState.get_proof ~previous:None initial_scope
-    | Some scope -> Protocol.ProofState.get_proof ~previous:None scope
+    let pp_goals_opt = ExecutionManager.get_current_goals_pp st.execution_state in
+    begin match pp_goals_opt with
+    | Some pp_goals when List.length pp_goals > 0 ->
+      Some { Protocol.ProofState.
+        goals = pp_goals;
+        shelvedGoals = [];
+        givenUpGoals = [];
+        unfocusedGoals = [];
+        navigation = None;
+        current_lemma = None;
+        proof_progress = 0.0;
+      }
+    | _ ->
+      let goals = ExecutionManager.get_current_goals_text st.execution_state in
+      if List.length goals = 0 then None else
+      Some (Protocol.ProofState.of_strings goals)
     end
 
 let get_string_proof st id =
@@ -843,54 +871,77 @@ let hover st pos =
       let character' = if character = 0 then 0 else character - 1 in
       word_at_or_backoff (Position.create ~line ~character:character') (attempts + 1)
   in
+  let mk_md s = Some (MarkupContent.create ~kind:MarkupKind.Markdown ~value:s) in
+  let normalize_candidates (w:string) : string list =
+    let w = String.trim w in
+    if String.length w = 0 then [] else
+    let base = w in
+    let suffix = try
+      let idx = String.rindex w '.' in
+      if idx + 1 < String.length w then String.sub w (idx+1) (String.length w - idx - 1) else w
+    with Not_found -> w in
+    if String.equal (String.lowercase_ascii base) (String.lowercase_ascii suffix)
+    then [base] else [base; suffix]
+  in
   match word_at_or_backoff pos 0 with
   | None -> None
   | Some word ->
-    let markdown s = Some (MarkupContent.create ~kind:MarkupKind.Markdown ~value:s) in
-    (* Try environment-based info at the sentence containing pos *)
-    begin match id_of_pos st pos with
-    | None ->
-      (* Fallback to keyword/tactic descriptions *)
-      let w = String.lowercase_ascii word in
-      let value =
-        if List.mem w ["lemma"; "theorem"; "axiom"] then
-          Printf.sprintf "**%s** – definition keyword" word
-        else if List.mem w ["proof"; "qed"] then
-          Printf.sprintf "**%s** – proof keyword" word
-        else if List.mem w ["apply"; "rewrite"; "unfold"; "simplify"; "auto"; "intros"; "split"; "trivial"] then
-          Printf.sprintf "**%s** – tactic" word
-        else
-          Printf.sprintf "**%s** – symbol" word
-      in markdown value
-    | Some id ->
-      begin match ExecutionManager.get_easycrypt_state st.execution_state id with
+    (* 1) Try sentence env: locals/prog vars pretty-printed *)
+    let env_hover =
+      match id_of_pos st pos with
       | None -> None
-      | Some scope ->
-        let env =
-          match ExecutionManager.get_env_of_sentence st.execution_state id with
-          | Some e -> e
-          | None -> EcLib.EcScope.env scope
+      | Some sid ->
+        begin match ExecutionManager.get_easycrypt_state st.execution_state sid with
+        | None -> None
+        | Some scope ->
+          let env = match ExecutionManager.get_env_of_sentence st.execution_state sid with Some e -> e | None -> EcLib.EcScope.env scope in
+          let ppe = EcLib.EcPrinting.PPEnv.ofenv env in
+          let is_local = try EcLib.EcEnv.Var.lookup_local_opt word env <> None with _ -> false in
+          if is_local then mk_md (Printf.sprintf "`%s` – local variable" word) else
+          match (try EcLib.EcEnv.Var.lookup_progvar_opt ([], word) env with _ -> None) with
+          | Some (`Var pv, _ty) -> mk_md (Format.asprintf "`%s` – program variable %a" word (EcLib.EcPrinting.pp_pv ppe) pv)
+          | Some (`Proj (pv, _), _ty) -> mk_md (Format.asprintf "`%s` – program variable %a" word (EcLib.EcPrinting.pp_pv ppe) pv)
+          | None -> None
+        end
+    in
+    match env_hover with
+    | Some _ as r -> r
+    | None ->
+      (* 2) Try declaration via symbol index/AST: show declaration snippet *)
+      let candidates = normalize_candidates word in
+      let decl_md =
+        let rec try_names = function
+          | [] -> None
+          | name :: tl ->
+            begin match ExecutionManager.lookup_symbol_def st.execution_state name with
+            | Some (sid, _range_opt) ->
+              let ast = ExecutionManager.get_ast_of_sentence st.execution_state sid in
+              let outline_stmt =
+                let lname = String.lowercase_ascii name in
+                let o = Document.outline st.document in
+                match List.find_opt (fun (e:Document.outline_element) -> String.equal (String.lowercase_ascii e.name) lname) o with
+                | Some e -> Some e.statement | None -> None
+              in
+              let code = match ast with Some a -> String.trim a | None -> (match outline_stmt with Some s -> s | None -> name) in
+              let md = Printf.sprintf "**%s**\n\n```easycrypt\n%s\n```" name code in
+              mk_md md
+            | None -> try_names tl
+            end
         in
-        (* Pretty-print using EasyCrypt printers when possible *)
-        let ppe = EcLib.EcPrinting.PPEnv.ofenv env in
-        (* Try locals and program variables; if not found, check document declarations *)
-        let is_local = try EcLib.EcEnv.Var.lookup_local_opt word env <> None with _ -> false in
-        if is_local then markdown (Printf.sprintf "`%s` – local variable" word) else
-        let prog_info = try EcLib.EcEnv.Var.lookup_progvar_opt ([], word) env with _ -> None in
-        (match prog_info with
-        | Some (`Var pv, _ty) ->
-            let s = Format.asprintf "program variable %a" (EcLib.EcPrinting.pp_pv ppe) pv in
-            markdown ("`" ^ word ^ "` – " ^ s)
-        | Some (`Proj (pv, _), _ty) ->
-            let s = Format.asprintf "program variable %a" (EcLib.EcPrinting.pp_pv ppe) pv in
-            markdown ("`" ^ word ^ "` – " ^ s)
-        | None ->
-          let name_l = String.lowercase_ascii word in
-          let declared = List.exists (fun (e:Document.outline_element) -> String.equal (String.lowercase_ascii e.name) name_l) (Document.outline st.document) in
-          if declared then markdown (Printf.sprintf "`%s` – declaration in this document" word)
-          else markdown (Printf.sprintf "`%s` – symbol" word))
+        try_names candidates
+      in
+      begin match decl_md with
+      | Some _ as r -> r
+      | None ->
+        (* 3) Fallback: simple classification *)
+        let w = String.lowercase_ascii word in
+        let value =
+          if List.mem w ["lemma"; "theorem"; "axiom"] then Printf.sprintf "**%s** – definition keyword" word
+          else if List.mem w ["proof"; "qed"] then Printf.sprintf "**%s** – proof keyword" word
+          else if List.mem w ["apply"; "rewrite"; "unfold"; "simplify"; "auto"; "intros"; "split"; "trivial"] then Printf.sprintf "**%s** – tactic" word
+          else Printf.sprintf "**%s** – symbol" word in
+        mk_md value
       end
-    end
 
 (* EasyCrypt stub - Pcoq not needed *)
 let lconstr = ref (fun _ -> "")
@@ -1102,6 +1153,11 @@ let print st pos ~pattern =
 let warn_nested_proofs_opt () = ()
 
 let () = (* EasyCrypt - no option system needed *) ()
+
+(* AST/env and symbol index plumbing for LSP callers *)
+let get_env_of_sentence st sid = ExecutionManager.get_env_of_sentence st.execution_state sid
+let get_ast_of_sentence st sid = ExecutionManager.get_ast_of_sentence st.execution_state sid
+let lookup_symbol_def st name = ExecutionManager.lookup_symbol_def st.execution_state name
 
 module Internal = struct
 
