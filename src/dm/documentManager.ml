@@ -660,9 +660,9 @@ let get_proof st id =
   | None -> 
     let pp_goals_opt = ExecutionManager.get_current_goals_pp st.execution_state in
     begin match pp_goals_opt with
-    | Some pp_goals when List.length pp_goals > 0 ->
+    | Some goals when List.length goals > 0 ->
       Some { Protocol.ProofState.
-        goals = pp_goals;
+        goals;
         shelvedGoals = [];
         givenUpGoals = [];
         unfocusedGoals = [];

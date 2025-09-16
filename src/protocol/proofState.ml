@@ -39,6 +39,11 @@ type pp_atom = {
   cls: string option; (* e.g., "keyword", "ident", "type", etc. *)
 } [@@deriving yojson]
 
+(* Helpers to convert EasyCrypt pretty-printing to atoms *)
+let pp_atom_of_tuple (text, cls) = { text; cls }
+let yojson_of_pp_atom_tuple (text, cls) =
+  `Assoc [("text", `String text); ("cls", match cls with None -> `Null | Some c -> `String c)]
+
 type pp = pp_atom list [@@deriving yojson]
 
 type goal = {
