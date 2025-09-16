@@ -1195,7 +1195,9 @@ module Internal = struct
     let string_by_id = String.concat "\n" @@ List.map string_of_item code_lines_by_id in
     let string_by_end = String.concat "\n" @@ List.map string_of_item code_lines_by_end in
     String.concat "\n" ["Document using sentences_by_id map\n"; string_by_id; "\nDocument using sentences_by_end map\n"; string_by_end]
-    let inject_doc_events = inject_doc_events
+    
+  let inject_doc_events = inject_doc_events
+  let cancel st = Option.iter Sel.Event.cancel st.cancel_handle
 
 end
 

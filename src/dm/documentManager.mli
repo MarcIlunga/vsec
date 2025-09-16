@@ -171,6 +171,8 @@ module Internal : sig
   val string_of_state : state -> string
   val observe_id : state -> sentence_id option
   val inject_doc_events : Document.event Sel.Event.t list -> event Sel.Event.t list
+  (** Cancel any ongoing background work, if present *)
+  val cancel : state -> unit
 
   val validate_document : state -> Document.parsing_end_info -> state
 

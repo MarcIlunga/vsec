@@ -100,6 +100,7 @@ let rec do_initialize id params =
       "easycrypt.stepBackward";
       "easycrypt.interpretToPoint";
       "easycrypt.interpretToEnd";
+      "easycrypt.cancel";
     ] in
     Lsp.Types.ExecuteCommandOptions.create ~commands:cmds ()
   in
@@ -1523,6 +1524,17 @@ let handle_lsp_event = function
                     Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
                     handle_ok ()
                   with _ -> handle_ok ())
+                end)
+            | Some "easycrypt.cancel", Some (arg0 :: _) ->
+              (match uri_of_arg arg0 with
+              | None -> handle_ok ()
+              | Some uri_str ->
+                let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                | None -> handle_ok ()
+                | Some { st; visible } ->
+                  Dm.DocumentManager.Internal.cancel st;
+                  handle_ok ()
                 end)
             | _ -> handle_ok ()
             end
