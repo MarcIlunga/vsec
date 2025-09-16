@@ -604,32 +604,9 @@ let send_log (message:string) =
   output_json notif
 
 (* ProofView notification sender - following VSRocq pattern *)
-let send_proof_view_notification uri proof_state =
+let send_proof_view_notification uri (proof_state:Protocol.ProofState.t) =
   log (fun () -> Printf.sprintf "Sending proof view notification for %s" uri);
-  
-  (* For now, send a basic notification with sample data to get the pipeline working *)
-  let proof_state_json = `Assoc [
-    ("goals", `List [
-      `Assoc [
-        ("id", `Int 1);
-        ("hypotheses", `List [`String "H1 : forall (x : int), 0 <= x => 0 < x + 1"; `String "H2 : a : int"; `String "H3 : 0 <= a"]);
-        ("goal", `String "0 < a + 1");
-      ]
-    ]);
-    ("shelvedGoals", `List []);
-    ("givenUpGoals", `List []);
-    ("unfocusedGoals", `List []);
-    ("navigation", `Assoc [
-      ("current_step", `Int 1);
-      ("total_steps", `Int 3);
-      ("can_step_forward", `Bool true);
-      ("can_step_backward", `Bool false);
-      ("step_history", `List []);
-    ]);
-    ("current_lemma", `String "test_simple_proof (a : int) : 0 <= a => 0 < a + 1");
-    ("proof_progress", `Float 0.75);
-  ] in
-  
+  let proof_state_json = Protocol.ProofState.yojson_of_t proof_state in
   let notification = `Assoc [
     ("jsonrpc", `String "2.0");
     ("method", `String "prover/proofView");
@@ -799,7 +776,9 @@ let open_new_document uri text =
     log (fun () -> "Sending proof view notification for opened document");
     send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
   | None ->
-    log (fun () -> "No proof state available for document"));
+    (* Always notify client with an empty state to unblock UI wiring *)
+    let empty = { Protocol.ProofState.goals = []; shelvedGoals = []; givenUpGoals = []; unfocusedGoals = []; navigation = None; current_lemma = None; proof_progress = 0.0 } in
+    send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) empty);
   
   inject_dm_events (uri, events @ bg_events)
 

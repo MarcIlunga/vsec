@@ -143,6 +143,12 @@ export function activate(context: ExtensionContext) {
                 const activeEditor = window.activeTextEditor;
                 if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
                     Client.writeToVsEcChannel("🎯 Interpreting to cursor position (executeCommand)...");
+                    // Persist last proof position per document
+                    context.workspaceState.update('vsec.lastProofPosition:' + activeEditor.document.uri.toString(), {
+                        line: activeEditor.selection.active.line,
+                        character: activeEditor.selection.active.character,
+                        version: activeEditor.document.version
+                    });
                     client.sendRequest('workspace/executeCommand', {
                         command: 'easycrypt.interpretToPoint',
                         arguments: [{
@@ -195,6 +201,20 @@ export function activate(context: ExtensionContext) {
                 if (GoalPanel.currentPanel) {
                     GoalPanel.currentPanel.updateProofState(params.proofState, params.textDocument);
                     Client.writeToVsEcChannel("✅ Goal panel updated with new proof state");
+                    // Restore cursor to last proof position if available
+                    const uri = params.textDocument?.uri as string | undefined;
+                    const active = window.activeTextEditor;
+                    if (uri && active && active.document.uri.toString() === uri) {
+                        const key = 'vsec.lastProofPosition:' + uri;
+                        const saved = context.workspaceState.get<any>(key);
+                        if (saved && typeof saved.line === 'number' && typeof saved.character === 'number') {
+                            const newSel = new (window.activeTextEditor!.selection.constructor as any)(
+                                active.selection.anchor.with(saved.line, saved.character),
+                                active.selection.active.with(saved.line, saved.character)
+                            );
+                            active.selection = newSel;
+                        }
+                    }
                 } else {
                     Client.writeToVsEcChannel("⚠️ Goal panel creation failed");
                 }
