@@ -155,3 +155,17 @@ let mk_proof_statement statement range = {statement; range}
 let mk_proof_step tactic range = {tactic; range}
 
 let mk_proof_block statement steps range = {steps; statement; range}
+
+(* Helper to append a step to navigation history *)
+let push_step (nav: proof_navigation option) (step: proof_step_info) : proof_navigation option =
+  match nav with
+  | None -> Some { current_step = 1; total_steps = 1; can_step_forward = true; can_step_backward = false; step_history = [step] }
+  | Some n ->
+    let hist = n.step_history @ [step] in
+    Some {
+      current_step = List.length hist;
+      total_steps = List.length hist;
+      can_step_forward = true;
+      can_step_backward = (List.length hist) > 1;
+      step_history = hist
+    }

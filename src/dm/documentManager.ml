@@ -49,6 +49,7 @@ type state = {
   observe_id : observe_id;
   cancel_handle : Sel.Event.cancellation_handle option;
   document_state: document_state;
+  nav_history: Protocol.ProofState.proof_step_info list;
 }
 
 type event =
@@ -578,7 +579,7 @@ let init init_vs uri ~text =
   let document = Document.create_document init_vs text in
   let execution_state, feedback = ExecutionManager.init init_vs in
   let opts = [] in (* Default empty options for EasyCrypt *)
-  let state = { uri; opts; init_vs; document; execution_state; observe_id=Top; cancel_handle = None; document_state = Parsing } in
+  let state = { uri; opts; init_vs; document; execution_state; observe_id=Top; cancel_handle = None; document_state = Parsing; nav_history = [] } in
   let priority = Some PriorityManager.launch_parsing in
   let event = Sel.now ?priority ParseBegin in
   state, [event] @ [inject_em_event feedback]
@@ -590,7 +591,7 @@ let reset { uri; opts; init_vs; document; execution_state; } =
   ExecutionManager.destroy execution_state;
   let execution_state, feedback = ExecutionManager.init init_vs in
   let observe_id = Top in
-  let state = { uri; opts; init_vs; document; execution_state; observe_id; cancel_handle = None ; document_state = Parsing } in
+  let state = { uri; opts; init_vs; document; execution_state; observe_id; cancel_handle = None ; document_state = Parsing; nav_history = [] } in
   let priority = Some PriorityManager.launch_parsing in
   let event = Sel.now ?priority ParseBegin in
   state, [event] @ [inject_em_event feedback]
@@ -661,12 +662,18 @@ let get_proof st id =
     let pp_goals_opt = ExecutionManager.get_current_goals_pp st.execution_state in
     begin match pp_goals_opt with
     | Some goals when List.length goals > 0 ->
+      let nav = if st.nav_history = [] then None else Some { Protocol.ProofState.
+        current_step = List.length st.nav_history;
+        total_steps = List.length st.nav_history;
+        can_step_forward = true;
+        can_step_backward = (List.length st.nav_history) > 1;
+        step_history = st.nav_history } in
       Some { Protocol.ProofState.
         goals;
         shelvedGoals = [];
         givenUpGoals = [];
         unfocusedGoals = [];
-        navigation = None;
+        navigation = nav;
         current_lemma = None;
         proof_progress = 0.0;
         in_proof = true;
@@ -680,12 +687,18 @@ let get_proof st id =
     let pp_goals_opt = ExecutionManager.get_current_goals_pp st.execution_state in
     begin match pp_goals_opt with
     | Some pp_goals when List.length pp_goals > 0 ->
+      let nav = if st.nav_history = [] then None else Some { Protocol.ProofState.
+        current_step = List.length st.nav_history;
+        total_steps = List.length st.nav_history;
+        can_step_forward = true;
+        can_step_backward = (List.length st.nav_history) > 1;
+        step_history = st.nav_history } in
       Some { Protocol.ProofState.
         goals = pp_goals;
         shelvedGoals = [];
         givenUpGoals = [];
         unfocusedGoals = [];
-        navigation = None;
+        navigation = nav;
         current_lemma = None;
         proof_progress = 0.0;
         in_proof = true;
@@ -1221,12 +1234,46 @@ let interpret_to_next st =
       | _ :: rest -> find_next rest
     in
     (match find_next sentences with
-     | Some next_id -> observe ~background:false st next_id ~should_block_on_error:true
+     | Some next_id ->
+        let before = get_proof st (Some current_id) in
+        let st', events = observe ~background:false st next_id ~should_block_on_error:true in
+        let after = get_proof st' (Some next_id) in
+        let nav_history =
+          match before, after with
+          | Some b, Some a ->
+            let step : Protocol.ProofState.proof_step_info = {
+              step_id = (List.length st.nav_history) + 1;
+              command = "stepForward";
+              position = RawDocument.position_of_loc (Document.raw_document st'.document) (RawDocument.loc_of_position (Document.raw_document st'.document) (RawDocument.position_of_loc (Document.raw_document st'.document) 0));
+              timestamp = Unix.gettimeofday ();
+              goals_before = b.goals;
+              goals_after = a.goals;
+            } in
+            st.nav_history @ [step]
+          | _ -> st.nav_history
+        in
+        { st' with nav_history }, events
      | None -> st, [])
   | None ->
     (* Start from first sentence *)
     match Document.sentences st.document with
-    | first :: _ -> observe ~background:false st first.Document.id ~should_block_on_error:true
+    | first :: _ ->
+      let before = get_proof st None in
+      let st', events = observe ~background:false st first.Document.id ~should_block_on_error:true in
+      let after = get_proof st' (Some first.Document.id) in
+      let nav_history =
+        match before, after with
+        | Some b, Some a ->
+          let step : Protocol.ProofState.proof_step_info = {
+            step_id = 1;
+            command = "stepForward";
+            position = RawDocument.position_of_loc (Document.raw_document st'.document) 0;
+            timestamp = Unix.gettimeofday ();
+            goals_before = b.goals;
+            goals_after = a.goals;
+          } in [step]
+        | _ -> [] in
+      { st' with nav_history }, events
     | [] -> st, []
 
 (* interpret_to_previous already exists in the file - just expose it *)
