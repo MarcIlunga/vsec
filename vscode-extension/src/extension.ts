@@ -189,6 +189,15 @@ export function activate(context: ExtensionContext) {
             // 🔄 Listen for Proof View Updates from Server
             client.onNotification('prover/proofView', (params: any) => {
                 Client.writeToVsEcChannel("🎯 Received proof view update from server");
+                try {
+                    const dbg = JSON.stringify({
+                        goals: params?.proofState?.goals?.length ?? 0,
+                        shelved: params?.proofState?.shelvedGoals?.length ?? 0,
+                        givenUp: params?.proofState?.givenUpGoals?.length ?? 0,
+                        uri: params?.textDocument?.uri
+                    });
+                    Client.writeToVsEcChannel("🧪 proofView payload: " + dbg);
+                } catch {}
                 console.log('[Extension Host] Proof view update:', params);
                 
                 // Auto-open goal panel on first proof state (like VSCoq)
@@ -223,6 +232,14 @@ export function activate(context: ExtensionContext) {
             // 🔄 Listen for Execution Overview Updates (prepared/processing/processed)
             client.onNotification('prover/executionOverview', (params: any) => {
                 Client.writeToVsEcChannel("📦 Received execution overview update from server");
+                try {
+                    Client.writeToVsEcChannel("🧪 overview payload: " + JSON.stringify({
+                        hasPrepared: !!params?.overview?.prepared,
+                        hasProcessing: !!params?.overview?.processing,
+                        hasProcessed: !!params?.overview?.processed,
+                        uri: params?.textDocument?.uri
+                    }));
+                } catch {}
                 if (GoalPanel.currentPanel) {
                     // Forward to webview to render range highlighting
                     GoalPanel.currentPanel['updateExecutionOverview']?.(params.overview, params.textDocument);

@@ -1406,6 +1406,19 @@ let handle_lsp_event = function
             let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result)] in
             output_json resp; []
           ) else if String.equal req.method_ "workspace/executeCommand" then (
+            (* Debug: trace incoming executeCommand *)
+            (match json with
+            | `Assoc fields ->
+              (match List.assoc_opt "params" fields with
+              | Some (`Assoc pf) ->
+                (match List.assoc_opt "command" pf with
+                | Some (`String c) -> send_log ("[executeCommand] command=" ^ c)
+                | _ -> send_log "[executeCommand] command missing");
+                (match List.assoc_opt "arguments" pf with
+                | Some (`List _) -> send_log "[executeCommand] arguments present"
+                | _ -> send_log "[executeCommand] no arguments")
+              | _ -> send_log "[executeCommand] params missing")
+            | _ -> send_log "[executeCommand] malformed request");
             let params_json = match json with `Assoc fields -> (match List.assoc_opt "params" fields with Some v -> v | None -> `Null) | _ -> `Null in
             let (cmd_opt, args_opt) =
               match params_json with
@@ -1430,94 +1443,86 @@ let handle_lsp_event = function
               | _ -> None
             in
             let handle_ok () =
-              let result = `Null in
-              let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result)] in
-              output_json resp; []
-            in
-            begin match cmd_opt, args_opt with
-            | Some "easycrypt.stepForward", Some (arg0 :: _) ->
-              (match uri_of_arg arg0 with
-              | None -> handle_ok ()
-              | Some uri_str ->
-                let uri = Lsp.Types.DocumentUri.of_string uri_str in
-                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
-                | None -> handle_ok ()
-                | Some { st; visible } ->
-                  (try
-                    let (new_st, events) = Dm.DocumentManager.interpret_to_next st in
-                    Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
-                    let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
-                    let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
-                    (match proof_state with Some proof -> send_proof_view_notification (DocumentUri.to_string uri) proof | None -> ());
-                    let diagnostics = Dm.DocumentManager.all_diagnostics new_st in
-                    let publish = Lsp.Types.PublishDiagnosticsParams.create ~uri ~diagnostics () in
-                    output_json (Jsonrpc.Notification.yojson_of_t (Lsp.Server_notification.to_jsonrpc (PublishDiagnostics publish)));
-                    send_messages_notification (DocumentUri.to_string uri) diagnostics;
-                    handle_ok ()
-                  with _ -> handle_ok ())
-                end)
-            | Some "easycrypt.stepBackward", Some (arg0 :: _) ->
-              (match uri_of_arg arg0 with
-              | None -> handle_ok ()
-              | Some uri_str ->
-                let uri = Lsp.Types.DocumentUri.of_string uri_str in
-                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
-                | None -> handle_ok ()
-                | Some { st; visible } ->
-                  (try
-                    let (new_st, events) = Dm.DocumentManager.interpret_to_previous st in
-                    Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
-                    let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
-                    let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
-                    (match proof_state with Some proof -> send_proof_view_notification (DocumentUri.to_string uri) proof | None -> ());
-                    handle_ok ()
-                  with _ -> handle_ok ())
-                end)
-            | Some "easycrypt.interpretToPoint", Some (arg0 :: _) ->
-              (match uri_of_arg arg0, pos_of_arg arg0 with
-              | Some uri_str, Some pos ->
-                let uri = Lsp.Types.DocumentUri.of_string uri_str in
-                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
-                | None -> handle_ok ()
-                | Some { st; visible } ->
-                  (try
-                    let (new_st, events) = Dm.DocumentManager.interpret_to_position st pos in
-                    Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
-                    let obs_id = Dm.DocumentManager.Internal.observe_id new_st in
-                    let proof_state = Dm.DocumentManager.get_proof new_st obs_id in
-                    (match proof_state with Some proof -> send_proof_view_notification (DocumentUri.to_string uri) proof | None -> ());
-                    handle_ok ()
-                  with _ -> handle_ok ())
-                end
-              | _ -> handle_ok ())
-            | Some "easycrypt.interpretToEnd", Some (arg0 :: _) ->
-              (match uri_of_arg arg0 with
-              | None -> handle_ok ()
-              | Some uri_str ->
-                let uri = Lsp.Types.DocumentUri.of_string uri_str in
-                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
-                | None -> handle_ok ()
-                | Some { st; visible } ->
-                  (try
-                    let (new_st, events) = Dm.DocumentManager.interpret_to_end st in
-                    Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
-                    handle_ok ()
-                  with _ -> handle_ok ())
-                end)
-            | Some "easycrypt.cancel", Some (arg0 :: _) ->
-              (match uri_of_arg arg0 with
-              | None -> handle_ok ()
-              | Some uri_str ->
-                let uri = Lsp.Types.DocumentUri.of_string uri_str in
-                begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
-                | None -> handle_ok ()
-                | Some { st; visible } ->
-                  Dm.DocumentManager.Internal.cancel st;
-                  handle_ok ()
-                end)
-            | _ -> handle_ok ()
-            end
-          ) else if String.equal req.method_ "textDocument/typeDefinition" then (
+               let result = `Null in
+               let resp = `Assoc [("jsonrpc", `String "2.0"); ("id", Jsonrpc.Id.yojson_of_t req.id); ("result", result)] in
+               output_json resp; []
+             in
+             begin match cmd_opt, args_opt with
+             | Some "easycrypt.stepForward", Some (arg0 :: _) ->
+               (match uri_of_arg arg0 with
+               | None -> handle_ok ()
+               | Some uri_str ->
+                 let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                 begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                 | None -> handle_ok ()
+                 | Some { st; visible } ->
+                   (try
+                     send_log "[stepForward] executing";
+                     let (new_st, events) = Dm.DocumentManager.interpret_to_next st in
+                     Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
+                     inject_dm_events (uri, events)
+                   with exn -> send_log ("[stepForward] exception: " ^ Printexc.to_string exn); handle_ok ())
+                 end)
+             | Some "easycrypt.stepBackward", Some (arg0 :: _) ->
+               (match uri_of_arg arg0 with
+               | None -> handle_ok ()
+               | Some uri_str ->
+                 let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                 begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                 | None -> handle_ok ()
+                 | Some { st; visible } ->
+                   (try
+                     send_log "[stepBackward] executing";
+                     let (new_st, events) = Dm.DocumentManager.interpret_to_previous st in
+                     Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
+                     inject_dm_events (uri, events)
+                   with exn -> send_log ("[stepBackward] exception: " ^ Printexc.to_string exn); handle_ok ())
+                 end)
+             | Some "easycrypt.interpretToPoint", Some (arg0 :: _) ->
+               (match uri_of_arg arg0, pos_of_arg arg0 with
+               | Some uri_str, Some pos ->
+                 let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                 begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                 | None -> handle_ok ()
+                 | Some { st; visible } ->
+                   (try
+                     send_log (Printf.sprintf "[interpretToPoint] executing to (%d,%d)" pos.line pos.character);
+                     let (new_st, events) = Dm.DocumentManager.interpret_to_position st pos in
+                     Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
+                     inject_dm_events (uri, events)
+                   with exn -> send_log ("[interpretToPoint] exception: " ^ Printexc.to_string exn); handle_ok ())
+                 end
+               | _ -> handle_ok ())
+             | Some "easycrypt.interpretToEnd", Some (arg0 :: _) ->
+               (match uri_of_arg arg0 with
+               | None -> handle_ok ()
+               | Some uri_str ->
+                 let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                 begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                 | None -> handle_ok ()
+                 | Some { st; visible } ->
+                   (try
+                     send_log "[interpretToEnd] executing";
+                     let (new_st, events) = Dm.DocumentManager.interpret_to_end st in
+                     Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
+                     inject_dm_events (uri, events)
+                   with exn -> send_log ("[interpretToEnd] exception: " ^ Printexc.to_string exn); handle_ok ())
+                 end)
+             | Some "easycrypt.cancel", Some (arg0 :: _) ->
+               (match uri_of_arg arg0 with
+               | None -> handle_ok ()
+               | Some uri_str ->
+                 let uri = Lsp.Types.DocumentUri.of_string uri_str in
+                 begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
+                 | None -> handle_ok ()
+                 | Some { st; visible } ->
+                   send_log "[cancel] requested";
+                   Dm.DocumentManager.Internal.cancel st;
+                   handle_ok ()
+                 end)
+             | _ -> handle_ok ()
+             end
+           ) else if String.equal req.method_ "textDocument/typeDefinition" then (
             (* Reuse definition logic *)
             let params_json = match json with `Assoc fields -> (match List.assoc_opt "params" fields with Some v -> v | None -> `Null) | _ -> `Null in
             let (uri_opt, pos_opt) =
