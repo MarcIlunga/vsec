@@ -76,6 +76,7 @@ let rec do_initialize id params =
   let hoverProvider = `Bool true in
   let definitionProvider = `Bool true in
   let referencesProvider = `Bool true in
+  let renameProvider = `Bool true in
   let documentSymbolProvider = `DocumentSymbolOptions (Lsp.Types.DocumentSymbolOptions.create ~workDoneProgress:true ()) in
   (* Advertise semantic tokens via typed LSP capabilities *)
   let token_types = [ "keyword"; "type"; "function"; "variable"; "property"; "comment" ] in
@@ -98,6 +99,7 @@ let rec do_initialize id params =
     ~hoverProvider
     ~definitionProvider
     ~referencesProvider
+    ~renameProvider
     ~documentSymbolProvider
     ~semanticTokensProvider
   ()
@@ -497,6 +499,46 @@ let rec dispatch_std_request : type a. Jsonrpc.Id.t -> a Lsp.Client_request.t ->
       let ranges = Dm.DocumentManager.references st position in
       let locs = List.map (fun range -> Lsp.Types.Location.create ~uri:textDocument.uri ~range) ranges in
       Ok (Some locs), []
+    end
+  | TextDocumentRename params ->
+    let Lsp.Types.RenameParams.{ textDocument; position; newName } = params in
+    begin match Hashtbl.find_opt states (Lsp.Types.DocumentUri.to_path textDocument.uri) with
+    | None -> Ok None, []
+    | Some { st } ->
+      let raw = Dm.DocumentManager.Internal.raw_document st in
+      let word_opt = RawDocument.word_at_position raw position in
+      begin match word_opt with
+      | None ->
+        let open Lsp.Types in
+        let empty = WorkspaceEdit.t_of_yojson (`Assoc [ ("changes", `Assoc []) ]) in
+        Ok (Some empty), []
+      | Some oldName ->
+        let text = RawDocument.text raw in
+        let lines = String.split_on_char '\n' text in
+        let edits = ref [] in
+        List.iteri (fun line_idx line ->
+          let rec search_from i =
+            if i < 0 || i >= String.length line then () else
+            match String.index_from_opt line i (String.get oldName 0) with
+            | None -> ()
+            | Some j ->
+              if j + String.length oldName <= String.length line && String.sub line j (String.length oldName) = oldName then (
+                let open Lsp.Types in
+                let range = Range.create ~start:(Position.create ~line:line_idx ~character:j)
+                                         ~end_:(Position.create ~line:line_idx ~character:(j + String.length oldName)) in
+                edits := (textDocument.uri, range) :: !edits;
+                search_from (j + String.length oldName)
+              ) else search_from (j + 1)
+          in
+          search_from 0
+        ) lines;
+        let open Lsp.Types in
+        let textEdits = List.map (fun (_uri, range) -> TextEdit.create ~range ~newText:newName) !edits in
+        (* Construct WorkspaceEdit as JSON to avoid typed helper signature mismatches *)
+        let changes = `Assoc [ (DocumentUri.to_string textDocument.uri, `List (List.map TextEdit.yojson_of_t textEdits)) ] in
+        let workspaceEdit_json = `Assoc [ ("changes", changes) ] in
+        Ok (Some (WorkspaceEdit.t_of_yojson workspaceEdit_json)), []
+      end
     end
   (* TODO: Add DocumentSymbol and SemanticTokens support when LSP library is updated *)
   | UnknownRequest _ | _  -> Error ({message="Received unknown request"; code=None}), []
