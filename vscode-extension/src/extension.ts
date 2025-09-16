@@ -178,6 +178,23 @@ export function activate(context: ExtensionContext) {
                 }
             });
             context.subscriptions.push(interpretToEndCommand);
+
+            // Command: Cancel proof
+            const cancelProofCommand = commands.registerCommand('vsec.cancelProof', () => {
+                const activeEditor = window.activeTextEditor;
+                if (activeEditor && activeEditor.document.languageId === 'easycrypt') {
+                    Client.writeToVsEcChannel("🛑 Cancel proof (executeCommand)...");
+                    client.sendRequest('workspace/executeCommand', {
+                        command: 'easycrypt.cancel',
+                        arguments: [{
+                            textDocument: { uri: activeEditor.document.uri.toString(), version: activeEditor.document.version }
+                        }]
+                    });
+                } else {
+                    window.showWarningMessage('Cancel proof is only available for EasyCrypt files');
+                }
+            });
+            context.subscriptions.push(cancelProofCommand);
             
             // Command: Proof Search & Discovery
             const proofSearchCommand = commands.registerCommand('vsec.proofSearch', () => {

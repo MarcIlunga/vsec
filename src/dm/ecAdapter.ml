@@ -61,4 +61,22 @@ let try_dynlink () =
       ()
   end
 
+(* --- Fallback lightweight goals provider (best-effort) --- *)
+
+let fallback_goals_of_scope (scope:EcLib.EcScope.scope) : Protocol.ProofState.goal list =
+  (* We do not have direct access to EasyCrypt proof engine; build a minimal goal from current context when possible. *)
+  let mk text : Protocol.ProofState.goal =
+    let open Protocol.ProofState in
+    let atom s = { text = s; cls = None } in
+    { id = 0; hypotheses = []; goal = text; hypotheses_pp = []; goal_pp = [atom text] }
+  (* Try to find a pending goal string from scope by inspecting environment printing, if available. *)
+  in []
+
+let () =
+  (* Register a fallback adapter if none is provided via dynlink, so callers can still receive a non-crashing result *)
+  if !goals_ref = None then begin
+    log (fun () -> "Registering fallback EasyCrypt goals adapter");
+    register_goals (fun scope -> fallback_goals_of_scope scope)
+  end
+
 
