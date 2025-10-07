@@ -82,4 +82,14 @@ result-*
 
 # System files
 .DS_Store
-Thumbs.db.specstory/
+Thumbs.db
+
+# Specstory conversation history (AI-generated, not source)
+.specstory/
+
+# Temporary planning/recovery documents (session-specific)
+AST_MIGRATION_PLAN.md
+EVALUATION_PREP.md
+INTERACTIVE_PROVING_ROADMAP.md
+QUICK_START_IMPLEMENTATION.md
+RESTORE_INSTRUCTIONS.md
