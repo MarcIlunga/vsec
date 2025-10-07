@@ -440,11 +440,22 @@ let interp_ast ~doc_id ~state_id ~st ~error_recovery ast =
     let scope_after, feedback_events =
       match (
         (* Try dynamic adapter first *)
-        (try EcAdapter.try_dynlink (); EcAdapter.try_process st ast_trimmed with _ -> None)
+        (try 
+          EcAdapter.try_dynlink (); 
+          log (fun () -> "[ExecutionManager] Calling adapter.try_process");
+          let result = EcAdapter.try_process st ast_trimmed in
+          log (fun () -> Printf.sprintf "[ExecutionManager] Adapter returned: %s" 
+            (match result with Some _ -> "Some(scope)" | None -> "None"));
+          result
+        with exn -> 
+          log (fun () -> Printf.sprintf "[ExecutionManager] Adapter exception: %s" (Printexc.to_string exn));
+          None)
       ) with
       | Some st' ->
+        log (fun () -> "[ExecutionManager] Using adapter result");
         st', [(state_id, (Lsp.Types.DiagnosticSeverity.Information, None, "Executed by EasyCrypt adapter"))]
       | None ->
+        log (fun () -> "[ExecutionManager] Adapter returned None, using fallback");
         (* Real EasyCrypt execution implementation *)
         try
           log (fun () -> Printf.sprintf "Attempting real EasyCrypt execution for: %s" ast_trimmed);
@@ -1236,7 +1247,7 @@ let get_env_of_sentence st id =
 
 
 (* Adapter-provided pp goals for current scope, if available *)
-let get_current_goals_pp st : Protocol.ProofState.goal list option =
+let get_current_goals_pp st : (Protocol.ProofState.goal list, string) result =
   try
     (* Prefer the latest executed scope if any; otherwise use initial *)
     let scope_opt =
@@ -1250,10 +1261,28 @@ let get_current_goals_pp st : Protocol.ProofState.goal list option =
         | None -> Some st.initial
     in
     match scope_opt with
-    | None -> None
+    | None -> 
+      log (fun () -> "[get_current_goals_pp] No scope available");
+      Error "No proof scope available"
     | Some scope ->
-      (try EcAdapter.try_dynlink (); EcAdapter.try_goals scope with _ -> None)
-  with _ -> None
+      (try 
+        log (fun () -> "[get_current_goals_pp] Attempting to load adapter...");
+        EcAdapter.try_dynlink (); 
+        log (fun () -> "[get_current_goals_pp] Adapter loaded, extracting goals...");
+        let result = EcAdapter.try_goals scope in
+        log (fun () -> Printf.sprintf "[get_current_goals_pp] Extracted %d goals" 
+          (match result with Some goals -> List.length goals | None -> 0));
+        (match result with
+        | Some goals -> Ok goals
+        | None -> Error "Adapter returned no goals (try_goals returned None)")
+      with exn ->
+        let error_msg = Printf.sprintf "Adapter exception: %s" (Printexc.to_string exn) in
+        log (fun () -> Printf.sprintf "[get_current_goals_pp] ADAPTER FAILED: %s" error_msg);
+        Error error_msg)
+  with exn ->
+    let error_msg = Printf.sprintf "Internal error: %s" (Printexc.to_string exn) in
+    log (fun () -> Printf.sprintf "[get_current_goals_pp] ERROR: %s" error_msg);
+    Error error_msg
 
 module ProofWorkerProcess = struct
   type options = ProofWorker.options

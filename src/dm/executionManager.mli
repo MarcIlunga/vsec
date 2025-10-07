@@ -73,7 +73,7 @@ val get_easycrypt_state : state -> sentence_id -> EcLib.EcScope.scope option
 val get_current_goals_text : state -> string list
 
 (** Adapter-provided EasyCrypt goals for current scope, if available *)
-val get_current_goals_pp : state -> Protocol.ProofState.goal list option
+val get_current_goals_pp : state -> (Protocol.ProofState.goal list, string) result
 
 val lookup_symbol_id : state -> string -> sentence_id option
 

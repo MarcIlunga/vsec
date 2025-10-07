@@ -50,15 +50,12 @@ let adapter_loaded = ref false
 
 let try_dynlink () =
   if not !adapter_loaded then begin
-    adapter_loaded := true;
     let path = Sys.getenv_opt "VSEC_EC_ADAPTER" |> Option.value ~default:"vsec_ec_adapter.cmxs" in
-    try
-      log (fun () -> ("Trying to dynlink EC adapter: " ^ path));
-      Dynlink.loadfile path;
-      log (fun () -> "Dynlink of EC adapter succeeded")
-    with exn ->
-      log (fun () -> ("Dynlink of EC adapter failed: " ^ Printexc.to_string exn));
-      ()
+    log (fun () -> ("Trying to dynlink EC adapter: " ^ path));
+    Dynlink.loadfile path;
+    adapter_loaded := true;
+    log (fun () -> "Dynlink of EC adapter succeeded")
+    (* Note: If dynlink fails, exception propagates up - don't set adapter_loaded *)
   end
 
 (* --- Fallback lightweight goals provider (best-effort) --- *)

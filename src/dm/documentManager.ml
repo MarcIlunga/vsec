@@ -663,9 +663,9 @@ let execute st id vst_for_next_todo started task background block =
 let get_proof st id =
   match id with
   | None -> 
-    let pp_goals_opt = ExecutionManager.get_current_goals_pp st.execution_state in
-    begin match pp_goals_opt with
-    | Some goals when List.length goals > 0 ->
+    let pp_goals_result = ExecutionManager.get_current_goals_pp st.execution_state in
+    begin match pp_goals_result with
+    | Ok goals when List.length goals > 0 ->
       let nav = if st.nav_history = [] then None else Some { Protocol.ProofState.
         current_step = List.length st.nav_history;
         total_steps = List.length st.nav_history;
@@ -683,15 +683,42 @@ let get_proof st id =
         in_proof = true;
         error_message = None;
       }
-    | _ ->
+    | Error error_msg ->
+      (* Return proof state with error message *)
+      Some { Protocol.ProofState.
+        goals = [];
+        shelvedGoals = [];
+        givenUpGoals = [];
+        unfocusedGoals = [];
+        navigation = None;
+        current_lemma = None;
+        proof_progress = 0.0;
+        in_proof = false;
+        error_message = Some error_msg;
+      }
+    | Ok [] ->
+      (* Adapter returned empty goals - try text fallback *)
       let goals = ExecutionManager.get_current_goals_text st.execution_state in
-      if List.length goals = 0 then None else
-      Some (Protocol.ProofState.of_strings goals)
+      if List.length goals = 0 then 
+        (* No goals from either source - show diagnostic *)
+        Some { Protocol.ProofState.
+          goals = [];
+          shelvedGoals = [];
+          givenUpGoals = [];
+          unfocusedGoals = [];
+          navigation = None;
+          current_lemma = None;
+          proof_progress = 0.0;
+          in_proof = false;
+          error_message = Some "Adapter loaded but returned empty goals. Text fallback also empty. Are you in a proof?";
+        }
+      else
+        Some (Protocol.ProofState.of_strings goals)
     end
   | Some id ->
-    let pp_goals_opt = ExecutionManager.get_current_goals_pp st.execution_state in
-    begin match pp_goals_opt with
-    | Some pp_goals when List.length pp_goals > 0 ->
+    let pp_goals_result = ExecutionManager.get_current_goals_pp st.execution_state in
+    begin match pp_goals_result with
+    | Ok pp_goals when List.length pp_goals > 0 ->
       let nav = if st.nav_history = [] then None else Some { Protocol.ProofState.
         current_step = List.length st.nav_history;
         total_steps = List.length st.nav_history;
@@ -709,10 +736,37 @@ let get_proof st id =
         in_proof = true;
         error_message = None;
       }
-    | _ ->
+    | Error error_msg ->
+      (* Return proof state with error message *)
+      Some { Protocol.ProofState.
+        goals = [];
+        shelvedGoals = [];
+        givenUpGoals = [];
+        unfocusedGoals = [];
+        navigation = None;
+        current_lemma = None;
+        proof_progress = 0.0;
+        in_proof = false;
+        error_message = Some error_msg;
+      }
+    | Ok [] ->
+      (* Adapter returned empty goals - try text fallback *)
       let goals = ExecutionManager.get_current_goals_text st.execution_state in
-      if List.length goals = 0 then None else
-      Some (Protocol.ProofState.of_strings goals)
+      if List.length goals = 0 then 
+        (* No goals from either source - show diagnostic *)
+        Some { Protocol.ProofState.
+          goals = [];
+          shelvedGoals = [];
+          givenUpGoals = [];
+          unfocusedGoals = [];
+          navigation = None;
+          current_lemma = None;
+          proof_progress = 0.0;
+          in_proof = false;
+          error_message = Some "Adapter loaded but returned empty goals (with id). Text fallback also empty.";
+        }
+      else
+        Some (Protocol.ProofState.of_strings goals)
     end
 
 let get_string_proof st id =
