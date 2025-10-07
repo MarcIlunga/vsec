@@ -1,303 +1,359 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI assistants (Claude, GPT, etc.) when working with code in this repository.
+
+## 🚨 **CRITICAL: GIT SAFETY RULES** 🚨
+
+### **ABSOLUTE PROHIBITIONS - NO EXCEPTIONS**
+
+**NEVER, UNDER ANY CIRCUMSTANCES:**
+- ❌ Run `git reset --hard` without EXPLICIT user permission
+- ❌ Run `git reset --soft` without EXPLICIT user permission  
+- ❌ Run `git clean -fd` without EXPLICIT user permission
+- ❌ Run `git push --force` without EXPLICIT user permission
+- ❌ Delete branches without EXPLICIT user permission
+- ❌ Modify `.git/` directory contents
+- ❌ Run any destructive git command that loses history
+
+**IF YOU ACCIDENTALLY LOSE WORK:**
+- Work can be recovered from `.specstory/history/` files
+- Check for VSIX packages in `vscode-extension/` (contain compiled code)
+- Use `git reflog` to find lost commits
+- Extract source from binaries using `objdump`, `strings`, `nm -C`
+
+**BEFORE ANY GIT OPERATION:**
+1. Always use `git status` first
+2. Ask user for confirmation on destructive operations
+3. Create a backup branch if unsure: `git branch backup-$(date +%s)`
+
+---
 
 ## Project Overview
 
-VsEc is a Language Server Protocol (LSP) implementation for EasyCrypt, forked from VSCoq. It provides IDE support for the EasyCrypt proof assistant.
+VsEc is a Language Server Protocol (LSP) implementation for EasyCrypt, adapted from VSCoq. It provides VS Code IDE support for the EasyCrypt proof assistant with interactive proving capabilities.
 
-## Development Commands
+**Tech Stack:**
+- **Backend**: OCaml 4.14+ with Dune build system
+- **Frontend**: TypeScript/React with Vite
+- **LSP**: Based on OCaml LSP library
+- **EasyCrypt**: Integrated via opam packages
 
-### Build
+---
+
+## Build Commands
+
+### **Primary Build Script** (Use this for everything!)
+
 ```bash
-# Build the project
-dune build
+# Build server only
+./build-extension.sh -l
+# OR
+./build_lsp.sh build server
 
-# Build in watch mode (rebuilds on file changes)
-dune build --watch
+# Build extension (TypeScript + webview)
+./build_lsp.sh build extension
+
+# Full build (server + extension + webview)
+./build_lsp.sh build
+
+# Create VSIX package (full build + packaging)
+./build_lsp.sh package
 ```
 
-### Test
+### Manual Commands (if build script fails)
+
 ```bash
-# Run all tests
-dune runtest
+# OCaml LSP Server
+cd src && dune build
 
-# Run tests in watch mode
-dune runtest --watch
+# TypeScript Extension
+cd vscode-extension && npm install && npm run compile
 
-# Run a specific test file
-dune exec ./src/tests/<test_file>.exe
+# React Webview UI
+cd vscode-extension/goal-view-ui && npm install && npm run build
 ```
 
-### Development Environment
-```bash
-# Enter Nix development shell (includes OCaml toolchain and LSP)
-nix develop
+### Testing
 
-# Or with direnv
-direnv allow
+```bash
+# OCaml unit tests
+cd src && dune runtest
+
+# Run specific test
+dune exec src/tests/test_interactive_suite.exe
+
+# TypeScript tests
+cd vscode-extension && npm test
 ```
 
-### Release
-```bash
-# Create release package
-cd src && ./make-release.sh
-```
+---
 
 ## Architecture
 
-### Core Components
+### Directory Structure
 
-**SEL (Simple Event Library)** - Custom event loop (`src/sel/`)
-- Alternative to threads/Lwt built on Unix.select
-- Handles multiple event sources without blocking
-- Key types: `'a Sel.event`, `Sel.wait`, `Sel.on_*` constructors
+```
+src/                          # OCaml LSP Server
+├── eclsp/                    # LSP server entry point
+│   └── lspManager.ml         # Main LSP request/notification handlers
+├── dm/                       # Document Manager
+│   ├── documentManager.ml    # Document state & execution management
+│   ├── types.ml              # Type definitions (SentenceId, etc.)
+│   └── plugins/              # EasyCrypt adapter plugins
+├── protocol/                 # Protocol types
+│   ├── proofState.ml         # ProofState with error_message field
+│   ├── ast.ml                # AST serialization (EasyCrypt → JSON)
+│   └── messages.ml           # Structured message types
+└── tests/                    # Comprehensive test suite (18 files)
 
-**Document Manager** (`src/dm/`)
-- `scheduler`: Plans document execution, tracks dependencies
-- `executionManager`: Manages EasyCrypt state and sentence execution
-- `document`: Holds user text and validated/parsed form
-- `documentManager`: Main API for document operations
+vscode-extension/             # VS Code Extension
+├── src/                      # TypeScript extension host
+│   ├── extension.ts          # Main entry point
+│   ├── panels/GoalPanel.ts   # Webview panel management
+│   ├── webviewTypes.ts       # Type definitions for webview messages
+│   └── test/                 # TypeScript tests
+└── goal-view-ui/             # React webview UI
+    └── src/
+        ├── components/       # React components
+        └── types.ts          # ProofState, Goal types
 
-**LSP Implementation** (`src/lsp/`)
-- JSON-RPC protocol handling
-- LSP message types and extended protocol support
-- Integration with SEL event system
-
-**Driver** (`src/driver/`)
-- `ecLsp.ml`: Main executable entry point
-- `lspManager.ml`: Handles LSP requests and VSCoq-specific messages
-
-### Key Implementation Details
-
-1. **Event Handling Pattern**: All async operations use SEL events
-   ```ocaml
-   type event = 
-     | LspMessage of ... 
-     | DocumentChange of ...
-   let handle_event = function
-     | LspMessage msg -> handle_lsp msg
-     | DocumentChange doc -> update_document doc
-   ```
-
-2. **Document Processing**: Parsing and execution are entangled - validation stops at sentences with parsing effects
-
-3. **State Management**: Global EasyCrypt state managed by executionManager
-
-4. **Testing**: Uses `ppx_inline_test` for unit tests inline with implementation
-
-## EasyCrypt Integration
-
-The `src/easycrypt/` directory is reserved for EasyCrypt-specific components. Integration points:
-- Build system references `easycrypt.ecLib`
-- Document manager adapted for EasyCrypt syntax
-- Execution manager handles EasyCrypt proof states
-
-## Common Development Tasks
-
-### Adding a new LSP handler
-1. Define message types in `src/lsp/`
-2. Add event constructor in `lspManager.ml`
-3. Implement handler following SEL event pattern
-4. Update protocol documentation
-
-### Debugging
-- Enable verbose logging: Set appropriate log levels in driver
-- Test specific documents: Use test files in `src/tests/interactive/`
-- Trace event flow: Add logging to SEL event handlers
-
-### Dependencies
-All OCaml dependencies managed via OPAM and dune. Key libraries:
-- `yojson`: JSON parsing for LSP
-- `ppx_*`: Various syntax extensions
-- `sexplib`: S-expression support
-
-## Repository Management
-
-**IMPORTANT**: Always work with the correct repository:
-- **Fork Repository**: `MarcIlunga/vsec` (origin) - This is where you create PRs
-- **Upstream Repository**: `EasyCrypt/vsec` (upstream) - This is the main project
-
-### Verifying Repository Setup
-```bash
-# Check your remotes
-git remote -v
-
-# Should show:
-# origin    https://github.com/MarcIlunga/vsec.git (fetch)
-# origin    https://github.com/MarcIlunga/vsec.git (push)
-# upstream  https://github.com/EasyCrypt/vsec.git (fetch)
-# upstream  https://github.com/EasyCrypt/vsec.git (push)
+scripts/                      # Utility scripts
+├── extract_easycrypt_types.py  # Type extraction from EasyCrypt
+├── agent_manager.py          # Agent task dispatcher
+└── watch_agents.py           # Agent monitoring tool
 ```
 
-### Creating Pull Requests
-```bash
-# ALWAYS specify the repository explicitly
-gh pr create --repo MarcIlunga/vsec --title "..." --body "..."
+### Key Files
 
-# NEVER create PRs to EasyCrypt/vsec directly
-```
+**Critical OCaml Files:**
+- `src/dm/documentManager.ml` - Document state, observe_id tracking, cancel_handle management
+- `src/eclsp/lspManager.ml` - LSP handlers, notifications, command dispatch
+- `src/protocol/proofState.ml` - ProofState type with error handling
+- `src/protocol/ast.ml` - EasyCrypt AST → JSON serialization (318 lines)
+- `src/dm/types.ml` - SentenceId module, DiagnosticSeverity, RangeList
 
-### Syncing with Upstream
-```bash
-# Fetch latest changes from upstream
-git fetch upstream
+**Critical TypeScript Files:**
+- `vscode-extension/src/extension.ts` - Extension activation, LSP client
+- `vscode-extension/src/panels/GoalPanel.ts` - Webview lifecycle, message passing
+- `vscode-extension/goal-view-ui/src/types.ts` - ProofState interface (includes in_proof, error_message)
+- `vscode-extension/src/webviewTypes.ts` - Discriminated unions for type safety
 
-# Merge upstream main into your main
-git checkout main
-git merge upstream/main
+---
 
-# Push to your fork
-git push origin main
-```
+## Recent Critical Fixes (October 2025)
+
+### Memory Leaks Fixed
+1. **cancel_handle cleanup** (documentManager.ml:602)
+   - Added `let state = { state with cancel_handle = None }` after cancellation
+   - Prevents dangling event handle references
+
+2. **Document cleanup on close** (lspManager.ml:1240-1245)
+   - Properly removes document state from hashtable
+   - Cancels execution and destroys ExecutionManager state
+
+### Critical Bug Fixes
+1. **observe_id tracking** (documentManager.ml:313, 319)
+   - Forward execution now updates `observe_id = Id id`
+   - "Next" command advances correctly
+   - Interpret-to-cursor establishes correct baseline
+
+### Type Safety Improvements
+1. **error_message field** - Added to ProofState.t throughout stack
+2. **TypeScript strict mode** - Enabled in all tsconfig.json files
+3. **Discriminated unions** - For webview message types
+4. **AST serialization** - Complete EasyCrypt type → JSON infrastructure
+
+---
 
 ## Development Workflow
 
-### Before Starting Any Feature
+### Making Changes
 
-1. **Check Current State**:
+1. **Always check git status first:**
    ```bash
    git status
-   git log --oneline -5
-   dune build
-   dune runtest
    ```
 
-2. **Create Feature Branch**:
+2. **Create a branch for new features:**
    ```bash
-   git checkout -b feature/<roadmap-item>-<description>
-   # Example: git checkout -b feature/1.2-parser-integration
+   git checkout -b feature/your-feature-name
    ```
 
-3. **Review Implementation Status**:
-   - Check ROADMAP.md for current priorities and dependencies
-   - Ensure all prerequisite features are completed
-   - Review existing code patterns in similar modules
-
-### Testing Guidelines
-
-**IMPORTANT**: All new features must include comprehensive tests, especially edge cases. Previous tests must ALWAYS pass.
-
-#### Writing Tests
-
-1. **Use PPX Inline Tests**:
-   ```ocaml
-   let%test "descriptive_test_name" =
-     (* Test implementation *)
-     expected = actual
-   
-   let%test_unit "unit_test_name" =
-     (* Test with assertions *)
-     assert (condition)
+3. **Build and test after changes:**
+   ```bash
+   ./build_lsp.sh build && dune runtest
    ```
 
-2. **Required Edge Cases to Test**:
-   - Empty input/empty state
-   - Malformed or invalid input
-   - Boundary conditions (start/end of file, max sizes)
-   - Unicode and special characters
-   - Large inputs (performance testing)
-   - Concurrent modifications
-   - State transitions and invalidations
-   - Error recovery scenarios
-
-3. **Test Organization**:
-   ```ocaml
-   (* Group related tests *)
-   module TestParsing = struct
-     let%test "parse_empty_document" = ...
-     let%test "parse_invalid_syntax" = ...
-     let%test "parse_unicode_identifiers" = ...
-   end
+4. **Commit with descriptive messages:**
+   ```bash
+   git add <files>
+   git commit -m "feat: description of changes"
    ```
 
-#### Running Tests
+### Code Style
+
+**OCaml:**
+- Use `let () =` for side effects
+- Prefer `Result.t` over exceptions for error handling
+- Use smart constructors for types with invariants
+- Document all public functions in .mli files
+
+**TypeScript:**
+- Enable `strict: true`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`
+- Use discriminated unions for message types
+- Avoid `any` - use proper types or `unknown`
+- Guard array/string accesses for `undefined`
+
+---
+
+## Common Tasks
+
+### Adding a New LSP Command
+
+1. Add handler in `src/eclsp/lspManager.ml`
+2. Register command in `vscode-extension/src/extension.ts`
+3. Update command palette entries in `package.json`
+4. Test with both TypeScript and OCaml tests
+
+### Modifying ProofState
+
+1. Update `src/protocol/proofState.ml` and `.mli`
+2. Update `vscode-extension/goal-view-ui/src/types.ts`
+3. Verify serialization with `@@deriving yojson`
+4. Test full round-trip (OCaml → JSON → TypeScript)
+
+### Debugging LSP
 
 ```bash
-# Run all tests - MUST pass before any commit
-dune runtest
+# Enable LSP logging
+export VSEC_LSP_LOG=debug
 
-# Run specific test module
-dune exec ./src/tests/test_<module>.exe
+# Watch LSP output in VS Code
+# View → Output → Select "VsEc Language Server"
 
-# Run tests in watch mode during development
-dune runtest --watch
-
-# Verify no regressions in modified files
-git diff --name-only | xargs dune build --force
+# Manual LSP testing
+./test_lsp_manual.sh
 ```
 
-### Code Quality Standards
+---
 
-1. **No Compiler Warnings**: Code must compile with zero warnings
-2. **Follow OCaml Conventions**: 
-   - Use meaningful variable names
-   - Prefer pattern matching over if-then-else
-   - Use `|>` for function composition
-3. **Document Complex Logic**: Add comments for non-obvious implementations
-4. **Maintain Invariants**: Document and preserve module invariants
+## Testing
 
-### Pull Request Process
+### Test Coverage
 
-1. **Ensure All Tests Pass**:
-   ```bash
-   dune clean && dune build && dune runtest
-   ```
+**OCaml Tests (18 files):**
+- `test_ast_serialization.ml` - AST → JSON conversion
+- `test_interactive_suite.ml` - End-to-end interactive proving
+- `test_lsp_integration.ml` - LSP protocol compliance
+- `test_query_commands.ml` - Query command functionality
+- `test_step_forward.ml` - Proof stepping
+- And 13 more comprehensive tests
 
-2. **Stage Only Your Changes**:
-   ```bash
-   # NEVER use git add -A or git add .
-   # Instead, explicitly add only files you modified:
-   git add path/to/specific/file1.ml
-   git add path/to/specific/file2.ml
-   
-   # Review what will be committed:
-   git status
-   git diff --cached
-   ```
+**TypeScript Tests:**
+- `queryCommands.test.ts` - Query command edge cases
 
-3. **Commit with Descriptive Messages**:
-   ```bash
-   git commit -m "Implement <feature>: <description>
-   
-   - Add <specific change 1>
-   - Fix <specific issue>
-   - Test <edge cases covered>"
-   ```
+### Running Tests
 
-3. **Create PR with Template**:
-   ```bash
-   gh pr create --title "Implement <roadmap-item>: <description>" \
-     --body "## Summary
-   Implements roadmap item X.Y
-   
-   ## Testing
-   - Added edge case tests for ...
-   - All existing tests pass
-   - Performance verified on large files"
-   ```
+```bash
+# All OCaml tests
+cd src && dune runtest
 
-### Performance Considerations
+# Specific test suite
+dune exec src/tests/test_interactive_suite.exe
 
-- Avoid blocking operations in SEL event handlers
-- Use incremental algorithms for document processing
-- Test with files >1000 lines
-- Profile memory usage for long-running sessions
+# With coverage
+dune runtest --instrument-with bisect_ppx
 
-### Common Pitfalls to Avoid
+# TypeScript tests  
+cd vscode-extension && npm test
+```
 
-1. **Don't Block the Event Loop**: Use `Sel.now` for expensive computations
-2. **Preserve Document Invariants**: Always validate document state after modifications
-3. **Handle All Error Cases**: Never use `assert false` without a TODO comment
-4. **Test State Transitions**: Ensure invalid states are impossible
-5. **Avoid Global State**: Use the execution manager for state management
+---
 
-## Roadmap and Priorities
+## Packaging
 
-See ROADMAP.md for:
-- Current implementation status
-- Priority ordered feature list
-- Dependency graph
-- Next available tasks
+```bash
+# Create VSIX package
+./build_lsp.sh package
 
-Always work on the lowest numbered incomplete item from the roadmap that has all dependencies satisfied.
+# Output: vscode-extension/vsec-easycrypt-X.Y.Z.vsix
+# Size: ~29 MB (includes 45 MB OCaml binary)
+
+# Install locally
+code --install-extension vscode-extension/vsec-easycrypt-*.vsix
+```
+
+---
+
+## Troubleshooting
+
+### Build Fails
+
+```bash
+# Clean everything
+dune clean
+rm -rf vscode-extension/node_modules vscode-extension/goal-view-ui/node_modules
+
+# Rebuild from scratch
+./build_lsp.sh build
+```
+
+### LSP Not Starting
+
+1. Check `which easycrypt` - EasyCrypt must be installed
+2. Check VS Code Output panel for errors
+3. Verify `vscode-extension/vsec-lsp` binary exists
+4. Try manual build: `cd src && dune build`
+
+### Type Errors After Changes
+
+1. Rebuild OCaml: `cd src && dune build`
+2. Rebuild TypeScript: `cd vscode-extension && npm run compile`
+3. Check type definitions match: compare `proofState.ml` vs `types.ts`
+
+---
+
+## Important Notes
+
+### DO NOT:
+- ❌ Commit build artifacts (`.js`, `.d.ts`, `_build/`, `node_modules/`)
+- ❌ Commit VSIX files
+- ❌ Commit `.specstory/` history files
+- ❌ Run git operations without checking status first
+- ❌ Use `git reset --hard` (see warnings at top!)
+
+### DO:
+- ✅ Use `./build_lsp.sh` for all builds
+- ✅ Run tests after changes
+- ✅ Update both .ml and .mli when changing interfaces
+- ✅ Keep TypeScript types in sync with OCaml types
+- ✅ Write tests for new features
+- ✅ Ask user before destructive operations
+
+---
+
+## Resources
+
+- **EasyCrypt**: https://github.com/EasyCrypt/easycrypt
+- **LSP Spec**: https://microsoft.github.io/language-server-protocol/
+- **VSCoq** (original): https://github.com/coq-community/vscoq
+- **Dune Docs**: https://dune.readthedocs.io/
+
+---
+
+## Recovery Information (In Case of Emergency)
+
+If work is lost due to git issues:
+
+1. **Check reflog**: `git reflog --all` to find lost commits
+2. **Check VSIX files**: They contain compiled source code
+3. **Check specstory**: `.specstory/history/*.md` files contain detailed session logs
+4. **Binary analysis**: Use `objdump`, `strings`, `nm -C` on `vsec-lsp` binary
+5. **JavaScript recovery**: Use `js-beautify` on compiled `.js` files in VSIX
+
+**Last Resort**: The working VSIX is at `vscode-extension/vsec-easycrypt-0.1.19.vsix`
+
+---
+
+*Last Updated: October 7, 2025*
+*Version: Post-Recovery (7 commits restoring 6,400+ lines)*
