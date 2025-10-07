@@ -8,6 +8,8 @@ export class GoalPanel {
   public static currentPanel: GoalPanel | undefined;
   private readonly _panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
+  private _isReady: boolean = false;
+  private _pendingMessages: any[] = [];
 
   private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
     this._panel = panel;
@@ -18,6 +20,19 @@ export class GoalPanel {
     // Bridge: receive messages from webview and dispatch VS Code commands
     this._panel.webview.onDidReceiveMessage(async (msg: any) => {
       if (!msg || typeof msg !== 'object') { return; }
+      
+      // CRITICAL FIX: Handle webview ready signal
+      if (msg.type === 'webview-ready') {
+        this._isReady = true;
+        // Flush pending messages
+        while (this._pendingMessages.length > 0) {
+          const pending = this._pendingMessages.shift();
+          if (pending) {
+            this._panel.webview.postMessage(pending);
+          }
+        }
+        return;
+      }
       
       if (msg.type === 'command' && typeof msg.command === 'string') {
         const args = Array.isArray(msg.args) ? msg.args : (msg.args !== undefined ? [msg.args] : []);
@@ -77,28 +92,43 @@ export class GoalPanel {
   }
 
   public updateProofState(proofState: any, textDocument: any) {
-    // Send proof state update to the webview
-    this._panel.webview.postMessage({
+    // CRITICAL FIX: Queue messages until webview is ready
+    const message = {
       type: 'proofView',
       textDocument: textDocument,
       proofState: proofState
-    });
+    };
+    if (this._isReady) {
+      this._panel.webview.postMessage(message);
+    } else {
+      this._pendingMessages.push(message);
+    }
   }
 
   public updateExecutionOverview(overview: any, textDocument: any) {
-    this._panel.webview.postMessage({
+    const message = {
       type: 'executionOverview',
       textDocument,
       overview
-    });
+    };
+    if (this._isReady) {
+      this._panel.webview.postMessage(message);
+    } else {
+      this._pendingMessages.push(message);
+    }
   }
 
   public updateMessages(messages: any[], textDocument: any) {
-    this._panel.webview.postMessage({
+    const message = {
       type: 'messages',
       textDocument,
       messages
-    });
+    };
+    if (this._isReady) {
+      this._panel.webview.postMessage(message);
+    } else {
+      this._pendingMessages.push(message);
+    }
   }
 
   private async handleLspRequest(method: string, params: any): Promise<any> {

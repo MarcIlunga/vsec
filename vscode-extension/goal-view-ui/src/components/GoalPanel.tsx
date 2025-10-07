@@ -32,6 +32,16 @@ const GoalPanel: React.FC = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // CRITICAL FIX: Send ready signal when React app is mounted
+  useEffect(() => {
+    try {
+      const vscode = (window as any).acquireVsCodeApi ? (window as any).acquireVsCodeApi() : (window as any).vscode;
+      vscode?.postMessage({ type: 'webview-ready' });
+    } catch (err) {
+      console.error('Failed to send webview-ready signal:', err);
+    }
+  }, []);
+
   // Load persisted settings on mount
   useEffect(() => {
     try {
@@ -105,6 +115,26 @@ const GoalPanel: React.FC = () => {
           <VscGear />
         </MinimalButton>
       </div>
+
+      {/* CRITICAL FIX: Display error_message from ProofState */}
+      {proofState?.error_message && (
+        <div style={{
+          padding: '12px',
+          margin: '8px 0',
+          backgroundColor: 'var(--vscode-inputValidation-errorBackground)',
+          border: '1px solid var(--vscode-inputValidation-errorBorder)',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'start',
+          gap: '8px'
+        }}>
+          <span style={{fontSize: '16px', flexShrink: 0}}>⚠️</span>
+          <div style={{flex: 1}}>
+            <strong style={{display: 'block', marginBottom: '4px'}}>Proof Extraction Error</strong>
+            <span>{proofState.error_message}</span>
+          </div>
+        </div>
+      )}
 
       {(!proofState || (proofState && proofState.goals && proofState.goals.length === 0)) ? (
         <>

@@ -212,7 +212,9 @@ let push_state id ast synterp classif st =
     base_id st, push_ex_sentence ex_sentence st, Query ex_sentence
   | EcModule ->
     base_id st, extrude_side_effect ex_sentence st, Exec ex_sentence
-  | EcOther -> base_id st, push_ex_sentence ex_sentence st, Skip { id; error = Some ("Unsupported command") }
+  | EcOther -> 
+      (* CRITICAL FIX: Don't spam "Unsupported command" - silently skip *)
+      base_id st, push_ex_sentence ex_sentence st, Skip { id; error = None }
 
 let string_of_task (task_id,(base_id,task)) =
   let s = match task with
