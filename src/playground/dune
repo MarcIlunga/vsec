@@ -1,0 +1,8 @@
+(executable
+ (name ec_playground)
+ (public_name ec_playground)
+ (modes exe)
+ (flags :standard -rectypes)
+ (libraries easycrypt.ecLib batteries yojson zarith why3))
+
+

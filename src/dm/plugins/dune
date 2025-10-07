@@ -1,0 +1,13 @@
+(library
+ (name vsec_ec_adapter)
+ (modules vsec_ec_adapter)
+ (libraries easycrypt.ecLib dm protocol)
+ (modes native)
+ (flags -rectypes (:standard -w -27))
+)
+
+(rule
+ (alias build-plugin)
+ (action (progn)))
+
+
