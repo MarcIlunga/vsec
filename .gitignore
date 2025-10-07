@@ -62,6 +62,19 @@ vscode-extension/vsec-easycrypt-*.vsix
 # Testing artifacts
 **/test-results/
 **/coverage/
+**/__pycache__/
+*.pyc
+.vscode-test/
+
+# Build artifacts from recovery
+extracted_types/
+vscode-extension/src/**/*.js
+vscode-extension/src/**/*.d.ts
+vscode-extension/src/**/*.d.ts.map
+!vscode-extension/src/test/
+agent1.txt
+agent2.txt
+index.html
 
 # Nix artifacts (in case we re-add later)
 result
