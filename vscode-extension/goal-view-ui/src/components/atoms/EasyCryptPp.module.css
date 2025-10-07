@@ -1,0 +1,66 @@
+/* EasyCrypt goal syntax highlighting - adapted from VSCoq */
+
+/* Construct (term) styling */
+.constr-notation {
+  color: var(--vscode-symbolIcon-operatorForeground, var(--vscode-editor-foreground));
+}
+
+.constr-keyword {
+  color: var(--vscode-symbolIcon-keywordForeground, #569CD6);
+  font-weight: bold;
+}
+
+.constr-evar {
+  color: var(--vscode-symbolIcon-variableForeground, #9CDCFE);
+  font-style: italic;
+}
+
+.constr-path {
+  color: var(--vscode-symbolIcon-namespaceForeground, #4EC9B0);
+}
+
+.constr-reference {
+  color: var(--vscode-symbolIcon-functionForeground, #DCDCAA);
+}
+
+.constr-type {
+  color: var(--vscode-symbolIcon-typeForeground, #4EC9B0);
+}
+
+.constr-variable {
+  color: var(--vscode-symbolIcon-variableForeground, #9CDCFE);
+}
+
+/* Tactic styling */
+.tactic-keyword {
+  color: var(--vscode-symbolIcon-keywordForeground, #C586C0);
+  font-weight: bold;
+}
+
+.tactic-primitive {
+  color: var(--vscode-symbolIcon-functionForeground, #DCDCAA);
+}
+
+.tactic-string {
+  color: var(--vscode-symbolIcon-stringForeground, #CE9178);
+}
+
+/* Module styling */
+.module-keyword {
+  color: var(--vscode-symbolIcon-moduleForeground, #4FC1FF);
+  font-weight: bold;
+}
+
+/* Message styling */
+.message-error {
+  color: var(--vscode-errorForeground, #F48771);
+  text-decoration: underline;
+}
+
+.message-warning {
+  color: var(--vscode-notificationsWarningIcon-foreground, #CCA700);
+}
+
+.message-debug {
+  color: var(--vscode-debugIcon-breakpointForeground, #848484);
+}
