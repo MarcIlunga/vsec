@@ -69,8 +69,8 @@ vscode-extension/vsec-easycrypt-*.vsix
 # Build artifacts from recovery
 extracted_types/
 vscode-extension/src/**/*.js
-vscode-extension/src/**/*.d.ts
-vscode-extension/src/**/*.d.ts.map
+vscode-extension/**/*.d.ts
+vscode-extension/**/*.d.ts.map
 !vscode-extension/src/test/
 agent1.txt
 agent2.txt
