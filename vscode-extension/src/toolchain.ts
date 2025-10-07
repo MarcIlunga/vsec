@@ -56,12 +56,22 @@ export default class VsEcToolchainManager implements Disposable {
 
     public getServerConfiguration() : ServerOptions {
         const config = workspace.getConfiguration('vsec');
+        
+        // Set up adapter path for dynlinking
+        const platform = process.platform === 'win32' ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux';
+        const arch = process.arch === 'x64' ? 'x64' : process.arch === 'arm64' ? 'arm64' : 'x64';
+        const adapterPath = path.join(this._context.extensionPath, 'resources', 'adapters', `${platform}-${arch}`, 'vsec_ec_adapter.cmxs');
+        
         const serverOptions : ServerOptions = {
             command: this._vsecPath, 
             args: config.get('args', []),
             options: {
                 cwd: workspace.workspaceFolders?.[0]?.uri.fsPath,
                 shell: true,
+                env: {
+                    ...process.env,
+                    VSEC_EC_ADAPTER: adapterPath
+                }
             },
         };
         return serverOptions;

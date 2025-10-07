@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 
 import {
   LanguageClient,
@@ -22,35 +24,46 @@ interface SemanticHighlightingParams {
 
 export default class Client extends LanguageClient {
 
-    private static _channel: any = vscode.window.createOutputChannel('VsEc EasyCrypt');
-    private static _easycryptLog: any = vscode.window.createOutputChannel('EasyCrypt Log');
-    
     // Decoration types for semantic highlighting
     private static decorationTypes = new Map<string, vscode.TextEditorDecorationType>();
 
     constructor(
         serverOptions: ServerOptions,
         clientOptions: LanguageClientOptions,
+        extensionContext: vscode.ExtensionContext,
     ) {
         super(
             'vsec-language-server',
-            'VsEc EasyCrypt Language Server',
+            'VsEc EasyCrypt',
             serverOptions,
             clientOptions
         );
-        Client._channel.appendLine("VsEc EasyCrypt v0.1.18 - RED KEYWORDS + VARIED COLORS!");
+        
+        // Read version from package.json and log to the LSP output channel
+        const packageJsonPath = path.join(extensionContext.extensionPath, 'package.json');
+        let version = '0.1.19'; // fallback
+        try {
+            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+            version = packageJson.version || version;
+        } catch (e) {
+            // Use fallback version
+        }
+        
+        this.info(`VsEc EasyCrypt v${version}`);
     }
 
     public static writeToVsEcChannel(message: string) {
-        Client._channel.appendLine(message);
+        // Use the built-in LSP output channel
+        console.log(message);
     }
 
     public static writeEasyCryptMessageLog(message: string) {
-        Client._easycryptLog.appendLine(message);
+        // Use the built-in LSP output channel
+        console.log(message);
     }
 
     public static showLog() {
-        Client._channel.show(true);
+        // The LSP channel is already available in the output panel
     }
 
 }
