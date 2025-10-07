@@ -55,11 +55,22 @@ let lsp : event Sel.Event.t =
 let pr_event event = "Event" (* simplified for EasyCrypt *)
 
 let init () =
-  (* Initialize EasyCrypt state like VSRocq initializes Vernacstate *)
-  let gstate = EcLib.EcGState.create () in
-  let scope = EcLib.EcScope.empty gstate in
+  (* Initialize EasyCrypt state properly with theories loaded *)
+  let checkmode = EcLib.EcCommands.{
+    cm_checkall = false;
+    cm_timeout = 3;
+    cm_cpufactor = 1;
+    cm_nprovers = 4;
+    cm_provers = None;
+    cm_profile = false;
+    cm_iterate = false;
+  } in
+  
+  (* Initialize EasyCrypt with boot=true to load standard library *)
+  EcLib.EcCommands.initialize ~restart:false ~undo:false ~boot:true ~checkmode;
+  let scope = EcLib.EcCommands.current () in
   init_state := Some scope;
-  log (fun () -> "EasyCrypt state initialized");
+  log (fun () -> "EasyCrypt state initialized with standard library");
   (* Return the lsp event to start reading *)
   [lsp]
 
@@ -860,8 +871,12 @@ let open_new_document uri text =
   | None ->
     (* HIGH #67: Send empty proof state with error message to inform client *)
     log (fun () -> "No proof state available for opened document");
-    send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) 
-      "Proof extraction unavailable (EasyCrypt adapter may not be loaded)");
+    (* Check if adapter exists *)
+    let adapter_path = Sys.getenv_opt "VSEC_EC_ADAPTER" |> Option.value ~default:"vsec_ec_adapter.cmxs" in
+    let adapter_exists = Sys.file_exists adapter_path in
+    let error_msg = Printf.sprintf "Proof extraction unavailable. Adapter path: %s (exists: %b)" 
+      adapter_path adapter_exists in
+    send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) error_msg);
   
   inject_dm_events (uri, events @ bg_events)
 
@@ -1854,11 +1869,23 @@ let handle_event (event : event) =
           let proof_state = Dm.DocumentManager.get_proof st obs in
           (match proof_state with
           | Some proof ->
+            (* Send proof state as-is; error_message field is already populated if there was an error *)
             send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
           | None ->
-            log (fun () -> "No proof state in event loop");
-            send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) 
-              "Proof extraction failed during document processing")
+            (* Only send empty state if truly no proof available (not in a proof) *)
+            log (fun () -> "No proof state in event loop (not in proof mode)");
+            let empty_proof = Protocol.ProofState.{
+              goals = [];
+              shelvedGoals = [];
+              givenUpGoals = [];
+              unfocusedGoals = [];
+              navigation = None;
+              current_lemma = None;
+              proof_progress = 0.0;
+              in_proof = false;
+              error_message = None;
+            } in
+            send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) empty_proof)
       end;
       inject_dm_events (uri, handled_event.events)
     end
