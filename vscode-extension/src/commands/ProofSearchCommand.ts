@@ -113,7 +113,7 @@ export class ProofSearchProvider {
     static async showProofSearchPanel(extensionUri: vscode.Uri) {
         const panel = vscode.window.createWebviewPanel(
             'proofSearch',
-            '🔍 EasyCrypt Proof Search & Discovery',
+            '$(search) EasyCrypt Proof Search & Discovery',
             vscode.ViewColumn.Beside,
             {
                 enableScripts: true,
@@ -156,11 +156,11 @@ export class ProofSearchProvider {
                 
                 case 'copyLemma':
                     vscode.env.clipboard.writeText(message.lemma);
-                    vscode.window.showInformationMessage(`📋 Copied lemma: ${message.lemma}`);
+                    vscode.window.showInformationMessage(`Copied lemma: ${message.lemma}`);
                     break;
 
                 case 'searchMore':
-                    vscode.window.showInformationMessage('🔍 Advanced search coming in future versions!');
+                    vscode.window.showInformationMessage('Advanced search coming in future versions!');
                     break;
             }
         });
@@ -340,18 +340,18 @@ export class ProofSearchProvider {
         </head>
         <body>
             <div class="header">
-                <h1>🔍 EasyCrypt Proof Search & Discovery</h1>
+                <h1>EasyCrypt Proof Search & Discovery</h1>
                 <p>Intelligent lemma search and tactic suggestions for your proofs</p>
                 
                 <div class="goal-context">
-                    <strong>🎯 Current Goal Context:</strong><br>
+                    <strong>Current Goal Context:</strong><br>
                     <code>${goalContext}</code>
                 </div>
             </div>
 
             <div class="section">
                 <h2 class="section-title">
-                    ⚡ Smart Tactic Suggestions
+                    Smart Tactic Suggestions
                 </h2>
                 ${tactics.length > 0 ? tactics.map(tactic => `
                     <div class="item">
@@ -362,7 +362,7 @@ export class ProofSearchProvider {
                         <div class="reasoning">${tactic.reasoning}</div>
                         <div class="example">Example: ${tactic.example}</div>
                         <button class="button" onclick="insertTactic('${tactic.tactic}')">
-                            ✨ Insert Tactic
+                            Insert Tactic
                         </button>
                     </div>
                 `).join('') : '<div class="empty-state">No specific tactic suggestions for this goal.</div>'}
@@ -370,7 +370,7 @@ export class ProofSearchProvider {
 
             <div class="section">
                 <h2 class="section-title">
-                    📚 Applicable Lemmas & Theorems
+                    Applicable Lemmas & Theorems
                 </h2>
                 ${lemmas.length > 0 ? lemmas.map(lemma => `
                     <div class="item">
@@ -379,12 +379,12 @@ export class ProofSearchProvider {
                             <span class="relevance">${Math.round(lemma.relevance * 100)}% relevance</span>
                         </div>
                         <div class="statement">${lemma.statement}</div>
-                        <div class="module">📦 ${lemma.module}</div>
+                        <div class="module">${lemma.module}</div>
                         <button class="button" onclick="insertTactic('apply ${lemma.name}')">
-                            🎯 Apply Lemma
+                            Apply Lemma
                         </button>
                         <button class="button" onclick="copyLemma('${lemma.name}')">
-                            📋 Copy Name
+                            Copy Name
                         </button>
                     </div>
                 `).join('') : '<div class="empty-state">No applicable lemmas found for this goal context.</div>'}
@@ -392,7 +392,7 @@ export class ProofSearchProvider {
 
             <div class="search-more">
                 <button class="button pulse" onclick="searchMore()">
-                    🚀 Advanced Search & Discovery
+                    Advanced Search & Discovery
                 </button>
             </div>
 
