@@ -309,11 +309,14 @@ let observe ~background state id ~should_block_on_error : (state * event Sel.Eve
     | Some task -> (* task will only be Some if there is no error *)
         let event = create_execution_event background (Execute {id; vst_for_next_todo; task; started = Unix.gettimeofday ()}) in
         let cancel_handle = Some (Sel.Event.get_cancellation_handle event) in
-        {state with execution_state; cancel_handle}, [event]
+        (* Forward navigation: update observe_id immediately to the target sentence *)
+        let state = { state with execution_state; cancel_handle; observe_id = Id id } in
+        state, [event]
     | None ->
       match error_id with
       | None ->
-        {state with execution_state}, []
+        (* Nothing to execute (already up-to-date) — still advance observe_id to target *)
+        { state with execution_state; observe_id = Id id }, []
       | Some (error_id, loc) ->
         let state, error_range = state_before_error state error_id loc in
         let events = mk_block_on_error_event error_range error_id background in
@@ -599,6 +602,7 @@ let reset { uri; opts; init_vs; document; execution_state; } =
 let apply_text_edits state edits =
   (* Cancel any ongoing execution/parsing to reconcile with new edits *)
   Option.iter Sel.Event.cancel state.cancel_handle;
+  let state = { state with cancel_handle = None } in
   let apply_edit_and_shift_diagnostics_locs_and_overview state (range, new_text as edit) =
     let document = Document.apply_text_edit state.document edit in
     let exec_st = state.execution_state in
@@ -677,6 +681,7 @@ let get_proof st id =
         current_lemma = None;
         proof_progress = 0.0;
         in_proof = true;
+        error_message = None;
       }
     | _ ->
       let goals = ExecutionManager.get_current_goals_text st.execution_state in
@@ -702,6 +707,7 @@ let get_proof st id =
         current_lemma = None;
         proof_progress = 0.0;
         in_proof = true;
+        error_message = None;
       }
     | _ ->
       let goals = ExecutionManager.get_current_goals_text st.execution_state in

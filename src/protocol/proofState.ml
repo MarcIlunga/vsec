@@ -82,6 +82,7 @@ type t = {
   current_lemma: string option;
   proof_progress: float; (* 0.0 to 1.0 completion *)
   in_proof: bool; (* whether we are inside a proof block *)
+  error_message: string option; (* User-visible error messages for adapter/proof extraction failures *)
 } [@@deriving yojson]
 
 (** Create goal from EasyCrypt proof context *)
@@ -135,6 +136,7 @@ let get_proof ~previous scope =
       current_lemma = None;
       proof_progress = 0.0;
       in_proof = true;
+      error_message = None;
     }
 
 let of_strings (gs: string list) : t =
@@ -148,6 +150,7 @@ let of_strings (gs: string list) : t =
     current_lemma = None;
     proof_progress = 0.0;
     in_proof = false;
+    error_message = None;
   }
 
 let mk_proof_statement statement range = {statement; range}

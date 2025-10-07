@@ -37,6 +37,8 @@ export interface EasyCryptProofState {
   navigation?: ProofNavigation;
   current_lemma?: string;
   proof_progress?: number; // 0.0 to 1.0
+  in_proof: boolean; // whether we are inside a proof block
+  error_message?: string; // User-visible error messages
 }
 
 export interface ProofViewMessage {

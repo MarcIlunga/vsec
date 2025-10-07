@@ -841,7 +841,7 @@ let open_new_document uri text =
     send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
   | None ->
     (* Always notify client with an empty state to unblock UI wiring *)
-    let empty = { Protocol.ProofState.goals = []; shelvedGoals = []; givenUpGoals = []; unfocusedGoals = []; navigation = None; current_lemma = None; proof_progress = 0.0; in_proof = false } in
+    let empty = { Protocol.ProofState.goals = []; shelvedGoals = []; givenUpGoals = []; unfocusedGoals = []; navigation = None; current_lemma = None; proof_progress = 0.0; in_proof = false; error_message = None } in
     send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) empty);
   
   inject_dm_events (uri, events @ bg_events)

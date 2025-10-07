@@ -38,6 +38,7 @@ type t = {
   current_lemma: string option;
   proof_progress: float;
   in_proof: bool;
+  error_message: string option;
 } [@@deriving yojson]
 
 val get_proof : previous: t option -> EcLib.EcScope.scope -> t option
