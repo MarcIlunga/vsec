@@ -685,6 +685,24 @@ let send_proof_view_notification uri (proof_state:Protocol.ProofState.t) =
   output_json notification;
   log (fun () -> "ProofView notification sent")
 
+(* HIGH #67 FIX: Helper to send empty proof state with error message when adapter fails *)
+let send_empty_proof_with_error uri error_msg =
+  log (fun () -> Printf.sprintf "[ERROR] Proof extraction failed: %s" error_msg);
+  let empty_proof = Protocol.ProofState.{
+    goals = [];
+    shelvedGoals = [];
+    givenUpGoals = [];
+    unfocusedGoals = [];
+    navigation = None;
+    current_lemma = None;
+    proof_progress = 0.0;
+    in_proof = false;
+    error_message = Some error_msg;
+  } in
+  send_proof_view_notification uri empty_proof;
+  (* Also send a user-visible diagnostic message *)
+  send_log error_msg
+
 (* Custom semantic highlighting notification sender *)
 let send_semantic_highlighting_notification uri tokens =
   log (fun () -> Printf.sprintf "Sending semantic highlighting notification for %s with %d tokens" uri (List.length tokens));
@@ -840,9 +858,10 @@ let open_new_document uri text =
     log (fun () -> "Sending proof view notification for opened document");
     send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
   | None ->
-    (* Always notify client with an empty state to unblock UI wiring *)
-    let empty = { Protocol.ProofState.goals = []; shelvedGoals = []; givenUpGoals = []; unfocusedGoals = []; navigation = None; current_lemma = None; proof_progress = 0.0; in_proof = false; error_message = None } in
-    send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) empty);
+    (* HIGH #67: Send empty proof state with error message to inform client *)
+    log (fun () -> "No proof state available for opened document");
+    send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) 
+      "Proof extraction unavailable (EasyCrypt adapter may not be loaded)");
   
   inject_dm_events (uri, events @ bg_events)
 
@@ -945,7 +964,12 @@ let textDocumentDidClose params =
   let path = Lsp.Types.DocumentUri.to_path textDocument.uri in
   begin match Hashtbl.find_opt states path with
   | None -> log (fun () -> "[textDocumentDidClose] closed document with no state")
-  | Some { st } -> Hashtbl.replace states path { st; visible = false }
+  | Some { st } ->
+      (* MEM-2 FIX: Cancel ongoing execution, destroy state, remove from hashtable *)
+      log (fun () -> "[textDocumentDidClose] cleaning up document state");
+      Dm.DocumentManager.Internal.cancel st;
+      let _ = Dm.ExecutionManager.destroy (Dm.DocumentManager.Internal.execution_state st) in
+      Hashtbl.remove states path
   end;
   []
 
@@ -1009,7 +1033,9 @@ let ecInterpretToPoint params =
         log (fun () -> "Sending proof view notification for interpretToPoint");
         send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
       | None ->
-        log (fun () -> "No proof state available for interpretToPoint"));
+        log (fun () -> "No proof state available for interpretToPoint");
+        send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) 
+          "Proof extraction failed for interpretToPoint");
       
       log (fun () -> "[interpretToPoint] sent proof view update");
       inject_dm_events (uri, events)
@@ -1037,7 +1063,9 @@ let ecStepForward params =
         log (fun () -> "Sending proof view notification for stepForward");
         send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
       | None ->
-        log (fun () -> "No proof state available for stepForward"));
+        log (fun () -> "No proof state available for stepForward");
+        send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) 
+          "Proof extraction failed for stepForward");
       
       (* Immediately publish diagnostics from DocumentManager only; avoid regex heuristics *)
       let diagnostics = Dm.DocumentManager.all_diagnostics new_st in
@@ -1071,7 +1099,9 @@ let ecStepBackward params =
         log (fun () -> "Sending proof view notification for stepBackward");
         send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
       | None ->
-        log (fun () -> "No proof state available for stepBackward"));
+        log (fun () -> "No proof state available for stepBackward");
+        send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) 
+          "Proof extraction failed for stepBackward");
       
       inject_dm_events (uri, events)
     with
@@ -1091,11 +1121,16 @@ let ecInterpretToEnd params =
       Hashtbl.replace states (DocumentUri.to_path uri) { st = new_st; visible };
       
       (* Send proof state update from DocumentManager state *)
-      let textDocument = VersionedTextDocumentIdentifier.create ~uri ~version:1 in
       let obs = Dm.DocumentManager.Internal.observe_id new_st in
       let proof_state = Dm.DocumentManager.get_proof new_st obs in
-      let proof_notification = Protocol.ExtProtocol.Notification.Server.proofView textDocument proof_state in
-      output_json (Jsonrpc.Notification.yojson_of_t proof_notification);
+      (match proof_state with
+      | Some proof ->
+        log (fun () -> "Sending proof view notification for interpretToEnd");
+        send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
+      | None ->
+        log (fun () -> "No proof state available for interpretToEnd");
+        send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) 
+          "Proof extraction failed for interpretToEnd");
       
       inject_dm_events (uri, events)
     with
@@ -1820,7 +1855,10 @@ let handle_event (event : event) =
           (match proof_state with
           | Some proof ->
             send_proof_view_notification (Lsp.Types.DocumentUri.to_string uri) proof
-          | None -> ())
+          | None ->
+            log (fun () -> "No proof state in event loop");
+            send_empty_proof_with_error (Lsp.Types.DocumentUri.to_string uri) 
+              "Proof extraction failed during document processing")
       end;
       inject_dm_events (uri, handled_event.events)
     end
