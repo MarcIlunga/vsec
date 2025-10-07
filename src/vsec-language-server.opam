@@ -1,57 +1,16 @@
+# Minimal opam file required by dune for public_name declarations
 opam-version: "2.0"
 name: "vsec-language-server"
-maintainer: "Marc Ilunga <marc.ilunga@example.com>"
-authors: [ "Marc Ilunga" "The EasyCrypt development team" ]
+version: "0.1.19"
+synopsis: "Language Server Protocol implementation for EasyCrypt"
+maintainer: "MarcIlunga"
+authors: ["The EasyCrypt development team"]
 license: "MIT"
-homepage: "https://github.com/MarcIlunga/vsec"
-bug-reports: "https://github.com/MarcIlunga/vsec/issues"
-dev-repo: "git+https://github.com/MarcIlunga/vsec"
-
+depends: [
+  "ocaml" {>= "4.14"}
+  "dune" {>= "3.5"}
+]
 build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 
-install: [
-  ["dune" "install" "-p" name]
-]
-
-depends: [
-  "ocaml" { >= "4.14" }
-  "dune" { >= "3.5" }
-  
-  (* Core EasyCrypt and system dependencies *)
-  "easycrypt"
-  "base"
-  "uri"
-  "ocamlfind"
-  "result" { >= "1.5" }
-  
-  (* LSP and JSON-RPC libraries *)
-  "lsp" { >= "1.15" }
-  "jsonrpc" { >= "1.15" }
-  "sel" { >= "0.6.0" }
-  "yojson"
-  
-  (* Sexp support *)
-  "sexplib"
-  "ppx_sexp_conv"
-  
-  (* PPX preprocessing *)
-  "ppx_yojson_conv"
-  "ppx_yojson_conv_lib"
-  "ppx_import"
-  "ppx_deriving" { >= "5.0" }
-  "ppx_optcomp"
-  
-  (* Testing *)
-  "ppx_inline_test"
-  "ppx_assert"
-  
-  (* Development tools *)
-  "why3"
-]
-
-synopsis: "VsEc EasyCrypt language server"
-description: """
-LSP based language server for EasyCrypt and its VsEc user interface
-"""

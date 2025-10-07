@@ -19,9 +19,14 @@ echo "Source dir: $SRC_DIR"
 
 # Function to build LSP server
 build_lsp() {
-    echo "📦 Building LSP server..."
+    echo "📦 Generating AST tag mappings..."
+    cd "$PROJECT_ROOT"
+    python3 scripts/extract_easycrypt_pp.py
+    
+    echo "📦 Building LSP server and adapter..."
     cd "$SRC_DIR"
-    opam exec -- dune build eclsp/ecLsp.exe
+    # Build both the server and the adapter plugin
+    opam exec -- dune build eclsp/ecLsp.exe dm/plugins/vsec_ec_adapter.cmxs
     
     if [ -f "$LSP_EXECUTABLE" ]; then
         echo "✅ LSP server built successfully: $LSP_EXECUTABLE"
@@ -33,6 +38,20 @@ build_lsp() {
     else
         echo "❌ LSP server build failed - executable not found"
         exit 1
+    fi
+    
+    # Copy adapter to extension resources
+    ADAPTER_SOURCE="$SRC_DIR/_build/default/dm/plugins/vsec_ec_adapter.cmxs"
+    ADAPTER_DEST="$EXTENSION_DIR/resources/adapters/linux-x64/vsec_ec_adapter.cmxs"
+    if [ -f "$ADAPTER_SOURCE" ]; then
+        echo "📦 Copying adapter to extension resources..."
+        mkdir -p "$(dirname "$ADAPTER_DEST")"
+        rm -f "$ADAPTER_DEST"  # Remove old version if exists
+        cp "$ADAPTER_SOURCE" "$ADAPTER_DEST"
+        echo "✅ Adapter copied: $ADAPTER_DEST"
+        ls -lh "$ADAPTER_DEST"
+    else
+        echo "⚠️  Adapter not found at $ADAPTER_SOURCE"
     fi
 }
 
@@ -47,17 +66,38 @@ clean_build() {
 # Function to install LSP server locally
 install_lsp() {
     echo "📥 Installing LSP server locally..."
-    cd "$SRC_DIR"
-    opam exec -- dune install --prefix="$HOME/.local"
     
-    if command -v vsec-lsp &> /dev/null; then
-        BIN_PATH="$(which vsec-lsp)"
-        echo "✅ LSP server installed: $BIN_PATH"
-        # Do not execute the server here to avoid starting the event loop
-        ls -lh "$BIN_PATH" || true
+    # Build first if needed
+    if [ ! -f "$LSP_EXECUTABLE" ] && [ ! -f "$ALT_LSP_EXECUTABLE" ]; then
+        echo "Building LSP server first..."
+        build_lsp
+    fi
+    
+    # Determine install directory
+    INSTALL_DIR="$HOME/.local/bin"
+    mkdir -p "$INSTALL_DIR"
+    
+    # Copy binary
+    if [ -f "$LSP_EXECUTABLE" ]; then
+        cp "$LSP_EXECUTABLE" "$INSTALL_DIR/vsec-lsp"
+    elif [ -f "$ALT_LSP_EXECUTABLE" ]; then
+        cp "$ALT_LSP_EXECUTABLE" "$INSTALL_DIR/vsec-lsp"
     else
-        echo "❌ LSP server installation failed"
+        echo "❌ LSP server binary not found"
         exit 1
+    fi
+    
+    chmod +x "$INSTALL_DIR/vsec-lsp"
+    
+    echo "✅ LSP server installed: $INSTALL_DIR/vsec-lsp"
+    ls -lh "$INSTALL_DIR/vsec-lsp"
+    
+    # Check if it's in PATH
+    if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
+        echo ""
+        echo "⚠️  Note: $HOME/.local/bin is not in your PATH"
+        echo "   Add this line to your ~/.bashrc or ~/.zshrc:"
+        echo "   export PATH=\"\$HOME/.local/bin:\$PATH\""
     fi
 }
 
@@ -83,6 +123,23 @@ package_with_modern_node() {
     fi
     # Fallback: run the existing package script inside nix-shell (expects Node >= 20 there)
     nix-shell "$PROJECT_ROOT/shell.nix" --command "npm run package"
+}
+
+# Ensure required artifacts exist before packaging-only (no rebuilds)
+check_artifacts_or_fail() {
+    echo "🔎 Checking existing artifacts (no rebuild)..."
+    # Check bundled LSP
+    if [ ! -f "$BUNDLED_LSP" ]; then
+        echo "❌ Missing bundled LSP at $BUNDLED_LSP"
+        echo "   Run: $0 package    (to build and bundle first)"
+        exit 1
+    fi
+    # Check that webview bundle exists
+    if [ ! -d "$EXTENSION_DIR/media/goal-view" ]; then
+        echo "❌ Missing webview bundle at $EXTENSION_DIR/media/goal-view"
+        echo "   Run: $0 build ui   (to build UI) or $0 package (full rebuild)"
+        exit 1
+    fi
 }
 
 # Function to bundle LSP with VS Code extension
@@ -161,12 +218,11 @@ package_ui_only() {
 # Function to install the freshly built VSIX using code CLI
 install_vsix() {
     echo "🧩 Installing VSIX into VS Code..."
-    package_extension
     cd "$EXTENSION_DIR"
     # Pick the newest VSIX to avoid installing a stale one
-    VSIX_FILE=$(ls -t vsec-easycrypt-*.vsix | head -n1)
+    VSIX_FILE=$(ls -t vsec-easycrypt-*.vsix 2>/dev/null | head -n1)
     if [ -z "$VSIX_FILE" ]; then
-        echo "❌ No VSIX found to install"
+        echo "❌ No VSIX found. Run '$PROJECT_ROOT/build_lsp.sh package' first to create one."
         exit 1
     fi
     
@@ -191,11 +247,15 @@ install_vsix() {
 }
 
 # Main script logic
-case "${1:-build}" in
+case "${1:-}" in
     "clean")
         clean_build
         ;;
     "install")
+        # Install the newest existing VSIX (no rebuild here)
+        install_vsix
+        ;;
+    "install-lsp-only")
         build_lsp
         install_lsp
         ;;
@@ -204,11 +264,30 @@ case "${1:-build}" in
         bundle_extension
         ;;
     "package")
-        build_lsp
-        package_extension
+        # Package into VSIX based on flag
+        if [ "${2:-}" = "only" ]; then
+            echo "📦 Packaging extension (no rebuild of server/UI/adapters)..."
+            check_artifacts_or_fail
+            cd "$EXTENSION_DIR"
+            echo "📦 Creating VSIX package..."
+            rm -f "$EXTENSION_DIR"/vsec-easycrypt-*.vsix || true
+            # Skip prepublish hooks to avoid rebuilding
+            export VSCE_SKIP_PREPUBLISH=1
+            package_with_modern_node
+            if ls "$EXTENSION_DIR"/vsec-easycrypt-*.vsix 1> /dev/null 2>&1; then
+                echo "✅ Extension packaged successfully:"
+                ls -lh "$EXTENSION_DIR"/vsec-easycrypt-*.vsix
+            else
+                echo "❌ Extension packaging failed"
+                exit 1
+            fi
+        else
+            echo "📦 Packaging extension (full rebuild)..."
+            build_lsp
+            package_extension
+        fi
         ;;
     "install-vsix")
-        build_lsp
         install_vsix
         ;;
     "ui-only")
@@ -218,22 +297,41 @@ case "${1:-build}" in
         package_ui_only
         install_vsix
         ;;
-    "build"|"")
-        build_lsp
+    "build")
+        if [ "${2:-}" = "ui" ]; then
+            echo "🎨 Building UI only..."
+            build_webview
+        elif [ "${2:-}" = "server" ]; then
+            echo "🔧 Building server only..."
+            build_lsp
+        else
+            echo "🔨 Building server and UI..."
+            build_lsp
+            build_webview
+        fi
         ;;
     "help"|"-h"|"--help")
-        echo "Usage: $0 [command]"
+        echo "Usage: $0 <command> [options]"
         echo ""
-        echo "Commands:"
-        echo "  build        Build LSP server (default)"
-        echo "  clean        Clean build artifacts"
-        echo "  install      Build and install LSP server locally"
-        echo "  bundle       Build and bundle LSP with VS Code extension"
-        echo "  package      Build, bundle, and package complete extension"
-        echo "  install-vsix Build, bundle, package, and install VSIX extension"
-        echo "  ui-only      Build and package UI only (no LSP rebuild)"
-        echo "  install-ui   Build UI, package, and install VSIX extension"
-        echo "  help         Show this help message"
+        echo "Primary Commands:"
+        echo "  build [server|ui]   Build server and/or UI"
+        echo "                      - build          Build both server and UI"
+        echo "                      - build server   Build LSP server only"
+        echo "                      - build ui       Build UI only"
+        echo ""
+        echo "  package [only]      Package extension into VSIX"
+        echo "                      - package        Full rebuild + package"
+        echo "                      - package only   Package without rebuilding"
+        echo ""
+        echo "  install             Install newest VSIX into VS Code (no rebuild)"
+        echo "  clean               Clean build artifacts"
+        echo ""
+        echo "Common Workflows:"
+        echo "  Fresh install:      ./build_lsp.sh package && ./build_lsp.sh install"
+        echo "  Full rebuild:       ./build_lsp.sh package"
+        echo "  Incremental:        ./build_lsp.sh build server | ui"
+        echo "                      ./build_lsp.sh package only"
+        echo "  Quick reinstall:    ./build_lsp.sh install"
         ;;
     *)
         echo "❌ Unknown command: $1"
