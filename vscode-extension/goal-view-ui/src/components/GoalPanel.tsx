@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './GoalPanel.module.css';
 import MinimalButton from './atoms/MinimalButton';
-import { VscGear } from 'react-icons/vsc';
+import { VscGear, VscWarning } from 'react-icons/vsc';
 import { EasyCryptProofState, ProofViewMessage } from '../types';
 import GoalSection from './organisms/GoalSection';
 import Message from './atoms/Message';
@@ -128,7 +128,7 @@ const GoalPanel: React.FC = () => {
           alignItems: 'start',
           gap: '8px'
         }}>
-          <span style={{fontSize: '16px', flexShrink: 0}}>⚠️</span>
+          <VscWarning style={{fontSize: '20px', flexShrink: 0, color: 'var(--vscode-inputValidation-errorForeground)'}} />
           <div style={{flex: 1}}>
             <strong style={{display: 'block', marginBottom: '4px'}}>Proof Extraction Error</strong>
             <span>{proofState.error_message}</span>

@@ -71,14 +71,14 @@ export function activate(context: ExtensionContext) {
             initializationOptions: config,
             synchronize: {
                 configurationSection: 'vsec-language-server'
-            },
-            outputChannelName: 'VsEc EasyCrypt Language Server'
+            }
+            // outputChannelName defaults to the client name 'VsEc EasyCrypt'
         };
 
         console.log('[Extension Host] Creating Language Client...');
         
         // Create the language client (like VSCoq)
-        client = new Client(serverOptions, clientOptions);
+        client = new Client(serverOptions, clientOptions, context);
         
         // Rely on built-in LSP semantic tokens provider from the server initialize result
         Client.writeToVsEcChannel("🎨 EXTENSION: Using VS Code semantic tokens via LSP capabilities");
