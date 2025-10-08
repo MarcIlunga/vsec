@@ -439,10 +439,11 @@ let interp_ast ~doc_id ~state_id ~st ~error_recovery ast =
     (* Prefer real EasyCrypt processing when available; fallback to simulation *)
     let scope_after, feedback_events =
       match (
-        (* Try dynamic adapter first *)
+        (* Try dynamic adapter first - get current scope from state *)
         (try 
           EcAdapter.try_dynlink (); 
           log (fun () -> "[ExecutionManager] Calling adapter.try_process");
+          (* st is already the current EcScope.scope *)
           let result = EcAdapter.try_process st ast_trimmed in
           log (fun () -> Printf.sprintf "[ExecutionManager] Adapter returned: %s" 
             (match result with Some _ -> "Some(scope)" | None -> "None"));
