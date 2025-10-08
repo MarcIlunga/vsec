@@ -56,23 +56,33 @@ let pr_event event = "Event" (* simplified for EasyCrypt *)
 
 let init () =
   (* Initialize EasyCrypt state properly with theories loaded *)
-  let checkmode = EcLib.EcCommands.{
-    cm_checkall = false;
-    cm_timeout = 3;
-    cm_cpufactor = 1;
-    cm_nprovers = 4;
-    cm_provers = None;
-    cm_profile = false;
-    cm_iterate = false;
-  } in
-  
-  (* Initialize EasyCrypt with boot=true to load standard library *)
-  EcLib.EcCommands.initialize ~restart:false ~undo:false ~boot:true ~checkmode;
-  let scope = EcLib.EcCommands.current () in
-  init_state := Some scope;
-  log (fun () -> "EasyCrypt state initialized with standard library");
-  (* Return the lsp event to start reading *)
-  [lsp]
+  try
+    let checkmode = EcLib.EcCommands.{
+      cm_checkall = false;
+      cm_timeout = 3;
+      cm_cpufactor = 1;
+      cm_nprovers = 4;
+      cm_provers = None;
+      cm_profile = false;
+      cm_iterate = false;
+    } in
+    
+    (* Initialize EasyCrypt with boot=true to load standard library *)
+    log (fun () -> "Attempting EasyCrypt initialization with standard library...");
+    EcLib.EcCommands.initialize ~restart:false ~undo:false ~boot:true ~checkmode;
+    let scope = EcLib.EcCommands.current () in
+    init_state := Some scope;
+    log (fun () -> "EasyCrypt state initialized with standard library");
+    (* Return the lsp event to start reading *)
+    [lsp]
+  with exn ->
+    (* Fall back to simple initialization if boot fails *)
+    log (fun () -> Printf.sprintf "EasyCrypt boot initialization failed: %s. Using simple scope." (Printexc.to_string exn));
+    let gstate = EcLib.EcGState.create () in
+    let scope = EcLib.EcScope.empty gstate in
+    init_state := Some scope;
+    log (fun () -> "EasyCrypt state initialized with empty scope (fallback)");
+    [lsp]
 
 (* Copy VSRocq do_initialize function, adapted for EasyCrypt *)
 type error = { message : string; code : int option }
